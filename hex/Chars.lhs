@@ -32,7 +32,7 @@ data CharCategory = Escape |
                 Other |
                 Active |
                 Comment |
-                Invalid
+                Invalid deriving (Eq, Enum, Bounded)
 
 instance Show CharCategory where
     show Escape = "Escape"
