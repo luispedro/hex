@@ -25,14 +25,27 @@ Test whether the categoryCode and codeCategory functions are consistent:
 test_categoryCode_codeCategory = TestList 
         [ (i ~=? (cac i)) | i <- [0..15]]
     where cac = codeCategory . categoryCode
+\end{code}
 
+Test simple parsing:
+
+\begin{code}
 test_token1 = (length $ chars2tokens $ map (annotate plaintextable) "\\macro") ~=? 1
 test_token5 = (length $ chars2tokens $ map (annotate plaintextable) "macro") ~=? 5
+test_sS = (length $ sS $ map (annotate plaintextable) "     ") ~=? 0
+test_sM1 = (length $ sM $ map (annotate plaintextable) "     ") ~=? 1
+test_sM2 = (length $ sM $ map (annotate plaintextable) "a    ") ~=? 2
 \end{code}
 
 The main driver
 
 \begin{code}
-tests = TestList [test_categoryCode_codeCategory, test_token1, test_token5]
+tests = TestList [test_categoryCode_codeCategory
+                    ,test_token1
+                    ,test_token5
+                    ,test_sS
+                    ,test_sM1
+                    ,test_sM2
+                    ]
 main = runTestTT tests
 \end{code}
