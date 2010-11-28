@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-make -q
+make --quiet
 ./hextest
 for sub in `ls tests`; do 
     for t in tests/$sub/*.hex; do
