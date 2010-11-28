@@ -2,5 +2,9 @@
 
 make -q
 ./hextest
-./hex chars tests/chars/one.hex | diff - tests/chars/one.output
-./hex tokens tests/tokens/one.hex | diff - tests/tokens/one.output
+for sub in `ls tests`; do 
+    for t in tests/$sub/*.hex; do
+        ./hex $sub $t | diff - tests/$sub/`basename $t hex`output 
+    done
+done
+

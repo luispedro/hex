@@ -1,0 +1,1 @@
+\def\wargs#1#2{#2-#1}\wargs{one}{two}
