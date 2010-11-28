@@ -139,7 +139,7 @@ Therefore, the environment cannot change in the inner expansion.
 
 \begin{code}
 expand env (t@(ControlSequence seq):ts)
-    | (seq == "expandafter") = expand env $ (head ts):(expand1 env $ tail $ tail ts)
+    | (seq == "expandafter") = expand env $ (head ts):(expand1 env $ tail ts)
     | otherwise = expand env $ expand1 env (t:ts)
 expand env (t:ts) = (fromToken t):(expand env ts)
 
