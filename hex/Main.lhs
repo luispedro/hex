@@ -8,6 +8,7 @@ import System.Environment
 import Chars (annotate, plaintextable)
 import Tokens (chars2tokens)
 import Macros (expand, plaintexenv)
+import LoadPL (loadPL)
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -26,6 +27,7 @@ expanded = (expand plaintexenv) . tokens
 function "chars" = concat . (map show) . chars
 function "tokens" = concat . (map show) . tokens
 function "expanded" = concat . (map show) . expanded
+function "loadPL" = concat . map (++"\n") . (map show) . loadPL
 \end{code}
 
 Without any error checking, get the subcommand, the filename, and print out the results.
