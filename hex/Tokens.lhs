@@ -17,12 +17,16 @@ implementation is a bit simpler that what is described in the book. In
 particular, there is no concept of ``lines'' separate from the separation by
 newline characters. Whether this will matter, only time will tell.
 
-We start with \code{skiptoeol} which is used for comments. Then, the
-implementation of the two easy states: S \& N:
+We start with \code{skiptoeol} which is used for comments. It skips everything,
+up to, and including, a newline.
 
 \begin{code}
-skiptoeol = dropWhile ((/= EOL) . category)
+skiptoeol = tail . ( dropWhile ((/= EOL) . category) )
+\end{code}
 
+Now, the implementation of the two easy states: S \& N.
+
+\begin{code}
 sN [] = []
 sN (c:cs)
     | (category c) == EOL = (ControlSequence "par"):(sN cs)
