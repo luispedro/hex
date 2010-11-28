@@ -1,7 +1,7 @@
 all: hex hextest
 .PHONY: all
 
-SOURCES := Chars.lhs Tokens.lhs Macros.lhs
+SOURCES := Chars.lhs Tokens.lhs Macros.lhs String.lhs
 
 hex: Main.lhs $(SOURCES)
 	ghc --make -O $^ -o $@

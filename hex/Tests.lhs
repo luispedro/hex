@@ -11,6 +11,7 @@ import Debug.Trace
 
 import Chars
 import Tokens
+import String
 \end{code}
 
 Little helper function
@@ -37,6 +38,13 @@ test_sM1 = (length $ sM $ map (annotate plaintextable) "     ") ~=? 1
 test_sM2 = (length $ sM $ map (annotate plaintextable) "a    ") ~=? 2
 \end{code}
 
+Simple string tests for find.
+
+\begin{code}
+test_stringfind = (find "abc" "012abc") ~=? Just 3
+test_stringnotfind = (find "abc" "012abd") ~=? Nothing
+\end{code}
+
 The main driver
 
 \begin{code}
@@ -46,6 +54,8 @@ tests = TestList [test_categoryCode_codeCategory
                     ,test_sS
                     ,test_sM1
                     ,test_sM2
+                    ,test_stringfind
+                    ,test_stringnotfind
                     ]
 main = runTestTT tests
 \end{code}
