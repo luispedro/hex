@@ -11,6 +11,9 @@ For the moment, we will use \textit{points} as our basic measure.
 data Dimen = Dimen
             { nrPoints :: Integer
             } deriving (Eq)
+
+instance Show Dimen where
+    show (Dimen n) = (show n) ++ "pt"
 \end{code}
 
 We write conversions from other metrics that are used. For now, we will only
