@@ -15,8 +15,19 @@ data Box = Box
             , width :: Dimen
             } deriving (Eq)
 instance Show Box where
-    show (Box h d w) = printf "[[h(%s)d(%s)w(%s)]]" (show h) (show d) (show w)
+    show (Box h d w) = printf "B[[h(%s)d(%s)w(%s)]]" (show h) (show d) (show w)
 \end{code}
 
+We also define ``glue'' here (as D.~E. Knuth himself points out, this should
+have been called ``springs'', but glue stuck):
 
+\begin{code}
+data Glue = Glue
+            { width :: Dimen
+            , shrinkage :: Dimen
+            , expandable :: Dimen
+            } deriving (Eq)
+instance Show Glue where
+    show (Glue w s e) = printf "G[[w(%s)s(%s)e(%s)]]" (show w) (show s) (show e)
+\end{code}
 
