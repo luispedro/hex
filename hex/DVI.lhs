@@ -23,9 +23,22 @@ In order to implement the backlinking, we need to keep track of the current
 position in the stream and, most importantly, the previous \emph{bop} position.
 
 \begin{code}
+data FontDef = FontDef  { checkSum :: Integer
+                        , scale :: Integer
+                        , designSize :: Integer
+                        , areaLength :: Integer
+                        , localPath :: Integer
+                        , path :: [DVIByte]
+                        } deriving (Eq, Show)
+
 data DVIStream = DVIStream { stream :: B.ByteString
                            , pos :: Integer
                            , lastBop :: Integer
+                           , totalPages :: Integer
+                           , maxV :: Integer
+                           , maxH :: Integer
+                           , maxPush :: Integer
+                           , fontDefs :: [FontDef]
                            } deriving (Eq)
 \end{code}
 
@@ -45,6 +58,8 @@ getCurPos :: State DVIStream Integer
 getCurPos = get >>= (return . pos)
 getLastBop = get >>= (return . lastBop)
 putLastBop b = modify (\st -> st { lastBop=b })
+getTotalPages = get >>= (return . totalPages)
+getFonts = get >>= (return . fontDefs)
 
 putn :: Integer -> Integer -> State DVIStream ()
 putn 0 b = return ()
@@ -106,6 +121,24 @@ pre i num den mag k x = do
     put1 mag
     putk k x
 
+fnt_def code ksize k c s d a l n = do
+    put1 code
+    ksize k
+    put4 c
+    put4 s
+    put4 d
+    put1 a
+    put1 l
+    putk (a+l) n
+
+fnt_def1 = fnt_def 243 put1
+fnt_def2 = fnt_def 244 put2
+fnt_def3 = fnt_def 245 put3
+fnt_def4 = fnt_def 246 put4
+
+fnt_num n = put1 $ 171 + n
+
+
 post p num den mag l u s t = do
     put1 248
     put4 p
@@ -120,6 +153,31 @@ post_post q i n223 = do
     put1 249
     put4 q
     put1 i
-    putk n223 $ map fromInteger [223,223,223,223]
+    putk n223 $ map fromInteger [223,223,223,223,223,223,223]
 
+\end{code}
+
+Based on these low-level functions, we define a higher level interface:
+
+\begin{code}
+
+startfile = pre 2 25400000 473628672 1000 0 []
+newpage = do
+    page <- getTotalPages
+    bop 0 0 0 0 0 0 0 0 0 0 (page + 1)
+
+endfile = do
+    lastBop <- getLastBop
+    fonts <- getFonts
+    npages <- getTotalPages
+    q <- getCurPos
+    post lastBop 25400000 473628672 0 0 16 16 npages
+    putfonts 0 fonts
+    pos <- getCurPos
+    post_post q 2 (if (pos `mod` 4) == 0 then 4 else 8 - (pos `mod` 4))
+    where
+        putfonts _ [] = return ()
+        putfonts n (f:fs) = putfont n f >> (putfonts (n+1) fs)
+        putfont n (FontDef c s d a l path) = do
+            fnt_def1 n c s d a l (map toInteger path)
 \end{code}
