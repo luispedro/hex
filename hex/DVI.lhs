@@ -43,6 +43,12 @@ data DVIStream = DVIStream { stream :: B.ByteString
                            } deriving (Eq)
 \end{code}
 
+Initially the stream starts empty:
+
+\begin{code}
+emptyStream = DVIStream { stream=B.empty, pos=0, lastBop=(-1), totalPages=0, maxV=0, maxH=0, maxPush=0, fontDefs=[] }
+\end{code}
+
 The main function puts a single byte into the stream:
 
 \begin{code}
