@@ -11,6 +11,7 @@ simple to implement and are supported by \TeX. Therefore, in order to be full
 import qualified Data.ByteString.Lazy as B
 import Control.Monad.State (State, modify, get, put)
 import Data.Word
+import Data.Char
 \end{code}
 
 A DVI file is a sequence of 8-bit bytes.
@@ -60,6 +61,8 @@ getLastBop = get >>= (return . lastBop)
 putLastBop b = modify (\st -> st { lastBop=b })
 getTotalPages = get >>= (return . totalPages)
 getFonts = get >>= (return . fontDefs)
+getNFonts :: State DVIStream Integer
+getNFonts = get >>= (return . toInteger . length . fontDefs)
 
 putn :: Integer -> Integer -> State DVIStream ()
 putn 0 b = return ()
@@ -111,6 +114,18 @@ down1 a = (put1 157) >> (put1 a)
 down2 a = (put1 158) >> (put2 a)
 down3 a = (put1 159) >> (put3 a)
 down4 a = (put1 160) >> (put4 a)
+
+w0 = put1 147
+w1 b = (put1 148) >> (put1 b)
+w2 b = (put1 149) >> (put2 b)
+w3 b = (put1 150) >> (put3 b)
+w4 b = (put3 151) >> (put4 b)
+
+x0 = put1 152
+x1 b = (put1 153) >> (put1 b)
+x2 b = (put1 154) >> (put2 b)
+x3 b = (put1 155) >> (put3 b)
+x4 b = (put3 156) >> (put4 b)
 
 pre i num den mag k x = do
     put1 247
@@ -165,6 +180,14 @@ startfile = pre 2 25400000 473628672 1000 0 []
 newpage = do
     page <- getTotalPages
     bop 0 0 0 0 0 0 0 0 0 0 (page + 1)
+
+putstr [] = return ()
+putstr (c:cs) = (put1 $ toInteger $ ord c) >> (putstr cs)
+move_down = down4
+move_right = right4
+
+defineFont (FontDef c s d a l t) = getNFonts >>= (\nfonts -> fnt_def1 nfonts c s d a l (map toInteger t))
+selectFont = fnt_num
 
 endfile = do
     lastBop <- getLastBop
