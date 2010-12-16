@@ -25,7 +25,7 @@ Here are my ideas:
  9. In-built (or script written) facilities for things like references (instead
     of relying on external programmes).
 10. Use of multi-core machines.
-11. More output formats (ePub?)
+11. More output formats (ePub, HTML, ...?)
 
 Some of these are traditionally built *on top* of TeX instead of modifying it.
 While that is a good way to do some things, it also means that the results are
