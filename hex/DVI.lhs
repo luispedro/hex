@@ -8,6 +8,8 @@ simple to implement and are supported by \TeX. Therefore, in order to be full
 \TeX{} compliant, we would need to implement them.
 
 \begin{code}
+import Measures
+
 import qualified Data.ByteString.Lazy as B
 import Control.Monad.State (State, modify, get, put)
 import Data.Word
@@ -220,8 +222,8 @@ newpage = do
 
 putstr [] = return ()
 putstr (c:cs) = (put1 $ toInteger $ ord c) >> (putstr cs)
-move_down = down4
-move_right = right4
+move_down = down4 . nrPoints
+move_right = right4 . nrPoints
 
 defineFont fnt@(FontDef c s d a l t) = do
     nfonts <- getNFonts
