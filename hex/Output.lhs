@@ -20,7 +20,7 @@ constant, but for now, that'll do):
 \begin{code}
 margin_top = (dimenFromInches 1)
 margin_right = (dimenFromInches 1)
-line_height = (dimenFromPoints 10)
+line_height = (dimenFromPoints 36)
 \end{code}
 
 To actually perform any operations, we start with code to put one element, then
