@@ -4,6 +4,8 @@ For the moment, a simple driver for Char.annotate.
 module Main where
 
 import System.Environment
+import qualified Data.ByteString.Lazy as B
+import Data.Char
 
 import Chars (annotate, plaintextable)
 import Tokens (chars2tokens)
@@ -11,6 +13,7 @@ import Macros (expand, plaintexenv)
 import LoadPL (loadPL)
 import Linebreak (commandsToLines)
 import Measures (dimenFromInches)
+import Output (outputBoxes)
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -26,13 +29,15 @@ chars = map (annotate plaintextable)
 tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
 breaklines = (commandsToLines (dimenFromInches 6)) . expanded
+dvioutput = outputBoxes . breaklines
 
-function :: String -> String -> String
-function "chars" = concat . (map show) . chars
-function "tokens" = concat . (map show) . tokens
-function "expanded" = concat . (map show) . expanded
-function "loadPL" = concat . map (++"\n") . (map show) . loadPL
-function "breaklines" = concat . concat . map (++["\n"]) . (map (map show)) . breaklines
+function :: String -> String -> IO ()
+function "chars" = putStrLn . concat . (map show) . chars
+function "tokens" = putStrLn . concat . (map show) . tokens
+function "expanded" = putStrLn . concat . (map show) . expanded
+function "loadPL" = putStrLn . concat . map (++"\n") . (map show) . loadPL
+function "breaklines" = putStrLn . concat . concat . map (++["\n"]) . (map (map show)) . breaklines
+function "dvioutput" = B.putStr . dvioutput
 \end{code}
 
 Without any error checking, get the subcommand, the filename, and print out the results.
@@ -42,6 +47,6 @@ main :: IO ()
 main = do
     args <- getArgs
     input <- readFile (args !! 1)
-    putStrLn $ function (args !! 0) $ input
+    function (args !! 0) $ input
 \end{code}
 
