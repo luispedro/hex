@@ -23,7 +23,7 @@ have been called ``springs'', but glue stuck):
 
 \begin{code}
 data Glue = Glue
-            { width :: Dimen
+            { size :: Dimen
             , shrinkage :: Dimen
             , expandable :: Dimen
             } deriving (Eq)
