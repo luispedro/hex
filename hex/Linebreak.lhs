@@ -99,10 +99,9 @@ uses the \emph{first fit} algorithm.
 \begin{code}
 breakParagraphIntoLines :: Dimen -> [LineElement] -> [[LineElement]]
 breakParagraphIntoLines _ [] = []
-breakParagraphIntoLines lineWidth les = breakIntoLines les
+breakParagraphIntoLines lineWidth les = (first:breakParagraphIntoLines lineWidth rest)
     where
-        breakIntoLines les = (first:breakIntoLines rest)
-        (first,rest) = splitAt (firstLine lineWidth les) les
+        (first,rest) = splitAt (firstLine zeroDimen les) les
         firstLine _ [] = 0
         firstLine (Dimen 0) (le:les) = 1 + (firstLine (leWidth le) les)
         firstLine n (le:les)
