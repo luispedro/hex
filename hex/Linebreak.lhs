@@ -16,9 +16,10 @@ We begin by breaking a sequence of commands into paragraphs:
 \begin{code}
 paragraphs :: [Command] -> [[Command]]
 paragraphs [] = []
-paragraphs cs = (par:paragraphs rest)
+paragraphs cs = (par:paragraphs rest')
     where
         (par, rest) = break isParagraph cs
+        rest' = if length rest > 0 then tail rest else rest
         isParagraph (PrimitiveCommand "par") = True
         isParagraph _ = False
 \end{code}
