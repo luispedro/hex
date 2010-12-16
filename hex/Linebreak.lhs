@@ -38,6 +38,9 @@ data LineElement = LineElement
                         , leFlag :: Bool
                         , leTypeset :: String
                         } deriving (Eq)
+
+instance Show LineElement where
+    show = leTypeset
 \end{code}
 
 We now define some basic constants: a space and infinite and minus-infinite

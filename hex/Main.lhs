@@ -9,6 +9,8 @@ import Chars (annotate, plaintextable)
 import Tokens (chars2tokens)
 import Macros (expand, plaintexenv)
 import LoadPL (loadPL)
+import Linebreak (commandsToLines)
+import Measures (dimenFromInches)
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -23,11 +25,13 @@ table maps strings to these functions.
 chars = map (annotate plaintextable)
 tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
+breaklines = (commandsToLines (dimenFromInches 6)) . expanded
 
 function "chars" = concat . (map show) . chars
 function "tokens" = concat . (map show) . tokens
 function "expanded" = concat . (map show) . expanded
 function "loadPL" = concat . map (++"\n") . (map show) . loadPL
+function "breaklines" = concat . map (++"\n") . (map show) . breaklines
 \end{code}
 
 Without any error checking, get the subcommand, the filename, and print out the results.
