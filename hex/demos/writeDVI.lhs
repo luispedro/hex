@@ -20,9 +20,6 @@ fontName = map (fromInteger . toInteger . ord)
 myFile = do
     startfile
     newpage
-    push
-    move_down $ Dimen 243
-    pop
     move_down $ Dimen 0x028335da
     push
     move_down $ Dimen 0xfd86cc26
