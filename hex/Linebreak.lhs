@@ -107,3 +107,14 @@ breakParagraphIntoLines lineWidth les = breakIntoLines les
             | otherwise = 1 + (firstLine n' les)
             where n' = (n `dplus` (leWidth le))
 \end{code}
+
+Finally, we put it all together: input is a sequence of commands and output is
+a sequence of lines:
+
+\begin{code}
+commandsToLines :: Dimen -> [Command] -> [[LineElement]]
+commandsToLines lineWidth cmds = concat
+                            $ map ((breakParagraphIntoLines lineWidth). preprocessParagraph)
+                            $ map (map lineElement)
+                            $ paragraphs cmds
+\end{code}
