@@ -20,11 +20,11 @@ fontName = map (fromInteger . toInteger . ord)
 myFile = do
     startfile
     newpage
-    move_down $ Dimen 0x028335da
+    down4 0x028335da
     push
-    move_down $ Dimen 0xfd86cc26
+    down4 0xfd86cc26
     push
-    move_right $ Dimen 0x140000
+    right4 0x140000
     defineFont $ FontDef 11374260171 0x000a0000 0x000a0000 0 5 $ fontName "cmr10"
     selectFont 0
     putstr "This"
@@ -32,15 +32,15 @@ myFile = do
     putstr "is"
     w0
     putstr "m"
-    move_right $ Dimen 0xb8e3
+    right4 0xb8e3
     putstr "y"
     w0
     putstr "file" -- 12_ff  le
     pop
     pop
-    move_down $ Dimen 0x180000
+    down4 0x180000
     push
-    move_right $ Dimen 0x0e860a3
+    right4 0x0e860a3
     putstr "1"
     pop
     eop
