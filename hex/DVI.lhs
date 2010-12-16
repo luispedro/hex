@@ -14,6 +14,7 @@ import qualified Data.ByteString.Lazy as B
 import Control.Monad.State (State, modify, get, put)
 import Data.Word
 import Data.Char
+import Data.Ratio
 \end{code}
 
 A DVI file is a sequence of 8-bit bytes.
@@ -192,9 +193,12 @@ post_post q i n223 = do
 
 Some constants to match \TeX.
 \begin{code}
-tex_num = 25400000
-tex_den = 473628672
-tex_mag = 1000
+tex_num = 25400000 :: Integer
+tex_den = 473628672 :: Integer
+tex_mag = 1000 :: Integer
+
+pointsTointernal :: Integer -> Integer
+pointsTointernal p = round $ (p % 1) * (tex_den % tex_num)*(tex_mag % 1)
 \end{code}
 
 There are two parameters that I'm still not sure how to compute, so I'll just
@@ -222,8 +226,8 @@ newpage = do
 
 putstr [] = return ()
 putstr (c:cs) = (put1 $ toInteger $ ord c) >> (putstr cs)
-move_down = down4 . nrPoints
-move_right = right4 . nrPoints
+move_down = down4 . pointsTointernal . nrPoints
+move_right = right4 . pointsTointernal . nrPoints
 
 defineFont fnt@(FontDef c s d a l t) = do
     nfonts <- getNFonts
