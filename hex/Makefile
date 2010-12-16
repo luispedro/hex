@@ -1,5 +1,5 @@
 all: hex hextest
-.PHONY: all
+.PHONY: all clean
 
 SOURCES :=  Chars.lhs \
             Tokens.lhs \
@@ -18,3 +18,5 @@ hex: Main.lhs $(SOURCES)
 hextest: Tests.lhs $(SOURCES)
 	ghc --make -O $^ -o $@
 
+clean:
+	rm -f *.o *.lhi hex hextest
