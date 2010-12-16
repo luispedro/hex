@@ -27,11 +27,12 @@ tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
 breaklines = (commandsToLines (dimenFromInches 6)) . expanded
 
+function :: String -> String -> String
 function "chars" = concat . (map show) . chars
 function "tokens" = concat . (map show) . tokens
 function "expanded" = concat . (map show) . expanded
 function "loadPL" = concat . map (++"\n") . (map show) . loadPL
-function "breaklines" = concat . map (++"\n") . (map show) . breaklines
+function "breaklines" = concat . concat . map (++["\n"]) . (map (map show)) . breaklines
 \end{code}
 
 Without any error checking, get the subcommand, the filename, and print out the results.
