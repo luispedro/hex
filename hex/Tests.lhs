@@ -12,6 +12,8 @@ import Debug.Trace
 import Chars
 import Tokens
 import String
+import Macros
+import Linebreak
 \end{code}
 
 Little helper function
@@ -45,6 +47,12 @@ test_stringfind = (find "abc" "012abc") ~=? Just 3
 test_stringnotfind = (find "abc" "012abd") ~=? Nothing
 \end{code}
 
+Tests for line breaking
+
+\begin{code}
+test_paragraphs = (length $ paragraphs [PrimitiveCommand  "par"]) ~=? 1
+\end{code}
+
 The main driver
 
 \begin{code}
@@ -56,6 +64,7 @@ tests = TestList [test_categoryCode_codeCategory
                     ,test_sM2
                     ,test_stringfind
                     ,test_stringnotfind
+                    ,test_paragraphs
                     ]
 main = runTestTT tests
 \end{code}
