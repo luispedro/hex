@@ -13,7 +13,7 @@ SOURCES :=  Chars.lhs \
             Fonts.lhs
 
 hex: Main.lhs $(SOURCES)
-	ghc --make -O $^ -o $@
+	ghc --make -O2 $^ -o $@
 
 hextest: Tests.lhs $(SOURCES)
 	ghc --make -O $^ -o $@
