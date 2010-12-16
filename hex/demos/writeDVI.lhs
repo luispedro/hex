@@ -26,7 +26,7 @@ myFile = do
     move_down 0xfd86cc26
     push
     move_right 0x140000
-    defineFont $ FontDef 0x4bf16079 0x000a0000 0x000a0000 0 5 $ fontName "cmr10"
+    defineFont $ FontDef 11374260171 0x000a0000 0x000a0000 0 5 $ fontName "cmr10"
     selectFont 0
     putstr "This"
     w3 0x35555
