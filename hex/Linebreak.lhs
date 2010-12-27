@@ -30,15 +30,25 @@ Digital Typography by D.~E. Knuth.
 
 \begin{code}
 
-data LineElement = LineElement
-                        { leType :: String
-                        , leWidth :: Dimen
-                        , leStretch :: Dimen
-                        , leShrink :: Dimen
-                        , lePenalty :: Integer
-                        , leFlag :: Bool
-                        , leTypeset :: String
-                        } deriving (Eq)
+data LineElement = HBox B.HBox | Glue B.Glue | Penalty Integer Bool deriving (Eq)
+
+leWidth (HBox hb) = B.width hb
+leWidth (Glue g) = B.size g
+leWidth (Penalty _ _) = zeroDimen
+leStretch (HBox hb) = zeroDimen
+leStretch (Glue g) = B.expandable g
+leStretch (Penalty _ _) = zeroDimen
+leShrink (HBox hb) = zeroDimen
+leShrink (Glue g) = B.shrinkage g
+leShrink (Penalty _ _) = zeroDimen
+lePenalty (HBox _) = 0
+lePenalty (Glue _) = 0
+lePenalty (Penalty p _) = p
+leFlag (HBox _) = False
+leFlag (Glue _) = False
+leFlag (Penalty _ f) = f
+leTypeset (HBox hb) = B.typeset $ B.boxContents hb
+leTypeset (Glue g) = " "
 
 instance Show LineElement where
     show = leTypeset
@@ -49,22 +59,12 @@ penalties. A space is not actually constant as it depends on the font, but we
 do not worry about that for now.
 
 \begin{code}
-spaceGlue = LineElement
-                { leType="glue"
-                , leWidth=(dimenFromPoints 12)
-                , leStretch=(dimenFromPoints 6)
-                , leShrink=(dimenFromPoints 3)
-                , lePenalty=0
-                , leFlag=False
-                , leTypeset=" " }
-penalty p = LineElement
-                { leType="glue"
-                , leWidth=zeroDimen
-                , leStretch=zeroDimen
-                , leShrink=zeroDimen
-                , lePenalty=p
-                , leFlag=False
-                , leTypeset="" }
+spaceGlue = Glue $ B.Glue
+                { B.size=(dimenFromPoints 12)
+                , B.expandable=(dimenFromPoints 6)
+                , B.shrinkage=(dimenFromPoints 3)
+                }
+penalty p = Penalty p False
 infPenalty = 10000
 minfPenalty = (-10000)
 \end{code}
@@ -75,14 +75,7 @@ We now transform the commands into \code{LineElement}s.
 lineElement :: Command -> LineElement
 lineElement (CharCommand c)
     | c == ' ' = spaceGlue
-    | otherwise = LineElement
-                        { leType="box"
-                        , leWidth=(dimenFromPoints 12)
-                        , leStretch=zeroDimen
-                        , leShrink=zeroDimen
-                        , lePenalty=0
-                        , leFlag=False
-                        , leTypeset=[c] }
+    | otherwise = HBox $ B.charBox c
 \end{code}
 
 In order to make everything work out, we need to add special markers to the end

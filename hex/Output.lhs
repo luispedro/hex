@@ -27,9 +27,9 @@ To actually perform any operations, we start with code to put one element, then
 one line, down:
 
 \begin{code}
-putle le
-    | (leType le) == "glue" = move_right (leWidth le)
-    | otherwise = putstr (leTypeset le)
+putle le@(Glue _) = move_right $ leWidth le
+putle le@(Penalty _ _) = return ()
+putle le = putstr $ leTypeset le
 
 putline line = do
     push
