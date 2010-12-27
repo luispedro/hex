@@ -78,6 +78,31 @@ lineElement (CharCommand c)
     | otherwise = HBox $ B.charBox c
 \end{code}
 
+In order to break up lines \emph{only at word boundaries}, we merge words
+(sequences of \code{HBox}es separated by \code{Glue} elements) into single
+boxes (words). This is independent of what the words actually consist of (e.g.,
+they may contain symbols or other non-alphabetic elements).
+
+\begin{code}
+concatenatewords :: [LineElement] -> [LineElement]
+concatenatewords [] = []
+concatenatewords (le@(Glue g):les) = (le:concatenatewords les)
+concatenatewords cs = (first:concatenatewords rest)
+    where
+        (firstelems,rest) = break (not . isBox) cs
+        first = merge $ map getBox firstelems
+        getBox (HBox b) = b
+        merge bs = HBox $ B.HBox
+                        { B.width=(foldr1 dplus $ map B.width bs)
+                        , B.depth=(foldr1 dmax $ map B.depth bs)
+                        , B.height=(foldr1 dmax $ map B.height bs)
+                        , B.boxContents=(B.BoxList $ map B.boxContents bs)
+                        }
+        isBox (HBox _) = True
+        isBox _ = False
+\end{code}
+
+
 In order to make everything work out, we need to add special markers to the end
 of the paragraph. Currently, they are not used, but, when the full algorithm is
 implemented, they will guarantee that the last line of a paragraph is correctly
@@ -110,7 +135,7 @@ a sequence of lines:
 \begin{code}
 commandsToLines :: Dimen -> [Command] -> [[LineElement]]
 commandsToLines lineWidth cmds = concat
-                            $ map ((breakParagraphIntoLines lineWidth). preprocessParagraph)
+                            $ map ((breakParagraphIntoLines lineWidth). preprocessParagraph . concatenatewords)
                             $ map (map lineElement)
                             $ paragraphs cmds
 \end{code}

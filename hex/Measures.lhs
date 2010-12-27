@@ -19,6 +19,7 @@ instance Ord Dimen where
     compare (Dimen np0) (Dimen np1) = compare np0 np1
 
 (Dimen np0) `dplus` (Dimen np1) = Dimen $ np0 + np1
+(Dimen np0) `dmax` (Dimen np1) = Dimen $ max np0 np1
 \end{code}
 
 We write conversions from other metrics that are used. For now, we will only
