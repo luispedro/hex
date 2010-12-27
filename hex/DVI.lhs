@@ -35,7 +35,7 @@ data FontDef = FontDef  { checkSum :: Integer
                         , path :: [DVIByte]
                         } deriving (Eq, Show)
 
-data DVIStream = DVIStream { stream :: B.ByteString
+data DVIStream = DVIStream { rstream :: B.ByteString
                            , pos :: Integer
                            , lastBop :: Integer
                            , totalPages :: Integer
@@ -47,10 +47,27 @@ data DVIStream = DVIStream { stream :: B.ByteString
                            } deriving (Eq)
 \end{code}
 
+We store the stream in reverse form for performance. This way, we are always
+appending to the front (which is fast).
+
+\begin{code}
+stream = B.reverse. rstream
+\end{code}
+
 Initially the stream starts empty:
 
 \begin{code}
-emptyStream = DVIStream { stream=B.empty, pos=0, lastBop=(-1), totalPages=0, maxV=0, maxH=0, curPush=0, maxPush=0, fontDefs=[] }
+emptyStream = DVIStream
+            { rstream=B.empty
+            , pos=0
+            , lastBop=(-1)
+            , totalPages=0
+            , maxV=0
+            , maxH=0
+            , curPush=0
+            , maxPush=0
+            , fontDefs=[]
+            }
 \end{code}
 
 The main function puts a single byte into the stream:
@@ -59,7 +76,7 @@ The main function puts a single byte into the stream:
 putByte :: DVIByte -> State DVIStream ()
 putByte b = modify putByteInto
     where
-        putByteInto st@(DVIStream {}) = st { stream=(B.snoc (stream st) b), pos=((pos st)+1) }
+        putByteInto st@(DVIStream {}) = st { rstream=(B.cons b $ rstream st), pos=((pos st)+1) }
 \end{code}
 
 Now, a few functions to retrieve and manipulate the state:
