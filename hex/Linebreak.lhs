@@ -49,6 +49,7 @@ leFlag (Glue _) = False
 leFlag (Penalty _ f) = f
 leTypeset (HBox hb) = B.typeset $ B.boxContents hb
 leTypeset (Glue g) = " "
+leTypeset (Penalty _ _) = ""
 
 instance Show LineElement where
     show = leTypeset
