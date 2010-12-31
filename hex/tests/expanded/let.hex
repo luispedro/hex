@@ -1,0 +1,5 @@
+\def\a{a}%
+\def\b{\a}%
+\let\c=\b%
+\def\a{b}%
+\c

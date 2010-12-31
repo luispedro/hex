@@ -141,6 +141,19 @@ expand env (t@(ControlSequence seq):ts)
             isBeginGroup _ = False
 \end{code}
 
+\begin{code}
+expand env ((ControlSequence "let"):ts) = expand env' rest
+    where
+        env' = Map.insert name macro env
+        ControlSequence name = head ts
+        (replacement,rest) = case ts of
+                        (_:(CharToken (TypedChar '=' _)):t:rest) -> (t,rest)
+                        (t:rest) -> (t,rest)
+        macro = case replacement of
+                (ControlSequence seq) -> case Map.lookup seq env of Just macro -> macro
+                (CharToken tc) -> Macro 0 [const [(CharToken tc)]]
+\end{code}
+
 For dealing with \tex{\\noexpand} we add a special case to expand.
 
 \begin{code}
