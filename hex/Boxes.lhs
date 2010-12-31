@@ -22,17 +22,32 @@ There are two types of boxes: horizontal (\code{Hbox}es) and vertical
 
 \begin{code}
 
-data HBox = HBox
-            { height :: Dimen
+data H = H deriving (Eq)
+data V = V deriving (Eq)
+class BoxType a where
+    codefor :: a -> String
+instance BoxType H where
+    codefor _ = "H"
+instance BoxType V where
+    codefor _ = "V"
+
+data (BoxType t) => Box t = Box
+            { boxType :: t
+            , height :: Dimen
             , depth :: Dimen
             , width :: Dimen
             , boxContents :: BoxContents
             } deriving (Eq)
-instance Show HBox where
-    show (HBox h d w _) = printf "HB[[h(%s)d(%s)w(%s)]]" (show h) (show d) (show w)
 
-charBox c = HBox
-        { height=zeroDimen
+type HBox = Box H
+type VBox = Box V
+
+instance (BoxType b) => Show (Box b) where
+    show (Box t h d w _) = printf "%sB[[h(%s)d(%s)w(%s)]]" (codefor t) (show h) (show d) (show w)
+
+charBox c = Box
+        { boxType=H
+        , height=zeroDimen
         , width=(dimenFromPoints 12)
         , depth=zeroDimen
         , boxContents=typesetChar c
