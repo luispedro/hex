@@ -30,7 +30,7 @@ Digital Typography by D.~E. Knuth.
 
 \begin{code}
 
-data LineElement = HBox B.HBox | Glue B.Glue | Penalty Integer Bool deriving (Eq)
+data LineElement = HBox B.HBox | Glue B.HGlue | Penalty Integer Bool deriving (Eq)
 
 leWidth (HBox hb) = B.width hb
 leWidth (Glue g) = B.size g
@@ -61,7 +61,8 @@ do not worry about that for now.
 
 \begin{code}
 spaceGlue = Glue $ B.Glue
-                { B.size=(dimenFromPoints 12)
+                { B.glueType=B.H
+                , B.size=(dimenFromPoints 12)
                 , B.expandable=(dimenFromPoints 6)
                 , B.shrinkage=(dimenFromPoints 3)
                 }

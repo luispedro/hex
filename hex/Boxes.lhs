@@ -58,12 +58,16 @@ We also define ``glue'' here (as D.~E. Knuth himself points out, this should
 have been called ``springs'', but glue stuck):
 
 \begin{code}
-data Glue = Glue
-            { size :: Dimen
+data (BoxType t) => Glue t = Glue
+            { glueType :: t
+            , size :: Dimen
             , shrinkage :: Dimen
             , expandable :: Dimen
             } deriving (Eq)
-instance Show Glue where
-    show (Glue w s e) = printf "G[[w(%s)s(%s)e(%s)]]" (show w) (show s) (show e)
+instance (BoxType t) => Show (Glue t) where
+    show (Glue t w s e) = printf "%sG[[w(%s)s(%s)e(%s)]]" (codefor t) (show w) (show s) (show e)
+
+type HGlue = Glue H
+type VGlue = Glue V
 \end{code}
 
