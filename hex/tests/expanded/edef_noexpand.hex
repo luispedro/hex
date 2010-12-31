@@ -1,0 +1,6 @@
+\def\a{a}%
+\def\b{b}%
+\edef\c{\a\noexpand\b}%
+\def\a{aa}%
+\def\b{bb}%
+\c
