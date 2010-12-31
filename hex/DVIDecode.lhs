@@ -9,7 +9,9 @@ import Data.Char
 import DVI
 \end{code}
 
-In order to parse 
+In order to parse DVI files, we need to shift bytes up and down, so we start
+with some helper functions. After all, a good programmer can write C in any
+language.
 
 \begin{code}
 (<<) :: Integer -> Integer -> Integer
@@ -18,10 +20,8 @@ x << 16 = x * 256 * 256
 x << 24 = x * 256 * 256 * 256
 \end{code}
 
-\begin{code}
-word8sToChars :: [DVIByte] -> [Char]
-word8sToChars = map (chr . fromInteger . toInteger)
-\end{code}
+Using these, we can parse the DVI format for 1- to 4-byte integers. Currently,
+we do not handle negative numbers.
 
 \begin{code}
 build1 v0 = " " ++ (show $ toInteger v0)
@@ -45,7 +45,13 @@ build4 v0 v1 v2 v3 = " " ++ (show v)
         v1' = toInteger v1
         v2' = toInteger v2
         v3' = toInteger v3
+\end{code}
 
+We define a couple of wrappers for reading numbers from a stream of bytes. This
+could have been written using a Monad interface, but this is so simple that it
+would maybe be overkill.
+
+\begin{code}
 get1 (d0:ds) = (build1 d0, ds)
 get2 (d0:d1:ds) = (build2 d0 d1, ds)
 get3 (d0:d1:d2:ds) = (build3 d0 d1 d2, ds)
@@ -53,14 +59,31 @@ get4 (d0:d1:d2:d3:ds) = (build4 d0 d1 d2 d3, ds)
 getk = splitAt
 \end{code}
 
+In order to print ASCII characters, we have convert bytes to characters in the
+obvious way:
+
+\begin{code}
+word8sToChars :: [DVIByte] -> [Char]
+word8sToChars = map (chr . fromInteger . toInteger)
+\end{code}
+
+Finally we come to the central function of the module, \code{decode}. This is a
+series of pattern matches for the various DVI commands.
+
+Currently, we only parse the commands that we output, but it is easily
+extensible.
+
 \begin{code}
 decode :: [DVIByte] -> [String]
 decode [] = []
 decode (d:ds)
     | d < 128 = (("char " ++ (show d) ++ "(" ++ [chr $ fromInteger $ toInteger d] ++ ")"):decode ds)
 
-
 decode (138:ds) = ("nop":decode ds)
+\end{code}
+
+The following is the idiom that looks very Monadic, but it's also very simple.
+\begin{code}
 decode (139:ds) = (("bop" ++ c0 ++ c1 ++ c2 ++ c3 ++ c4 ++ c5 ++ c6 ++ c7 ++ c8 ++ c9 ++ lastbop):decode rest)
     where
         (c0,r0) = get4 ds
@@ -149,9 +172,15 @@ decode (249:r0) = (("post_post" ++ q ++ i):decode rest)
 
 \end{code}
 
+Finally, for any DVI codes that we do not know about, we let the pattern
+matching fail, but leave open the option of uncommenting the code below to get
+a look at the codes that are failing.
+
 \begin{code}
-decode (d:ds) = (("unknown" ++ (build1 d)):decode ds)
-\end{code}<++>
+-- decode (d:ds) = (("unknown" ++ (build1 d)):decode ds)
+\end{code}
+
+The \code{main} function is trivial:
 
 \begin{code}
 main = do
@@ -159,3 +188,4 @@ main = do
     input <- B.readFile (args !! 0)
     putStr $ unlines $ decode $ map (fromInteger . toInteger) $ B.unpack input
 \end{code}
+
