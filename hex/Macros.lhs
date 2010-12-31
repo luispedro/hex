@@ -157,7 +157,7 @@ expand env ((ControlSequence "let"):ts) = expand env' rest
 For dealing with \tex{\\noexpand} we add a special case to expand.
 
 \begin{code}
-expand env ((ControlSequence "expandafter"):t:ts) = (fromToken t:expand env ts)
+expand env ((ControlSequence "noexpand"):t:ts) = (fromToken t:expand env ts)
 \end{code}
 
 \code{expandafter} is dealt in a nice way. Note that, at least in TeX, the
