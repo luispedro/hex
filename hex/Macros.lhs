@@ -20,6 +20,9 @@ data Command = CharCommand Char | PrimitiveCommand String
 fromToken (ControlSequence seq) = PrimitiveCommand seq
 fromToken (CharToken tc) = CharCommand $ value tc
 
+toToken (PrimitiveCommand c) = ControlSequence c
+toToken (CharCommand c) = CharToken $ TypedChar c Letter
+
 instance Show Command where
     show (PrimitiveCommand cmd) = "<\\" ++ cmd ++ ">"
     show (CharCommand c) = ['<',c,'>']
@@ -116,16 +119,32 @@ expand :: Environment -> [Token] -> [Command]
 expand _ [] = []
 expand env (t@(ControlSequence seq):ts)
     | isprimitive seq = (PrimitiveCommand seq) : (expand env ts)
-    | (seq == "def") = expand env' rest
+
+\end{code}
+
+Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
+difference is whether the \code{substitution} is the code that was presently
+directly or whether it's its expansion.
+
+\begin{code}
+expand env (t@(ControlSequence seq):ts)
+    | (seq == "def") || (seq == "edef") = expand env' rest
         where
             env' = Map.insert name macro env
             macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
             ControlSequence name = head ts
             (args,afterargs) = substtextstart $ tail ts
-            (substitution,rest) = breakAtGroupEnd 0 $ tail afterargs
+            (substitutiontext,rest) = breakAtGroupEnd 0 $ tail afterargs
+            substitution = if seq == "def" then substitutiontext else map toToken $ expand env substitutiontext
             substtextstart = break isBeginGroup
             isBeginGroup (CharToken tc) = (category tc) == BeginGroup
             isBeginGroup _ = False
+\end{code}
+
+For dealing with \tex{\\noexpand} we add a special case to expand.
+
+\begin{code}
+expand env ((ControlSequence "expandafter"):t:ts) = (fromToken t:expand env ts)
 \end{code}
 
 \code{expandafter} is dealt in a nice way. Note that, at least in TeX, the
