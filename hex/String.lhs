@@ -1,6 +1,7 @@
 \section{Strings}
 
-Haskell does not have a very complete system for basic string manipulation.
+Haskell does not have a very complete system for basic string manipulation. We
+remedy that situation by writing some functions ourselves.
 
 \begin{code}
 module String where
