@@ -1,4 +1,4 @@
-all: hex hextest
+all: hex hextest dvidecode
 .PHONY: all clean
 
 SOURCES :=  Chars.lhs \
@@ -17,6 +17,9 @@ hex: Main.lhs $(SOURCES)
 
 hextest: Tests.lhs $(SOURCES)
 	ghc --make -O $^ -o $@
+
+dvidecode: DVIDecode.lhs DVI.lhs
+	ghc --make -O2 $^ -o $@
 
 clean:
 	rm -f *.o *.lhi hex hextest
