@@ -51,7 +51,7 @@ spaceBox = B.Box
                 , B.width=(dimenFromPoints 12)
                 , B.depth=(dimenFromPoints 0)
                 , B.height=(dimenFromPoints 0)
-                , B.boxContents=(B.typesetChar ' ')
+                , B.boxContents=(B.Kern $ dimenFromPoints 12)
                 }
 penalty p = B.EPenalty $ B.Penalty B.H p False
 infPenalty = 10000
