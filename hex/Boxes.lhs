@@ -54,9 +54,9 @@ instance (BoxType b) => Show (Box b) where
 
 charBox c = Box
         { boxType=H
-        , height=zeroDimen
+        , height=(dimenFromPoints 18)
         , width=(dimenFromPoints 12)
-        , depth=zeroDimen
+        , depth=(dimenFromPoints 18)
         , boxContents=typesetChar c
         }
 \end{code}

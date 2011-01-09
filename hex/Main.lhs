@@ -33,7 +33,7 @@ chars = map (annotate plaintextable)
 tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
 breaklines = (vMode startenv) . expanded
-dvioutput = outputBoxes . breaklines
+dvioutput = (outputBoxes startenv). breaklines
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars

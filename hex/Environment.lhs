@@ -71,6 +71,10 @@ To start with, we have an environment with the textwidth register set. In the
 future, this should be done in a hex startup file.
 
 \begin{code}
-startenv = globalinsert "textwidth" (HexDimen (dimenFromInches 6)) empty
+startenv =
+        globalinsert "textwidth" (HexDimen (dimenFromInches 6)) $
+        globalinsert "margintop" (HexDimen (dimenFromInches 1)) $
+        globalinsert "marginright" (HexDimen (dimenFromInches 1)) $
+        empty
 \end{code}
 
