@@ -6,14 +6,18 @@ module Main where
 import System.Environment
 import qualified Data.ByteString.Lazy as B
 import Data.Char
+import Data.Maybe
 
 import Chars (annotate, plaintextable)
+import qualified Boxes
+import Boxes (typeset)
 import Tokens (chars2tokens)
 import Macros (expand, plaintexenv)
 import LoadPL (loadPL)
-import Linebreak (commandsToLines)
+import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
+import Environment (startenv)
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -28,7 +32,7 @@ table maps strings to these functions.
 chars = map (annotate plaintextable)
 tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
-breaklines = (commandsToLines (dimenFromInches 6)) . expanded
+breaklines = (vMode startenv) . expanded
 dvioutput = outputBoxes . breaklines
 
 function :: String -> String -> IO ()
@@ -36,8 +40,11 @@ function "chars" = putStrLn . concat . (map show) . chars
 function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 function "loadPL" = putStrLn . concat . map (++"\n") . (map show) . loadPL
-function "breaklines" = putStrLn . concat . concat . map (++["\n"]) . (map (map show)) . breaklines
+function "breaklines" = putStrLn . concat . (map (++"\n")) . (map typeset) . (map Boxes.boxContents) . catMaybes . (map asBox) . breaklines
 function "dvioutput" = B.putStr . dvioutput
+
+asBox (Boxes.EBox b) = Just b
+asBox _ = Nothing
 \end{code}
 
 Without any error checking, get the subcommand, the filename, and print out the results.

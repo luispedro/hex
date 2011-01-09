@@ -9,13 +9,6 @@ import Measures
 We define the basic box structure and operations on them. A box can contain a
 basic string or a sequence of other boxes (recursively).
 
-\begin{code}
-data BoxContents = TextContent String | BoxList [BoxContents] deriving (Eq)
-typeset (TextContent str) = str
-typeset (BoxList bcs) = concat $ map typeset bcs
-
-typesetChar c = TextContent [c]
-\end{code}
 
 There are two types of boxes: horizontal (\code{Hbox}es) and vertical
 (\code{VBox}es).
@@ -31,6 +24,20 @@ instance BoxType H where
 instance BoxType V where
     codefor _ = "V"
 
+\end{code}
+
+\begin{code}
+data BoxContents = TextContent String
+                    | Kern Dimen
+                    | BoxList [BoxContents] deriving (Eq)
+typeset (TextContent str) = str
+typeset (BoxList bcs) = concat $ map typeset bcs
+
+typesetChar c = TextContent [c]
+\end{code}
+
+
+\begin{code}
 data (BoxType t) => Box t = Box
             { boxType :: t
             , height :: Dimen
@@ -69,5 +76,42 @@ instance (BoxType t) => Show (Glue t) where
 
 type HGlue = Glue H
 type VGlue = Glue V
+
+spaceGlue = Glue
+            { glueType=H
+            , size=(dimenFromPoints 12)
+            , expandable=(dimenFromPoints 6)
+            , shrinkage=(dimenFromPoints 3)
+            }
 \end{code}
 
+\begin{code}
+data (BoxType t) => Penalty t = Penalty
+            { penaltyType :: t
+            , value :: Integer
+            , flag :: Bool
+            } deriving (Eq)
+instance (BoxType t) => Show (Penalty t) where
+    show (Penalty t v f) = printf "%sP[[%s(%s)]]" (codefor t) (show v) (show f)
+
+type HPenalty = Penalty H
+type VPenalty = Penalty V
+\end{code}
+
+Finally, we can define \code{H} and \code{V} elements as either a box, a glue,
+or a penalty:
+
+\begin{code}
+data (BoxType t) => Element t =
+                        EBox (Box t)
+                        | EGlue (Glue t)
+                        | EPenalty (Penalty t)
+
+instance (BoxType t) => Show (Element t) where
+    show (EBox b) = "E" ++ show b
+    show (EGlue g) = "E" ++ show g
+    show (EPenalty p) = "E" ++ show p
+
+type HElement = Element H
+type VElement = Element V
+\end{code}

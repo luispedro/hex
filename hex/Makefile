@@ -10,7 +10,9 @@ SOURCES :=  Chars.lhs \
             Linebreak.lhs \
             Boxes.lhs \
             Output.lhs \
-            Fonts.lhs
+            Fonts.lhs \
+            Environment.lhs \
+            Modes.lhs
 
 hex: Main.lhs $(SOURCES)
 	ghc --make -O2 $^ -o $@

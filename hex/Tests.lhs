@@ -14,6 +14,8 @@ import Tokens
 import String
 import Macros
 import Linebreak
+import Modes (vMode, paragraph)
+import Environment (startenv)
 \end{code}
 
 Little helper function
@@ -50,7 +52,8 @@ test_stringnotfind = (find "abc" "012abd") ~=? Nothing
 Tests for line breaking
 
 \begin{code}
-test_paragraphs = (length $ paragraphs [PrimitiveCommand  "par"]) ~=? 1
+test_paragraphs = (length p, length r) ~=? (0,0)
+        where (p,r) = (paragraph [PrimitiveCommand  "par"])
 \end{code}
 
 The main driver
