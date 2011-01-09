@@ -50,7 +50,7 @@ Now we can put down a sequence of lines easily:
 
 \begin{code}
 putlines [] = return ()
-putlines (ln:lns) = (putvbox ln) >> (putlines lns)
+putlines (ln:lns) = (putline ln) >> (putlines lns)
 \end{code}
 
 \begin{code}
