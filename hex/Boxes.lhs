@@ -1,9 +1,11 @@
 \section{Boxes}
 \begin{code}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Boxes where
 import Text.Printf
 
 import Measures
+
 \end{code}
 
 We define the basic box structure and operations on them. A box can contain a
@@ -123,11 +125,18 @@ type VElement = Element V
 A final utility function for dealing with boxes: merging them.
 
 \begin{code}
+class BoxListable a where
+    boxList :: [a] -> BoxContents
+instance BoxListable HBox where
+    boxList = HBoxList
+instance BoxListable VBox where
+    boxList = VBoxList
+
 mergeBoxes t bs = Box
             { boxType=t
             , width=(foldr1 dplus $ map width bs)
             , depth=(foldr1 dmax $ map depth bs)
             , height=(foldr1 dmax $ map height bs)
-            , boxContents=(HBoxList $ bs)
+            , boxContents=(boxList bs)
             }
 \end{code}
