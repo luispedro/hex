@@ -67,22 +67,6 @@ preprocessParagraph pars = pars ++
                                 , penalty minfPenalty]
 \end{code}
 
-\begin{code}
-vElementFromHList :: [B.HBox] -> B.VElement
-vElementFromHList ves = B.EBox $ B.Box
-                { B.boxType=B.V
-                , B.width=(foldr1 dplus $ map B.width ves)
-                , B.depth=(foldr1 dmax $ map B.depth ves)
-                , B.height=(foldr1 dmax $ map B.height ves)
-                , B.boxContents=(B.HBoxList ves)
-                }
-
-toBoxes = catMaybes . (map toBox)
-    where
-        toBox (B.EBox b) = Just b
-        toBox (B.EGlue g) = Just spaceBox
-        toBox _ = Nothing
-\end{code}
 
 
 In order to break up lines \emph{only at word boundaries}, we merge words
@@ -107,9 +91,9 @@ Now we come to the main function: \code{breakParagraphIntoLines}. It currently
 uses the \emph{first fit} algorithm.
 
 \begin{code}
-breakParagraphIntoLines :: Dimen -> [B.HElement] -> [B.VElement]
+breakParagraphIntoLines :: Dimen -> [B.HElement] -> [B.VBox]
 breakParagraphIntoLines _ [] = []
-breakParagraphIntoLines lineWidth les = (vElementFromHList $ toBoxes first):(breakParagraphIntoLines lineWidth rest)
+breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes first):(breakParagraphIntoLines lineWidth rest)
     where
         (first,rest) = splitAt (firstLine zeroDimen les) les
         firstLine _ [] = 0
@@ -118,12 +102,16 @@ breakParagraphIntoLines lineWidth les = (vElementFromHList $ toBoxes first):(bre
             | n' > lineWidth = 0
             | otherwise = 1 + (firstLine n' les)
             where n' = (n `dplus` (leWidth le))
+        toBoxes = catMaybes . (map toBox)
+        toBox (B.EBox b) = Just b
+        toBox (B.EGlue g) = Just spaceBox
+        toBox _ = Nothing
 \end{code}
 
 The interface function is \code{breakintolines}:
 
 \begin{code}
-breakintolines :: Dimen -> [B.HElement] -> [B.VElement]
+breakintolines :: Dimen -> [B.HElement] -> [B.VBox]
 breakintolines lw ls = breakParagraphIntoLines lw $ concatenatewords ls
 \end{code}
 

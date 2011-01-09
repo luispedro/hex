@@ -1,18 +1,20 @@
 all: hex hextest dvidecode
 .PHONY: all clean
 
-SOURCES :=  Chars.lhs \
-            Tokens.lhs \
-            Macros.lhs \
-            String.lhs \
-            LoadPL.lhs \
-            DVI.lhs \
-            Linebreak.lhs \
+SOURCES :=  \
             Boxes.lhs \
-            Output.lhs \
-            Fonts.lhs \
+			Chars.lhs \
+            DVI.lhs \
             Environment.lhs \
-            Modes.lhs
+            Fonts.lhs \
+            Linebreak.lhs \
+            LoadPL.lhs \
+            Macros.lhs \
+            Modes.lhs \
+			PageBreak.lhs \
+            Output.lhs \
+            String.lhs \
+            Tokens.lhs
 
 hex: Main.lhs $(SOURCES)
 	ghc --make -O2 $^ -o $@

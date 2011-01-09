@@ -64,7 +64,7 @@ paragraph cs = (par',rest')
 \end{code}
 
 \begin{code}
-hMode :: E.Environment -> [Command] -> [VElement]
+hMode :: E.Environment -> [Command] -> [VBox]
 hMode env [] = []
 hMode env cs = (breakintolines linewidth firstParagraph) ++ (vMode env rest)
     where

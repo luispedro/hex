@@ -20,7 +20,7 @@ one line, down:
 
 \begin{code}
 
-putvbox (EBox b) = do
+putvbox b = do
     move_down (height b)
     push
     putvboxcontent (boxContents b)
@@ -42,24 +42,31 @@ putlines (ln:lns) = (putvbox ln) >> (putlines lns)
 \end{code}
 
 \begin{code}
-
-outputBoxes :: E.Environment -> [VElement] -> B.ByteString
-outputBoxes env boxes = stream $ execState (outputBoxes' boxes) emptyStream
+putpages _ [] = return ()
+putpages env (p:ps) = (putpage p) >> (putpages env ps)
     where
         Just (E.HexDimen margintop) = E.lookup "margintop" env
         Just (E.HexDimen marginright) = E.lookup "marginright" env
-
-        outputBoxes' boxes = do
-            startfile
+        vboxes (VBoxList vb) = vb
+        putpage page = do
             newpage
             push
             move_down margintop
             move_right marginright
             defineFont cmr10
             selectFont 0
-            putboxes boxes
+            putlines $ vboxes $ boxContents page
             pop
             eop
+\end{code}
+
+\begin{code}
+
+outputBoxes :: E.Environment -> [VBox] -> B.ByteString
+outputBoxes env pages = stream $ execState (outputBoxes' pages) emptyStream
+    where
+        outputBoxes' pages = do
+            startfile
+            putpages env pages
             endfile
-        putboxes = putlines
 \end{code}

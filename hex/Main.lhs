@@ -17,6 +17,7 @@ import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
 import Environment (startenv)
+import PageBreak (breakpages)
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -32,14 +33,14 @@ chars = map (annotate plaintextable)
 tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
 breaklines = (vMode startenv) . expanded
-dvioutput = (outputBoxes startenv). breaklines
+dvioutput = (outputBoxes startenv) . (breakpages (dimenFromInches 7)) . breaklines
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
 function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 function "loadPL" = putStrLn . concat . map (++"\n") . (map show) . loadPL
-function "breaklines" = putStrLn . concat . (map (++"\n")) . (map show) . (map Boxes.boxContents) . catMaybes . (map asBox) . breaklines
+function "breaklines" = putStrLn . concat . (map (++"\n")) . (map show) . (map Boxes.boxContents) . breaklines
 function "dvioutput" = B.putStr . dvioutput
 
 asBox (Boxes.EBox b) = Just b
