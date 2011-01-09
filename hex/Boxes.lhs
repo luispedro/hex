@@ -29,11 +29,13 @@ instance BoxType V where
 \begin{code}
 data BoxContents = TextContent String
                     | Kern Dimen
-                    | BoxList [BoxContents] deriving (Eq)
+                    | VBoxList [VBox]
+                    | HBoxList [HBox] deriving (Eq)
 instance Show BoxContents where
     show (TextContent str) = str
     show (Kern d) = " "
-    show (BoxList bcs) = concat $ map show bcs
+    show (HBoxList bcs) = concat $ map (show . boxContents) bcs
+    show (VBoxList bcs) = concat $ map (show . boxContents) bcs
 
 typesetChar c = TextContent [c]
 \end{code}
@@ -126,6 +128,6 @@ mergeBoxes t bs = Box
             , width=(foldr1 dplus $ map width bs)
             , depth=(foldr1 dmax $ map depth bs)
             , height=(foldr1 dmax $ map height bs)
-            , boxContents=(BoxList $ map boxContents bs)
+            , boxContents=(HBoxList $ bs)
             }
 \end{code}

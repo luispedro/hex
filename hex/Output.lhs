@@ -29,7 +29,7 @@ putvbox (EBox b) = do
     where
         putvboxcontent (TextContent s) = putstr s
         putvboxcontent (Kern d) = move_right d
-        putvboxcontent (BoxList bs) = putvboxcontentmany bs
+        putvboxcontent (HBoxList bs) = putvboxcontentmany $ map boxContents bs
         putvboxcontentmany [] = return ()
         putvboxcontentmany (b:bs) = (putvboxcontent b) >> (putvboxcontentmany bs)
 \end{code}

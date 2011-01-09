@@ -74,7 +74,7 @@ vElementFromHList ves = B.EBox $ B.Box
                 , B.width=(foldr1 dplus $ map B.width ves)
                 , B.depth=(foldr1 dmax $ map B.depth ves)
                 , B.height=(foldr1 dmax $ map B.height ves)
-                , B.boxContents=(B.BoxList $ map B.boxContents ves)
+                , B.boxContents=(B.HBoxList ves)
                 }
 
 toBoxes = catMaybes . (map toBox)
