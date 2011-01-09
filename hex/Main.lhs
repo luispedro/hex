@@ -10,7 +10,6 @@ import Data.Maybe
 
 import Chars (annotate, plaintextable)
 import qualified Boxes
-import Boxes (typeset)
 import Tokens (chars2tokens)
 import Macros (expand, plaintexenv)
 import LoadPL (loadPL)
@@ -40,7 +39,7 @@ function "chars" = putStrLn . concat . (map show) . chars
 function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 function "loadPL" = putStrLn . concat . map (++"\n") . (map show) . loadPL
-function "breaklines" = putStrLn . concat . (map (++"\n")) . (map typeset) . (map Boxes.boxContents) . catMaybes . (map asBox) . breaklines
+function "breaklines" = putStrLn . concat . (map (++"\n")) . (map show) . (map Boxes.boxContents) . catMaybes . (map asBox) . breaklines
 function "dvioutput" = B.putStr . dvioutput
 
 asBox (Boxes.EBox b) = Just b

@@ -35,9 +35,6 @@ lePenalty (B.EPenalty p) = B.value p
 leFlag (B.EBox _) = False
 leFlag (B.EGlue _) = False
 leFlag (B.EPenalty p) = B.flag p
-leTypeset (B.EBox hb) = B.typeset $ B.boxContents hb
-leTypeset (B.EGlue g) = " "
-leTypeset (B.EPenalty p) = ""
 \end{code}
 
 We now define some basic constants: a space and infinite and minus-infinite

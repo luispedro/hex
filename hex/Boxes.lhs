@@ -30,8 +30,10 @@ instance BoxType V where
 data BoxContents = TextContent String
                     | Kern Dimen
                     | BoxList [BoxContents] deriving (Eq)
-typeset (TextContent str) = str
-typeset (BoxList bcs) = concat $ map typeset bcs
+instance Show BoxContents where
+    show (TextContent str) = str
+    show (Kern d) = " "
+    show (BoxList bcs) = concat $ map show bcs
 
 typesetChar c = TextContent [c]
 \end{code}
