@@ -20,6 +20,9 @@ isVCommand _ = False
 isHCommand = not . isVCommand
 \end{code}
 
+The two modes are intertwined. Switching to a different mode is simply a tail
+call to the other mode.
+
 \begin{code}
 vMode env [] = []
 vMode env cs@((PrimitiveCommand seq):_)
@@ -28,7 +31,18 @@ vMode env cs = hMode env cs
 \end{code}
 
 \begin{code}
-vMode1 env ((PrimitiveCommand "vthree"):cs) = vMode env cs
+vMode1 env ((PrimitiveCommand "vspace"):cs) = vMode env cs
+\end{code}
+
+\code{hMode'} is \emph{restricted horizontal mode}: it produces a list of
+HBoxes from a list of commands that are guaranteed to be h-commands.
+
+\begin{code}
+hMode' :: [Command] -> [HElement]
+hMode' = concatenatewords . map toHElement
+    where
+        toHElement (CharCommand ' ') = EGlue spaceGlue
+        toHElement (CharCommand c) = EBox $ charBox c
 \end{code}
 
 We begin by breaking a sequence of commands into paragraphs. \code{paragraph}
@@ -49,50 +63,11 @@ paragraph cs = (par',rest')
         isParagraphBreak _ = False
 \end{code}
 
-\code{hMode'} is \emph{restricted horizontal mode}: it produces a stream of
-HBoxes.
-
-\begin{code}
-hMode' :: [Command] -> [HElement]
-hMode' = concatenatewords . map toHElement
-    where
-        toHElement (CharCommand ' ') = EGlue spaceGlue
-        toHElement (CharCommand c) = EBox $ charBox c
-\end{code}
-In order to break up lines \emph{only at word boundaries}, we merge words
-(sequences of \code{HBox}es separated by \code{Glue} elements) into single
-boxes (words). This is independent of what the words actually consist of (e.g.,
-they may contain symbols or other non-alphabetic elements).
-
-\begin{code}
-concatenatewords [] = []
-concatenatewords (le@(EGlue g):les) = (le:concatenatewords les)
-concatenatewords cs = (first:concatenatewords rest)
-    where
-        (firstelems,rest) = break (not . isBox) cs
-        first = merge $ map getBox firstelems
-        getBox (EBox b) = b
-        merge bs = EBox $ Box
-                        { boxType=H
-                        , width=(foldr1 dplus $ map width bs)
-                        , depth=(foldr1 dmax $ map depth bs)
-                        , height=(foldr1 dmax $ map height bs)
-                        , boxContents=(BoxList $ map boxContents bs)
-                        }
-        isBox (EBox _) = True
-        isBox _ = False
-\end{code}
-
-\end{code}
-
 \begin{code}
 hMode :: E.Environment -> [Command] -> [VElement]
 hMode env [] = []
-hMode env cs = (breakParagraphIntoLines linewidth firstParagraph) ++ (vMode env rest)
+hMode env cs = (breakintolines linewidth firstParagraph) ++ (vMode env rest)
     where
         (firstParagraph, rest) = paragraph cs
         Just (E.HexDimen linewidth) = E.lookup "textwidth" env
 \end{code}
-
-Finally, we put it all together: input is a sequence of commands and output is
-a sequence of lines.

@@ -87,6 +87,25 @@ toBoxes = catMaybes . (map toBox)
         toBox _ = Nothing
 \end{code}
 
+
+In order to break up lines \emph{only at word boundaries}, we merge words
+(sequences of \code{HBox}es separated by \code{Glue} elements) into single
+boxes (words). This is independent of what the words actually consist of (e.g.,
+they may contain symbols or other non-alphabetic elements).
+
+\begin{code}
+concatenatewords [] = []
+concatenatewords (le@(B.EGlue g):les) = (le:concatenatewords les)
+concatenatewords cs = (first:concatenatewords rest)
+    where
+        (firstelems,rest) = break (not . isBox) cs
+        first = merge $ map getBox firstelems
+        getBox (B.EBox b) = b
+        merge bs = B.EBox $ B.mergeBoxes B.H bs
+        isBox (B.EBox _) = True
+        isBox _ = False
+\end{code}
+
 Now we come to the main function: \code{breakParagraphIntoLines}. It currently
 uses the \emph{first fit} algorithm.
 
@@ -102,5 +121,12 @@ breakParagraphIntoLines lineWidth les = (vElementFromHList $ toBoxes first):(bre
             | n' > lineWidth = 0
             | otherwise = 1 + (firstLine n' les)
             where n' = (n `dplus` (leWidth le))
+\end{code}
+
+The interface function is \code{breakintolines}:
+
+\begin{code}
+breakintolines :: Dimen -> [B.HElement] -> [B.VElement]
+breakintolines lw ls = breakParagraphIntoLines lw $ concatenatewords ls
 \end{code}
 

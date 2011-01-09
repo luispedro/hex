@@ -115,3 +115,15 @@ instance (BoxType t) => Show (Element t) where
 type HElement = Element H
 type VElement = Element V
 \end{code}
+
+A final utility function for dealing with boxes: merging them.
+
+\begin{code}
+mergeBoxes t bs = Box
+            { boxType=t
+            , width=(foldr1 dplus $ map width bs)
+            , depth=(foldr1 dmax $ map depth bs)
+            , height=(foldr1 dmax $ map height bs)
+            , boxContents=(BoxList $ map boxContents bs)
+            }
+\end{code}
