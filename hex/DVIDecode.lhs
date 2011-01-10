@@ -122,6 +122,12 @@ decode (158:d0:d1:ds) = (("down2" ++ (build2 d0 d1)):decode ds)
 decode (159:d0:d1:d2:ds) = (("down3" ++ (build3 d0 d1 d2)):decode ds)
 decode (160:d0:d1:d2:d3:ds) = (("down4" ++ (build4 d0 d1 d2 d3)):decode ds)
 
+decode (161:ds) = ("y0":decode ds)
+decode (162:d0:ds) = (("y1" ++ (build1 d0)):decode ds)
+decode (163:d0:d1:ds) = (("y2" ++ (build2 d0 d1)):decode ds)
+decode (164:d0:d1:d2:ds) = (("y3" ++ (build3 d0 d1 d2)):decode ds)
+decode (165:d0:d1:d2:d3:ds) = (("y4" ++ (build4 d0 d1 d2 d3)):decode ds)
+
 decode (d:ds)
     | d >= 171 && d < (171 + 64) = (("fnt_num" ++ (build1 (d-171))):decode ds)
     -- 171 + 64 = 235
