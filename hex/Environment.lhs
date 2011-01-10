@@ -78,12 +78,15 @@ currentFont = lookup "currentfont"
 To start with, we have an environment with the textwidth register set. In the
 future, this should be done in a hex startup file.
 
+DVI already has a $1''$ right and $1''$ top margin by default, so we do not
+need to add to this and set our margins to zero.
+
 \begin{code}
 startenv inputfont =
         globalinsert "currentfont" (HexFontInfo (loadPL inputfont)) $
         globalinsert "textwidth" (HexDimen (dimenFromInches 6)) $
-        globalinsert "margintop" (HexDimen (dimenFromInches 1)) $
-        globalinsert "marginright" (HexDimen (dimenFromInches 1)) $
+        globalinsert "margintop" (HexDimen zeroDimen) $
+        globalinsert "marginright" (HexDimen zeroDimen) $
         empty
 \end{code}
 
