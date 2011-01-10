@@ -28,6 +28,10 @@ instance Show GliphMetric where
                 ++ ", dp: " ++ (show $ depth g)
                 ++ ", ic: " ++ (show $ italicCorrection g)
                 ++ "]"
+
+data FontInfo = FontInfo [GliphMetric]
+instance Show FontInfo where
+    show (FontInfo fi) = concat $ map ((++"\n") . show) fi
 \end{code}
 
 The main function is converting a single S-expression to a \code{GliphMetric}
@@ -75,7 +79,7 @@ Now just need to call the \code{readGliphInformation} function for each
 S-expression.
 
 \begin{code}
-loadPL str = catMaybes $ (map (readGliphInformation designsize)) $ breakIntoSExpressions str
+loadPL str = FontInfo $ catMaybes $ (map (readGliphInformation designsize)) $ breakIntoSExpressions str
     where
         designsize = retrieveDesignSize $ breakIntoSExpressions str
 \end{code}

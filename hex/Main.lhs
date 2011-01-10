@@ -39,7 +39,7 @@ function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
 function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
-function "loadPL" = putStrLn . concat . map (++"\n") . (map show) . loadPL
+function "loadPL" = putStrLn . show . loadPL
 function "breaklines" = putStrLn . concat . (map (++"\n")) . (map show) . (map Boxes.boxContents) . breaklines
 function "dvioutput" = B.putStr . dvioutput
 
