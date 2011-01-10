@@ -57,14 +57,6 @@ type VBox = Box V
 
 instance (BoxType b) => Show (Box b) where
     show (Box t h d w _) = printf "%sB[[h(%s)d(%s)w(%s)]]" (codefor t) (show h) (show d) (show w)
-
-charBox c = Box
-        { boxType=H
-        , height=(dimenFromPoints 18)
-        , width=(dimenFromPoints 12)
-        , depth=(dimenFromPoints 18)
-        , boxContents=typesetChar c
-        }
 \end{code}
 
 We also define ``glue'' here (as D.~E. Knuth himself points out, this should

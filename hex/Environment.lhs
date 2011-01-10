@@ -5,6 +5,7 @@ module Environment where
 import qualified Data.Map as M
 import Prelude hiding (lookup)
 
+import LoadPL (FontInfo, loadPL)
 import Measures
 \end{code}
 
@@ -16,6 +17,7 @@ The environment holds a sort of variant type, \code{HexType}:
 data HexType =
         HexDimen Dimen
         | HexString String
+        | HexFontInfo FontInfo
 
 \end{code}
 
@@ -67,11 +69,18 @@ globalinsert name val (e:[]) = [M.insert name val e]
 globalinsert name val (e:es) = (e:(globalinsert name val es))
 \end{code}
 
+We define a few special names by coding them in functions:
+
+\begin{code}
+currentFont = lookup "currentfont"
+\end{code}
+
 To start with, we have an environment with the textwidth register set. In the
 future, this should be done in a hex startup file.
 
 \begin{code}
-startenv =
+startenv inputfont =
+        globalinsert "currentfont" (HexFontInfo (loadPL inputfont)) $
         globalinsert "textwidth" (HexDimen (dimenFromInches 6)) $
         globalinsert "margintop" (HexDimen (dimenFromInches 1)) $
         globalinsert "marginright" (HexDimen (dimenFromInches 1)) $

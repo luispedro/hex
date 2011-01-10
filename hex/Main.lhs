@@ -32,16 +32,22 @@ table maps strings to these functions.
 chars = map (annotate plaintextable)
 tokens = chars2tokens . chars
 expanded = (expand plaintexenv) . tokens 
-breaklines = (vMode startenv) . expanded
-dvioutput = (outputBoxes startenv) . (breakpages (dimenFromInches 7)) . breaklines
+breaklines fontinfo = (vMode (startenv fontinfo)) . expanded
+dvioutput fontinfo = (outputBoxes (startenv fontinfo)) . (breakpages (dimenFromInches 7)) . (breaklines fontinfo)
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
 function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 function "loadPL" = putStrLn . show . loadPL
-function "breaklines" = putStrLn . concat . (map (++"\n")) . (map show) . (map Boxes.boxContents) . breaklines
-function "dvioutput" = B.putStr . dvioutput
+
+function "breaklines" = \input -> do
+    fontinfo <- readFile "data/cmr10.pl"
+    putStrLn $ concat $ (map (++"\n")) $ (map show) $ (map Boxes.boxContents) $ breaklines fontinfo input
+function "dvioutput" = \input -> do
+    fontinfo <- readFile "data/cmr10.pl"
+    B.putStr $ dvioutput fontinfo input
+
 
 asBox (Boxes.EBox b) = Just b
 asBox _ = Nothing

@@ -53,7 +53,7 @@ Tests for line breaking
 
 \begin{code}
 test_paragraphs = (length p, length r) ~=? (0,0)
-        where (p,r) = (paragraph [PrimitiveCommand  "par"])
+        where (p,r) = (paragraph undefined [PrimitiveCommand  "par"])
 \end{code}
 
 The main driver

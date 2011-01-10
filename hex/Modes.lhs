@@ -4,6 +4,7 @@ module Modes where
 
 import qualified Environment as E
 
+import LoadPL (fixToFloat, widthHeightDepth)
 import Tokens
 import Macros
 import Measures
@@ -38,23 +39,30 @@ vMode1 env ((PrimitiveCommand "vspace"):cs) = vMode env cs
 HBoxes from a list of commands that are guaranteed to be h-commands.
 
 \begin{code}
-hMode' :: [Command] -> [HElement]
-hMode' = concatenatewords . map toHElement
+hMode' :: E.Environment -> [Command] -> [HElement]
+hMode' e = concatenatewords . map toHElement
     where
+        Just (E.HexFontInfo fnt) = E.currentFont e
         toHElement (CharCommand ' ') = EGlue spaceGlue
-        toHElement (CharCommand c) = EBox $ charBox c
+        toHElement (CharCommand c) = EBox $ Box
+                                { boxType=H
+                                , width=(dimenFromPoints (round $ fixToFloat w))
+                                , height=(dimenFromPoints (round $ fixToFloat h))
+                                , depth=(dimenFromPoints (round $ fixToFloat d))
+                                , boxContents=typesetChar c
+                                } where (w,h,d) = widthHeightDepth fnt c
 \end{code}
 
 We begin by breaking a sequence of commands into paragraphs. \code{paragraph}
 gets a single paragraph.
 
 \begin{code}
-paragraph :: [Command] -> ([HElement],[Command])
-paragraph [] = ([],[])
-paragraph cs = (par',rest')
+paragraph :: E.Environment -> [Command] -> ([HElement],[Command])
+paragraph _ [] = ([],[])
+paragraph e cs = (par',rest')
     where
         (par, rest) = break isParagraphBreak cs
-        par' = hMode' par
+        par' = hMode' e par
         rest' = case rest of
                     ((PrimitiveCommand "par"):rs) -> rs
                     _ -> rest
@@ -68,6 +76,6 @@ hMode :: E.Environment -> [Command] -> [VBox]
 hMode env [] = []
 hMode env cs = (breakintolines linewidth firstParagraph) ++ (vMode env rest)
     where
-        (firstParagraph, rest) = paragraph cs
+        (firstParagraph, rest) = paragraph env cs
         Just (E.HexDimen linewidth) = E.lookup "textwidth" env
 \end{code}
