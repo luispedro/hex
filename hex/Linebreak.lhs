@@ -43,12 +43,12 @@ do not worry about that for now.
 
 \begin{code}
 spaceEGlue = B.EGlue $ B.spaceGlue
-spaceBox = B.Box
+fixGlue (B.Glue _ s _ _)= B.Box
                 { B.boxType=B.H
-                , B.width=(dimenFromPoints 12)
-                , B.depth=(dimenFromPoints 0)
-                , B.height=(dimenFromPoints 0)
-                , B.boxContents=(B.Kern $ dimenFromPoints 12)
+                , B.width=s
+                , B.depth=zeroDimen
+                , B.height=zeroDimen
+                , B.boxContents=(B.Kern s)
                 }
 penalty p = B.EPenalty $ B.Penalty B.H p False
 infPenalty = 10000
@@ -104,7 +104,7 @@ breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes first):(brea
             where n' = (n `dplus` (leWidth le))
         toBoxes = catMaybes . (map toBox)
         toBox (B.EBox b) = Just b
-        toBox (B.EGlue g) = Just spaceBox
+        toBox (B.EGlue g) = Just $ fixGlue g
         toBox _ = Nothing
 \end{code}
 
