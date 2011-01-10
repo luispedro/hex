@@ -215,7 +215,7 @@ tex_den = 473628672 :: Integer
 tex_mag = 1000 :: Integer
 
 pointsTointernal :: Integer -> Integer
-pointsTointernal p = round $ (p % 1) * (tex_den % tex_num)*(tex_mag % 1)
+pointsTointernal = (* (256*256))
 \end{code}
 
 There are two parameters that I'm still not sure how to compute, so I'll just
