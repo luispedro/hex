@@ -6,8 +6,8 @@ import qualified Data.ByteString.Lazy as B
 import Control.Monad.State
 
 import qualified Environment as E
+import qualified Fonts as F
 import Boxes
-import Fonts
 import DVI
 import Measures
 import Linebreak
@@ -53,7 +53,7 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
             push
             move_down margintop
             move_right marginright
-            defineFont cmr10
+            defineFont F.cmr10
             selectFont 0
             putlines $ vboxes $ boxContents page
             pop

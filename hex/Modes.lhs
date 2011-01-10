@@ -3,8 +3,7 @@
 module Modes where
 
 import qualified Environment as E
-
-import LoadPL (fixToFloat, widthHeightDepth)
+import qualified Fonts as F
 import Tokens
 import Macros
 import Measures
@@ -43,14 +42,16 @@ hMode' :: E.Environment -> [Command] -> [HElement]
 hMode' e = concatenatewords . map toHElement
     where
         Just (E.HexFontInfo fnt) = E.currentFont e
-        toHElement (CharCommand ' ') = EGlue spaceGlue
+        (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
+        f2d = dimenFromPoints . round . F.fixToFloat
+        toHElement (CharCommand ' ') = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr)
         toHElement (CharCommand c) = EBox $ Box
                                 { boxType=H
-                                , width=(dimenFromPoints (round $ fixToFloat w))
-                                , height=(dimenFromPoints (round $ fixToFloat h))
-                                , depth=(dimenFromPoints (round $ fixToFloat d))
+                                , width=(f2d w)
+                                , height=(f2d h)
+                                , depth=(f2d d)
                                 , boxContents=typesetChar c
-                                } where (w,h,d) = widthHeightDepth fnt c
+                                } where (w,h,d) = F.widthHeightDepth fnt c
 \end{code}
 
 We begin by breaking a sequence of commands into paragraphs. \code{paragraph}

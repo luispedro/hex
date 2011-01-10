@@ -5,7 +5,8 @@ module Environment where
 import qualified Data.Map as M
 import Prelude hiding (lookup)
 
-import LoadPL (FontInfo, loadPL)
+import LoadPL (loadPL)
+import Fonts
 import Measures
 \end{code}
 
