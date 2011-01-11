@@ -1,10 +1,13 @@
+\section{Tokens}
+\begin{code}
+module Tokens where
+import Chars
+\end{code}
+
 Tokens are the next level after annotated characters. A Token is either a
 control sequence or an annotated character.
 
 \begin{code}
-module Tokens where
-import Chars
-
 data Token = ControlSequence String | CharToken TypedChar
 instance Show Token where
     show (ControlSequence name) = "[\\" ++ name ++ "]"
@@ -79,6 +82,5 @@ a list of \code{Token}s.
 \begin{code}
 chars2tokens :: [TypedChar] -> [Token]
 chars2tokens = sN . (filter ((/= Ignored) . category))
-
 \end{code}
 
