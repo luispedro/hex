@@ -4,6 +4,7 @@ module Modes where
 
 import qualified Environment as E
 import qualified Fonts as F
+import Chars
 import Tokens
 import Macros
 import Measures
@@ -44,8 +45,8 @@ hMode' e = concatenatewords . map toHElement
         Just (E.HexFontInfo fnt) = E.currentFont e
         (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
         f2d = dimenFromPoints . round . F.fixToFloat
-        toHElement (CharCommand ' ') = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr)
-        toHElement (CharCommand c) = EBox $ Box
+        toHElement (CharCommand (TypedChar _ Space)) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr)
+        toHElement (CharCommand (TypedChar c cat)) = EBox $ Box
                                 { boxType=H
                                 , width=(f2d w)
                                 , height=(f2d h)

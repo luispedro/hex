@@ -15,17 +15,19 @@ After expansion, we no longer have tokens: we have commands. For the moment, we
 have only very simple commands:
 
 \begin{code}
-data Command = CharCommand Char | PrimitiveCommand String
+data Command = CharCommand TypedChar | PrimitiveCommand String
 
 fromToken (ControlSequence seq) = PrimitiveCommand seq
-fromToken (CharToken tc) = CharCommand $ value tc
+fromToken (CharToken tc) = CharCommand tc
 
 toToken (PrimitiveCommand c) = ControlSequence c
-toToken (CharCommand c) = CharToken $ TypedChar c Letter
+toToken (CharCommand tc) = CharToken tc
 
 instance Show Command where
     show (PrimitiveCommand cmd) = "<\\" ++ cmd ++ ">"
-    show (CharCommand c) = ['<',c,'>']
+    show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
+    show (CharCommand (TypedChar _ Space)) = "< >"
+    show (CharCommand tc) = "<" ++ show tc ++ ">"
 \end{code}
 
 Our implementation of macros is very simple: they are lists of functions. So for example
