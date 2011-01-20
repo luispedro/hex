@@ -126,7 +126,7 @@ expand env (t@(ControlSequence seq):ts)
 
 Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
 difference is whether the \code{substitution} is the code that was presently
-directly or whether it's its expansion.
+directly or its expansion.
 
 \begin{code}
 expand env (t@(ControlSequence seq):ts)
