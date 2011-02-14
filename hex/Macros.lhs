@@ -9,6 +9,8 @@ import qualified Data.Map as Map
 
 import Tokens
 import Chars
+import CharStream
+
 \end{code}
 
 After expansion, we no longer have tokens: we have commands. For the moment, we
@@ -71,6 +73,8 @@ primitives =
     ["par"
     ,"hbox"
     ,"vbox"
+    ,"relax"
+    ,"bye"
     ]
 isprimitive = (`elem` primitives)
 \end{code}
@@ -169,6 +173,24 @@ expand' env t@(ControlSequence "expandafter") st = expand env $ streampush rest 
         where
             (guard, afterguard) = gettoken st
             rest = expand1 env afterguard
+\end{code}
+
+Manipulation of catcodes is performed here:
+
+\begin{code}
+expand' env (ControlSequence "catcode") st = expand env altered
+    where
+        (t, r0) = readChar st
+        char = tvalue t
+        (eq,r1) = gettoken r0
+        (nvalue, r2) = readNumber r1
+        altered = updateCharStream r2 $ catcode char nvalue
+        catcode c v st@TypedCharStream{table=t} = st{table=(Map.insert c (categoryCode v) t)}
+        readNumber st = let (ts, r) = gettokentil st (not . (`elem` "0123456789") . tvalue) in (read $ map tvalue ts, r)
+        readChar = gettoken . droptoken
+        tvalue (CharToken tc) = value tc
+        tvalue (ControlSequence [c]) = c
+        tvalue _ = '\0'
 \end{code}
 
 Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
