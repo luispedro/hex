@@ -1,5 +1,3 @@
-For the moment, a simple driver for Char.annotate.
-
 \begin{code}
 module Main where
 
