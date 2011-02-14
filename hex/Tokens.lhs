@@ -108,11 +108,25 @@ data TokenStream = TokenStream
 newTokenStream :: TypedCharStream -> TokenStream
 newTokenStream cs = TokenStream cs sN []
 
+\end{code}
+
+The main function of this module is \code{gettoken}, which returns a pair
+\code{(Token, TokenStream)}. This could easily be modified into a Monadic
+interface.
+
+\begin{code}
+
 gettoken st | emptyTokenStream st = error "hex.Tokens.gettoken: empty stream"
 gettoken tSt@TokenStream{queue=(t:ts)} = (t,tSt{queue=ts})
 gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} =
     gettoken tSt{charsource=st',state=s',queue=q}
         where (q,st',s') = applyStateFunction s st
+
+\end{code}
+
+To get a few tokens in a row, we can call \code{gettokentil}
+
+\begin{code}
 
 gettokentil st cond
     | emptyTokenStream st = ([], st)
@@ -131,6 +145,12 @@ emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
     | otherwise = (((length q) == 0) && emptyStream st')
         where (q,st',s') = applyStateFunction s st
+\end{code}
+
+We also add a function to manipulate the underlying stream:
+
+\begin{code}
+updateCharStream t@TokenStream{charsource=s} f = t{charsource=(f s)}
 \end{code}
 
 We add a simple helper function:
