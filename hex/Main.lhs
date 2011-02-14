@@ -3,21 +3,24 @@ For the moment, a simple driver for Char.annotate.
 \begin{code}
 module Main where
 
+import qualified Data.Map as Map
 import System.Environment
 import qualified Data.ByteString.Lazy as B
 import Data.Char
 import Data.Maybe
 
-import Chars (annotate, plaintextable)
+import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
-import Tokens (chars2tokens)
-import Macros (expand, plaintexenv)
+import Tokens
+import Macros (expand, emptyenv)
 import LoadPL (loadPL)
 import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
-import Environment (startenv)
+import Environment (loadfont)
 import PageBreak (breakpages)
+
+import Defaults (startenv, plaintexenv)
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -29,11 +32,12 @@ input file (as a string) and produces an output string. The \var{function}
 table maps strings to these functions.
 
 \begin{code}
-chars = map (annotate plaintextable)
-tokens = chars2tokens . chars
-expanded = (expand plaintexenv) . tokens 
-breaklines fontinfo = (vMode (startenv fontinfo)) . expanded
-dvioutput fontinfo = (outputBoxes (startenv fontinfo)) . (breakpages (dimenFromInches 7)) . (breaklines fontinfo)
+chars = map (annotate plaintexenv)
+tokens = chars2tokens
+expanded str = expand emptyenv $ newTokenStream $ TypedCharStream plaintexenv str
+breaklines env = (vMode env) . expanded
+dvioutput fontinfo = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (breaklines env)
+    where env = loadfont fontinfo startenv
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
@@ -43,7 +47,8 @@ function "loadPL" = putStrLn . show . loadPL
 
 function "breaklines" = \input -> do
     fontinfo <- readFile "data/cmr10.pl"
-    putStrLn $ concat $ (map (++"\n")) $ (map show) $ (map Boxes.boxContents) $ breaklines fontinfo input
+    putStrLn $ concat $ (map (++"\n")) $ (map show) $ (map Boxes.boxContents) $ breaklines (loadfont fontinfo startenv) input
+
 function "dvioutput" = \input -> do
     fontinfo <- readFile "data/cmr10.pl"
     B.putStr $ dvioutput fontinfo input

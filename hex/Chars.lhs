@@ -7,13 +7,6 @@ module Chars where
 Each character, after being read by the parser acquires a character code. In
 TeX, the character codes are all numeric, we will work internally with names.
 
-Character codes are defined by a table that the user can manipulate. This table
-obeys namespace rules. For now, we will just represent the table as a Data.Map:
-
-\begin{code}
-import qualified Data.Map as Map
-\end{code}
-
 We now define the categories.
 
 \begin{code}
@@ -112,43 +105,3 @@ our own function.
 instance Show TypedChar where
     show TypedChar{value=c, category=cat} = [c] ++ "(" ++ (show $ codeCategory cat) ++ ")"
 \end{code}
-
-We now define the central function of this module, which is a trivial function.
-
-\begin{code}
-annotate :: Map.Map Char CharCategory -> Char -> TypedChar
-\end{code}
-
-The reason it takes the table as its \emph{first} argument is that it makes it
-easier to curry.
-
-\begin{code}
-annotate table c = TypedChar{value=c, category=cat}
-    where cat = Map.findWithDefault Other c table
-\end{code}
-
-The plaintex table needs to be defined in code, at least in part. Some of it
-could be defined in HeX code if we have enough to correctly parse \\chardef.
-
-This is a ASCII only implementation (at least in the sense that only the
-non-accented 26 English letters are tagged as letters). For fuller unicode
-support, this might need to be extended in the future.
-
-\begin{code}
-plaintextable = Map.fromList $ [('\\', Escape)
-                         ,('{', BeginGroup)
-                         ,('}', EndGroup)
-                         ,('$', MathShift)
-                         ,('&', AlignmentTab)
-                         ,('\n', EOL)
-                         ,('#', Parameter)
-                         ,('^', Superscript)
-                         ,('_', SubScript)
-                         ,('\0', Ignored)
-                         ,(' ', Space)
-                         ,('~', Active)
-                         ,('%', Comment)
-                         ,('\8', Invalid)
-                         ] ++ map (\c -> (c, Letter)) "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-\end{code}
-

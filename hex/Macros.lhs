@@ -79,78 +79,71 @@ We need a few helper functions. \code{gettokenorgroup} retrieves the next
 \emph{token} or, if it is an enclosed group, it retrieves it as a list.
 
 \begin{code}
-gettokenorgroup :: [Token] -> ([Token], [Token])
-gettokenorgroup [] = error "hex.gettokenorgroup end of file"
-gettokenorgroup ((CharToken tc):ts)
-    | (category tc) == BeginGroup = breakAtGroupEnd 0 ts
-gettokenorgroup (t:ts) = ([t],ts)
-
-breakAtGroupEnd :: Integer -> [Token] -> ([Token], [Token])
-breakAtGroupEnd _ [] = error "hex.breakAtGroupEnd: unexpected end of file."
-breakAtGroupEnd 0 ((CharToken tc):ts)
-    | (category tc) == EndGroup = ([],ts)
-breakAtGroupEnd n (t:ts) = (t:ts',rest)
+gettokenorgroup :: TokenStream -> ([Token], TokenStream)
+gettokenorgroup st | emptyTokenStream st = error "hex.gettokenorgroup end of file"
+gettokenorgroup st = let (c,r) = gettoken st in gettokenorgroup' c r
     where
-        (ts',rest) = breakAtGroupEnd n' ts
-        n' = case (tokenCategory t) of
-            EndGroup -> n - 1
-            BeginGroup -> n + 1
-            _ -> n
-        tokenCategory (CharToken tc) = category tc
-        tokenCategory _ = Invalid -- It doesn't matter what
+        gettokenorgroup' (CharToken tc) r
+            | (category tc) == BeginGroup = breakAtGroupEnd 0 r
+        gettokenorgroup' t r = ([t],r)
+
+breakAtGroupEnd :: Integer -> TokenStream -> ([Token], TokenStream)
+breakAtGroupEnd _ st
+    | emptyTokenStream st = error "hex.breakAtGroupEnd: unexpected end of file."
+breakAtGroupEnd n st = breakAtGroupEnd' n t st'
+    where
+        (t,st') = gettoken st
+        breakAtGroupEnd' 0 t@(CharToken tc) rest
+            | (category tc) == EndGroup = ([], rest)
+            | otherwise = let (tail, r) = breakAtGroupEnd 0 rest in (t:tail, r)
+
+        breakAtGroupEnd' n t rest = (t:tail, r)
+            where
+                (tail,r) = breakAtGroupEnd n' rest
+                n' = case tokenCategory t of
+                    BeginGroup -> n + 1
+                    EndGroup -> n - 1
+                    _ -> n
+                tokenCategory (CharToken tc) = category tc
+                tokenCategory _ = Invalid -- It doesn't matter what
 \end{code}
 
 The work horse of this module is the \code{expand1} function.
 
 \begin{code}
-expand1 :: Environment -> [Token] -> [Token]
-expand1 env ((ControlSequence seq):ts) = (concat $ map (\f -> f arguments) (expansion macro)) ++ rest
+expand1 :: Environment -> TokenStream -> TokenStream
+expand1 env st = expand1' t r
     where
-        Just macro = Map.lookup seq env
-        (arguments,rest) = getargs (nargs macro) ts
-        getargs :: Int -> [Token] -> ([[Token]], [Token])
-        getargs 0 rest = ([],rest)
-        getargs n ts = ([a]++as,rest)
+        (t,r) = gettoken st
+        expand1' (ControlSequence seq) r = streamenqueue rest expanded
             where
-                (a,rs) = gettokenorgroup ts
-                (as,rest) = getargs (n-1) rs
-expand1 env ts = ts
+                expanded = (concat $ map (\f -> f arguments) (expansion macro))
+                Just macro = Map.lookup seq env
+                (arguments,rest) = getargs (nargs macro) r
+                getargs :: Int -> TokenStream -> ([[Token]], TokenStream)
+                getargs 0 rest = ([],rest)
+                getargs n st = ([a]++as,rest)
+                    where
+                        (a,rs) = gettokenorgroup st
+                        (as,rest) = getargs (n-1) rs
+        expand' _ _ = st
 \end{code}
 \begin{code}
-expand :: Environment -> [Token] -> [Command]
-expand _ [] = []
-expand env (t@(ControlSequence seq):ts)
-    | isprimitive seq = (PrimitiveCommand seq) : (expand env ts)
-
+expand :: Environment -> TokenStream -> [Command]
+expand _ st | emptyTokenStream st = []
+expand env st = expand' env t rest
+    where (t, rest) = gettoken st
 \end{code}
 
-Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
-difference is whether the \code{substitution} is the code that was presently
-directly or its expansion.
 
 \begin{code}
-expand env (t@(ControlSequence seq):ts)
-    | (seq == "def") || (seq == "edef") = expand env' rest
-        where
-            env' = Map.insert name macro env
-            macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
-            ControlSequence name = head ts
-            (args,afterargs) = substtextstart $ tail ts
-            (substitutiontext,rest) = breakAtGroupEnd 0 $ tail afterargs
-            substitution = if seq == "def" then substitutiontext else map toToken $ expand env substitutiontext
-            substtextstart = break isBeginGroup
-            isBeginGroup (CharToken tc) = (category tc) == BeginGroup
-            isBeginGroup _ = False
-\end{code}
-
-\begin{code}
-expand env ((ControlSequence "let"):ts) = expand env' rest
+expand' env (ControlSequence "let") st = expand env' rest
     where
         env' = Map.insert name macro env
-        ControlSequence name = head ts
-        (replacement,rest) = case ts of
-                        (_:(CharToken (TypedChar '=' _)):t:rest) -> (t,rest)
-                        (t:rest) -> (t,rest)
+        (ControlSequence name,aftername) = gettoken st
+        (replacement,rest) = case gettoken aftername of
+                        ((CharToken (TypedChar '=' _)),r) -> gettoken r
+                        (t,r) -> (t,r)
         macro = case replacement of
                 (ControlSequence seq) -> case Map.lookup seq env of Just macro -> macro
                 (CharToken tc) -> Macro 0 [const [(CharToken tc)]]
@@ -159,7 +152,8 @@ expand env ((ControlSequence "let"):ts) = expand env' rest
 For dealing with \tex{\\noexpand} we add a special case to expand.
 
 \begin{code}
-expand env ((ControlSequence "noexpand"):t:ts) = (fromToken t:expand env ts)
+expand' env (ControlSequence "noexpand") st = (fromToken t:expand env r)
+    where (t,r) = gettoken st
 \end{code}
 
 \code{expandafter} is dealt in a nice way. Note that, at least in TeX, the
@@ -170,13 +164,36 @@ following leads to an error:
 \end{tex}
 
 Therefore, the environment cannot change in the inner expansion.
+\begin{code}
+expand' env t@(ControlSequence "expandafter") st = expand env $ streampush rest guard
+        where
+            (guard, afterguard) = gettoken st
+            rest = expand1 env afterguard
+\end{code}
+
+Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
+difference is whether the \code{substitution} is the code that was presently
+directly or its expansion.
 
 \begin{code}
-expand env (t@(ControlSequence seq):ts)
-    | (seq == "expandafter") = expand env $ (head ts):(expand1 env $ tail ts)
-    | otherwise = expand env $ expand1 env (t:ts)
-expand env (t:ts) = (fromToken t):(expand env ts)
+expand' env (ControlSequence seq) st
+    | isprimitive seq = (PrimitiveCommand seq) : (expand env st)
+    | (seq == "def") || (seq == "edef") = expand env' rest
+        where
+            env' = Map.insert name macro env
+            macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
+            (ControlSequence name,aftername) = gettoken st
+            (args,afterargs) = gettokentil aftername isBeginGroup
+            (substitutiontext,rest) = breakAtGroupEnd 0 $ droptoken afterargs
+            substitution = if seq == "def" then substitutiontext else map toToken $ expand env $ tokenliststream substitutiontext
+            isBeginGroup (CharToken tc) = (category tc) == BeginGroup
+            isBeginGroup _ = False
+\end{code}
 
-plaintexenv :: Environment
-plaintexenv = Map.empty
+\begin{code}
+expand' env t@(CharToken _) st = (fromToken t):(expand env st)
+expand' env t st = expand env $ expand1 env $ streampush st t
+
+emptyenv :: Environment
+emptyenv = Map.empty
 \end{code}

@@ -1,7 +1,12 @@
 \section{Tokens}
 \begin{code}
 module Tokens where
+
 import Chars
+import CharStream
+import qualified Data.Map as Map
+import Defaults (plaintexenv)
+
 \end{code}
 
 Tokens are the next level after annotated characters. A Token is either a
@@ -24,22 +29,34 @@ We start with \code{skiptoeol} which is used for comments. It skips everything,
 up to, and including, a newline.
 
 \begin{code}
-skiptoeol = tail . ( dropWhile ((/= EOL) . category) )
+skiptoeol :: TypedCharStream -> TypedCharStream
+skiptoeol st
+    | emptyStream st = st
+    | (category c) == EOL = st'
+    | otherwise = skiptoeol st'
+    where (c,st') = getchar st
 \end{code}
 
 Now, the implementation of the two easy states: S \& N.
 
 \begin{code}
-sN [] = []
-sN (c:cs)
-    | (category c) == EOL = (ControlSequence "par"):(sN cs)
-    | (category c) == Space = sN cs
-    | otherwise = sM (c:cs)
-sS [] = []
-sS (c:cs)
-    | (category c) == EOL = sN cs
-    | (category c) == Space = sS cs
-    | otherwise = sM (c:cs)
+newtype StateFunction = StateFunction ( TypedCharStream -> ([Token], TypedCharStream, StateFunction) )
+applyStateFunction (StateFunction s) st = s st
+
+sN = StateFunction sN' where
+    sN' st
+        | emptyStream st = ([],st,sN)
+        | (category c) == EOL = ([ControlSequence "par"], rest, sN)
+        | (category c) == Space = sN' rest
+        | otherwise = applyStateFunction sM st
+        where (c,rest) = getchar st
+sS = StateFunction sS' where
+    sS' st
+        | emptyStream st = ([], st, sS)
+        | (category c) == EOL = applyStateFunction sN rest
+        | (category c) == Space = applyStateFunction sS rest
+        | otherwise = applyStateFunction sM st
+        where (c,rest) = getchar st
 \end{code}
 
 \code{sM} does most of the real work of transforming \code{TypedChar}s into
@@ -54,33 +71,73 @@ The rule of what the next state is are a bit convoluted, but they're taken from
 the Texbook.
 
 \begin{code}
-sM [] = []
-sM (c:cs)
-    | (category c) == EOL = (CharToken (TypedChar ' ' Space)):(sN cs)
-    | (category c) == Space = (CharToken c):sS cs
-    | (category c) == Comment = sN (skiptoeol cs)
-    | (category c) /= Escape = (CharToken c):(sM cs)
-    | otherwise = (ControlSequence name):(nextstate rest)
+
+sM = StateFunction sM' where
+    sM' st
+        | emptyStream st = ([], st, sM)
+        | (category c) == EOL = ([CharToken (TypedChar ' ' Space)], rest, sN)
+        | (category c) == Space = ([CharToken c], rest, sS)
+        | (category c) == Comment = applyStateFunction sN $ skiptoeol rest
+        | (category c) /= Escape = ([CharToken c], rest, sM)
+        where (c,rest) = getchar st
+    sM' st = ([ControlSequence name], rest', nextstate)
         where
-            (name,rest,nextstate) = breakup cs
-            breakup :: [TypedChar] -> (String, [TypedChar], [TypedChar] -> [Token])
-            breakup [] = ([],[],sN)
-            breakup (c:cs)
-                | (category c) == Space = ([value c],cs,sS)
-                | (category c) /= Letter = ([value c],cs,sM)
-                | otherwise = breakup' (c:cs)
-            breakup' :: [TypedChar] -> (String, [TypedChar], [TypedChar] -> [Token])
-            breakup' [] = ([],[],sS)
-            breakup' (c:cs)
-                | (category c) /= Letter = ([],(c:cs), sS)
-                | otherwise = ((value c):name', rest', state')
-                    where (name', rest', state') = breakup' cs
+            (c,rest) = getchar st
+            (name, rest', nextstate) = breakup rest
+            breakup st
+                | emptyStream st = ([],st,sN)
+                | (category c) == Space = ([value c], rest, sS)
+                | (category c) /= Letter = ([value c], rest, sM)
+                | otherwise = breakup' [] st
+                where (c,rest) = getchar st
+            breakup' acc st
+                | emptyStream st = (acc,st,sS)
+                | (category c) == Space = (acc, rest, sS)
+                | (category c) /= Letter = (acc, st, sM)
+                | otherwise = breakup' (acc ++ [value c]) rest
+                where
+                    (c,rest) = getchar st
 \end{code}
-The main function of this module takes a list of \code{TypedChar}s and produces
-a list of \code{Token}s.
 
 \begin{code}
-chars2tokens :: [TypedChar] -> [Token]
-chars2tokens = sN . (filter ((/= Ignored) . category))
+data TokenStream = TokenStream
+                { charsource :: TypedCharStream
+                , state :: StateFunction
+                , queue :: [Token]
+                }
+newTokenStream :: TypedCharStream -> TokenStream
+newTokenStream cs = TokenStream cs sN []
+
+gettoken st | emptyTokenStream st = error "hex.Tokens.gettoken: empty stream"
+gettoken tSt@TokenStream{queue=(t:ts)} = (t,tSt{queue=ts})
+gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} =
+    gettoken tSt{charsource=st',state=s',queue=q}
+        where (q,st',s') = applyStateFunction s st
+
+gettokentil st cond
+    | emptyTokenStream st = ([], st)
+    | (cond c) = ([],st)
+    | otherwise = let (c',st'') = gettokentil st' cond in (c:c', st'')
+    where (c,st') = gettoken st
+
+droptoken = snd . gettoken
+streampush st@TokenStream{queue=ts} t = st{queue=(t:ts)}
+streamenqueue st@TokenStream{queue=ts} nts = st{queue=(nts ++ ts)}
+tokenliststream ts = streamenqueue (newTokenStream $ TypedCharStream e []) ts
+    where e = Map.empty
+
+emptyTokenStream TokenStream{queue=(t:_)} = False
+emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
+    | emptyStream st = True
+    | otherwise = (((length q) == 0) && emptyStream st')
+        where (q,st',s') = applyStateFunction s st
 \end{code}
 
+We add a simple helper function:
+
+\begin{code}
+chars2tokens str = ts
+    where
+       (ts,_) = gettokentil st $ const False
+       st = newTokenStream $ TypedCharStream plaintexenv str
+\end{code}

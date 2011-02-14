@@ -10,12 +10,13 @@ import Test.HUnit
 import Debug.Trace
 
 import Chars
+import CharStream
 import Tokens
 import String
 import Macros
 import Linebreak
 import Modes (vMode, paragraph)
-import Environment (startenv)
+import Defaults (startenv, plaintexenv)
 \end{code}
 
 Little helper function
@@ -35,11 +36,17 @@ test_categoryCode_codeCategory = TestList
 Test simple parsing:
 
 \begin{code}
-test_token1 = (length $ chars2tokens $ map (annotate plaintextable) "\\macro") ~=? 1
-test_token5 = (length $ chars2tokens $ map (annotate plaintextable) "macro") ~=? 5
-test_sS = (length $ sS $ map (annotate plaintextable) "     ") ~=? 0
-test_sM1 = (length $ sM $ map (annotate plaintextable) "     ") ~=? 1
-test_sM2 = (length $ sM $ map (annotate plaintextable) "a    ") ~=? 2
+plaintextable = plaintexenv
+test_token1 = (length $ chars2tokens "\\macro") ~=? 1
+test_token_par = (length $ chars2tokens "\\par") ~=? 1
+test_token_par_nl = (length $ chars2tokens "\\par\n") ~=? 2
+test_token_a_nl = (length $ chars2tokens "a\n") ~=? 2
+test_token_sp_nl = (length $ chars2tokens " \n") ~=? 1
+test_token_a_sp_nl = (length $ chars2tokens "a \n") ~=? 2
+test_token5 = (length $ chars2tokens "macro") ~=? 5
+--test_sS = (length $ applyStateFunction sS $ map (annotate plaintextable) "     ") ~=? 0
+--test_sM1 = (length $ applyStateFunction sM $ map (annotate plaintextable) "     ") ~=? 1
+--test_sM2 = (length $ applyStateFunction sM $ map (annotate plaintextable) "a    ") ~=? 2
 \end{code}
 
 Simple string tests for find.
@@ -61,10 +68,15 @@ The main driver
 \begin{code}
 tests = TestList [test_categoryCode_codeCategory
                     ,test_token1
+                    ,test_token_par
+                    ,test_token_par_nl
+                    ,test_token_a_nl
+                    ,test_token_a_sp_nl
+                    ,test_token_sp_nl
                     ,test_token5
-                    ,test_sS
-                    ,test_sM1
-                    ,test_sM2
+                    --,test_sS
+                    --,test_sM1
+                    --,test_sM2
                     ,test_stringfind
                     ,test_stringnotfind
                     ,test_paragraphs
