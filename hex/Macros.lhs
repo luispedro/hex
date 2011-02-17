@@ -129,7 +129,7 @@ expand1 env st = expand1' t r
                     where
                         (a,rs) = gettokenorgroup st
                         (as,rest) = getargs (n-1) rs
-        expand' _ _ = st
+        --expand1' _ _ = st
 \end{code}
 \begin{code}
 expand :: Environment -> TokenStream -> [Command]
