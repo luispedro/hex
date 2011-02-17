@@ -52,3 +52,10 @@ emptyStream st@TypedCharStream{remaining=[]} = True
 emptyStream _ = False
 \end{code}
 
+To manipulate the stream, we use two functions:
+
+\begin{code}
+pushst st@TypedCharStream{table=t} = st{table=E.push t}
+popst st@TypedCharStream{table=t} = st{table=E.pop t}
+\end{code}
+

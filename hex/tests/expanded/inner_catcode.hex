@@ -1,11 +1,11 @@
-\def\changeb{\catcode`\c=2\relax macro has c inside}
-\def\a{a}
-{
-    \def\a{b}
-    \a
-    c
-    \par
-    \changeb
-c
-\a
+\def\changeb{\catcode`\c=2\relax macro has c inside}%
+\def\a{a}%
+{%
+    \def\a{b}%
+    \a%
+    c%
+    \par%
+    \changeb%
+c%
+\a%
 \bye

@@ -211,7 +211,10 @@ expand' env (ControlSequence seq) st
 \end{code}
 
 \begin{code}
-expand' env t@(CharToken tc) st = (fromToken t):(expand env st)
+expand' env t@(CharToken tc) st
+    | (category tc) == BeginGroup = (fromToken t):(expand (E.push env) (updateCharStream st pushst))
+    | (category tc) == EndGroup = (fromToken t):(expand (E.pop env) (updateCharStream st popst))
+    | otherwise = (fromToken t):(expand env st)
 expand' env t st = expand env $ expand1 env $ streampush st t
 
 emptyenv = E.empty
