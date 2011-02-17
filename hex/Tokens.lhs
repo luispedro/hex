@@ -78,6 +78,7 @@ sM = StateFunction sM' where
         | (category c) == EOL = ([CharToken (TypedChar ' ' Space)], rest, sN)
         | (category c) == Space = ([CharToken c], rest, sS)
         | (category c) == Comment = applyStateFunction sN $ skiptoeol rest
+        | (category c) == Active = ([ControlSequence [value c]], rest, sM)
         | (category c) /= Escape = ([CharToken c], rest, sM)
         where (c,rest) = getchar st
     sM' st = ([ControlSequence ('\\':name)], rest', nextstate)
