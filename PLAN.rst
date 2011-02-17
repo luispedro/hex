@@ -22,6 +22,8 @@ v0.0.2
 - \def & friends
 
 Expected: Jan 31 2011
+Released: Feb 16 2011
+(has character category manipulation too)
 
 v0.0.3
 ------
