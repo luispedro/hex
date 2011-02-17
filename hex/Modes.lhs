@@ -39,7 +39,7 @@ vMode1 env ((PrimitiveCommand "\\vspace"):cs) = vMode env cs
 HBoxes from a list of commands that are guaranteed to be h-commands.
 
 \begin{code}
-hMode' :: E.Environment -> [Command] -> [HElement]
+hMode' :: E.Environment String E.HexType -> [Command] -> [HElement]
 hMode' e = concatenatewords . map toHElement
     where
         Just (E.HexFontInfo fnt) = E.currentFont e
@@ -59,7 +59,7 @@ We begin by breaking a sequence of commands into paragraphs. \code{paragraph}
 gets a single paragraph.
 
 \begin{code}
-paragraph :: E.Environment -> [Command] -> ([HElement],[Command])
+paragraph :: E.Environment String E.HexType -> [Command] -> ([HElement],[Command])
 paragraph _ [] = ([],[])
 paragraph e cs = (par',rest')
     where
@@ -74,7 +74,7 @@ paragraph e cs = (par',rest')
 \end{code}
 
 \begin{code}
-hMode :: E.Environment -> [Command] -> [VBox]
+hMode :: E.Environment String E.HexType -> [Command] -> [VBox]
 hMode env [] = []
 hMode env cs = (breakintolines linewidth firstParagraph) ++ (vMode env rest)
     where

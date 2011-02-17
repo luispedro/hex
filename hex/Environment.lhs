@@ -25,32 +25,35 @@ data HexType =
 An environment is a nested sequence of mappings, which we implement as a list.
 
 \begin{code}
-type BaseEnvironment = M.Map String HexType
-type Environment = [BaseEnvironment]
+type BaseEnvironment a b = M.Map a b
+type Environment a b = [BaseEnvironment a b]
 \end{code}
 
 An empty environment is \emph{not} an empty list, but a list with an empty
 mapping:
 
 \begin{code}
-empty :: Environment
-empty = [M.empty :: BaseEnvironment]
+empty :: Environment a b
+empty = [M.empty :: (BaseEnvironment a b)]
 \end{code}
 
 Lookup is done by looking through the list for the first match.
 
 \begin{code}
-lookup :: String -> Environment -> Maybe HexType
+lookup :: (Ord a) => a -> Environment a b -> Maybe b
 lookup name [] = Nothing
 lookup name (e:es) = case M.lookup name e of
                 Just val -> Just val
                 Nothing -> lookup name es
+lookupWithDefault def name env = case lookup name env of
+    Just val -> val
+    Nothing -> def
 \end{code}
 
 Pushing and popping environments are simple list manipulations:
 
 \begin{code}
-push = (:) (M.empty :: BaseEnvironment)
+push = (:) (M.empty :: (BaseEnvironment a b))
 pop = tail
 \end{code}
 
@@ -59,7 +62,7 @@ global insertion. Inserting in the current environment is just a matter of
 manipulating the top of the list:
 
 \begin{code}
-insert :: String -> HexType -> Environment -> Environment
+insert :: (Ord a) => a -> b -> Environment a b -> Environment a b
 insert name val (e:es)= (M.insert name val e:es)
 \end{code}
 

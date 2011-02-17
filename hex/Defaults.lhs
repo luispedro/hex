@@ -17,7 +17,7 @@ non-accented 26 English letters are tagged as letters). For fuller unicode
 support, this might need to be extended in the future.
 
 \begin{code}
-plaintexenv = M.fromList $ [('\\', Escape)
+plaintexenv = [M.fromList $ [('\\', Escape)
                          ,('{', BeginGroup)
                          ,('}', EndGroup)
                          ,('$', MathShift)
@@ -32,6 +32,7 @@ plaintexenv = M.fromList $ [('\\', Escape)
                          ,('%', Comment)
                          ,('\8', Invalid)
                          ] ++ map (\c -> (c, Letter)) "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                ]
 \end{code}
 
 

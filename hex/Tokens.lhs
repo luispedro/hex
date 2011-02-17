@@ -4,7 +4,6 @@ module Tokens where
 
 import Chars
 import CharStream
-import qualified Data.Map as Map
 import Defaults (plaintexenv)
 
 \end{code}
@@ -138,8 +137,7 @@ gettokentil st cond
 droptoken = snd . gettoken
 streampush st@TokenStream{queue=ts} t = st{queue=(t:ts)}
 streamenqueue st@TokenStream{queue=ts} nts = st{queue=(nts ++ ts)}
-tokenliststream ts = streamenqueue (newTokenStream $ TypedCharStream e []) ts
-    where e = Map.empty
+tokenliststream ts = streamenqueue (newTokenStream $ TypedCharStream [] []) ts
 
 emptyTokenStream TokenStream{queue=(t:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}

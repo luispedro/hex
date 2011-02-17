@@ -62,7 +62,7 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
 
 \begin{code}
 
-outputBoxes :: E.Environment -> [VBox] -> B.ByteString
+outputBoxes :: E.Environment String E.HexType -> [VBox] -> B.ByteString
 outputBoxes env pages = stream $ execState (outputBoxes' pages) emptyStream
     where
         outputBoxes' pages = do

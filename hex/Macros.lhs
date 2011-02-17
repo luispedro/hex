@@ -5,11 +5,10 @@ Macros are the mechanism for TeX scripting.
 \begin{code}
 module Macros where
 
-import qualified Data.Map as Map
-
 import Tokens
 import Chars
 import CharStream
+import qualified Environment as E
 \end{code}
 
 After expansion, we no longer have tokens: we have commands. For the moment, we
@@ -58,7 +57,7 @@ buildExpansion ((CharToken tc0):(CharToken tc1):ts)
 buildExpansion (t:ts) = (const [t]):(buildExpansion ts)
 \end{code}
 \begin{code}
-type Environment = Map.Map String Macro
+type MacroEnvironment = E.Environment String Macro
 \end{code}
 
 Some control sequences are \emph{primitive}: They should pass by macro
@@ -114,14 +113,14 @@ breakAtGroupEnd n st = breakAtGroupEnd' n t st'
 The work horse of this module is the \code{expand1} function.
 
 \begin{code}
-expand1 :: Environment -> TokenStream -> TokenStream
+expand1 :: MacroEnvironment -> TokenStream -> TokenStream
 expand1 env st = expand1' t r
     where
         (t,r) = gettoken st
         expand1' (ControlSequence seq) r = streamenqueue rest expanded
             where
                 expanded = (concat $ map (\f -> f arguments) (expansion macro))
-                Just macro = Map.lookup seq env
+                Just macro = E.lookup seq env
                 (arguments,rest) = getargs (nargs macro) r
                 getargs :: Int -> TokenStream -> ([[Token]], TokenStream)
                 getargs 0 rest = ([],rest)
@@ -132,7 +131,7 @@ expand1 env st = expand1' t r
         --expand1' _ _ = st
 \end{code}
 \begin{code}
-expand :: Environment -> TokenStream -> [Command]
+expand :: MacroEnvironment -> TokenStream -> [Command]
 expand _ st | emptyTokenStream st = []
 expand env st = expand' env t rest
     where (t, rest) = gettoken st
@@ -142,13 +141,13 @@ expand env st = expand' env t rest
 \begin{code}
 expand' env (ControlSequence "\\let") st = expand env' rest
     where
-        env' = Map.insert name macro env
+        env' = E.insert name macro env
         (ControlSequence name,aftername) = gettoken st
         (replacement,rest) = case gettoken aftername of
                         ((CharToken (TypedChar '=' _)),r) -> gettoken r
                         (t,r) -> (t,r)
         macro = case replacement of
-                (ControlSequence seq) -> case Map.lookup seq env of Just macro -> macro
+                (ControlSequence seq) -> case E.lookup seq env of Just macro -> macro
                 (CharToken tc) -> Macro 0 [const [(CharToken tc)]]
 \end{code}
 
@@ -184,7 +183,7 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
         (eq,r1) = gettoken r0
         (nvalue, r2) = readNumber r1
         altered = updateCharStream r2 $ catcode char nvalue
-        catcode c v st@TypedCharStream{table=t} = st{table=(Map.insert c (categoryCode v) t)}
+        catcode c v st@TypedCharStream{table=t} = st{table=(E.insert c (categoryCode v) t)}
         readNumber st = let (ts, r) = gettokentil st (not . (`elem` "0123456789") . tvalue) in (read $ map tvalue ts, r)
         readChar = gettoken . droptoken
         tvalue (CharToken tc) = value tc
@@ -201,7 +200,7 @@ expand' env (ControlSequence seq) st
     | isprimitive seq = (PrimitiveCommand seq) : (expand env st)
     | (seq == "\\def") || (seq == "\\edef") = expand env' rest
         where
-            env' = Map.insert name macro env
+            env' = E.insert name macro env
             macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
@@ -212,9 +211,8 @@ expand' env (ControlSequence seq) st
 \end{code}
 
 \begin{code}
-expand' env t@(CharToken _) st = (fromToken t):(expand env st)
+expand' env t@(CharToken tc) st = (fromToken t):(expand env st)
 expand' env t st = expand env $ expand1 env $ streampush st t
 
-emptyenv :: Environment
-emptyenv = Map.empty
+emptyenv = E.empty
 \end{code}
