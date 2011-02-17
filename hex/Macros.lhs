@@ -10,7 +10,6 @@ import qualified Data.Map as Map
 import Tokens
 import Chars
 import CharStream
-
 \end{code}
 
 After expansion, we no longer have tokens: we have commands. For the moment, we
@@ -26,7 +25,7 @@ toToken (PrimitiveCommand c) = ControlSequence c
 toToken (CharCommand tc) = CharToken tc
 
 instance Show Command where
-    show (PrimitiveCommand cmd) = "<\\" ++ cmd ++ ">"
+    show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
     show (CharCommand (TypedChar _ Space)) = "< >"
     show (CharCommand tc) = "<" ++ show tc ++ ">"
@@ -70,11 +69,11 @@ the future.
 \begin{code}
 primitives :: [String]
 primitives =
-    ["par"
-    ,"hbox"
-    ,"vbox"
-    ,"relax"
-    ,"bye"
+    ["\\par"
+    ,"\\hbox"
+    ,"\\vbox"
+    ,"\\relax"
+    ,"\\bye"
     ]
 isprimitive = (`elem` primitives)
 \end{code}
@@ -141,7 +140,7 @@ expand env st = expand' env t rest
 
 
 \begin{code}
-expand' env (ControlSequence "let") st = expand env' rest
+expand' env (ControlSequence "\\let") st = expand env' rest
     where
         env' = Map.insert name macro env
         (ControlSequence name,aftername) = gettoken st
@@ -156,7 +155,7 @@ expand' env (ControlSequence "let") st = expand env' rest
 For dealing with \tex{\\noexpand} we add a special case to expand.
 
 \begin{code}
-expand' env (ControlSequence "noexpand") st = (fromToken t:expand env r)
+expand' env (ControlSequence "\\noexpand") st = (fromToken t:expand env r)
     where (t,r) = gettoken st
 \end{code}
 
@@ -169,7 +168,7 @@ following leads to an error:
 
 Therefore, the environment cannot change in the inner expansion.
 \begin{code}
-expand' env t@(ControlSequence "expandafter") st = expand env $ streampush rest guard
+expand' env t@(ControlSequence "\\expandafter") st = expand env $ streampush rest guard
         where
             (guard, afterguard) = gettoken st
             rest = expand1 env afterguard
@@ -178,9 +177,9 @@ expand' env t@(ControlSequence "expandafter") st = expand env $ streampush rest 
 Manipulation of catcodes is performed here:
 
 \begin{code}
-expand' env (ControlSequence "catcode") st = expand env altered
+expand' env (ControlSequence "\\catcode") st = expand env altered
     where
-        (t, r0) = readChar st
+        (t, r0) = readChar $ st
         char = tvalue t
         (eq,r1) = gettoken r0
         (nvalue, r2) = readNumber r1
@@ -189,7 +188,7 @@ expand' env (ControlSequence "catcode") st = expand env altered
         readNumber st = let (ts, r) = gettokentil st (not . (`elem` "0123456789") . tvalue) in (read $ map tvalue ts, r)
         readChar = gettoken . droptoken
         tvalue (CharToken tc) = value tc
-        tvalue (ControlSequence [c]) = c
+        tvalue (ControlSequence ['\\',c]) = c
         tvalue _ = '\0'
 \end{code}
 
@@ -200,14 +199,14 @@ directly or its expansion.
 \begin{code}
 expand' env (ControlSequence seq) st
     | isprimitive seq = (PrimitiveCommand seq) : (expand env st)
-    | (seq == "def") || (seq == "edef") = expand env' rest
+    | (seq == "\\def") || (seq == "\\edef") = expand env' rest
         where
             env' = Map.insert name macro env
             macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
             (substitutiontext,rest) = breakAtGroupEnd 0 $ droptoken afterargs
-            substitution = if seq == "def" then substitutiontext else map toToken $ expand env $ tokenliststream substitutiontext
+            substitution = if seq == "\\def" then substitutiontext else map toToken $ expand env $ tokenliststream substitutiontext
             isBeginGroup (CharToken tc) = (category tc) == BeginGroup
             isBeginGroup _ = False
 \end{code}

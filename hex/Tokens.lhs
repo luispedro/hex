@@ -15,7 +15,7 @@ control sequence or an annotated character.
 \begin{code}
 data Token = ControlSequence String | CharToken TypedChar
 instance Show Token where
-    show (ControlSequence name) = "[\\" ++ name ++ "]"
+    show (ControlSequence name) = "[" ++ name ++ "]"
     show (CharToken tc) = show tc
 \end{code}
 
@@ -46,7 +46,7 @@ applyStateFunction (StateFunction s) st = s st
 sN = StateFunction sN' where
     sN' st
         | emptyStream st = ([],st,sN)
-        | (category c) == EOL = ([ControlSequence "par"], rest, sN)
+        | (category c) == EOL = ([ControlSequence "\\par"], rest, sN)
         | (category c) == Space = sN' rest
         | otherwise = applyStateFunction sM st
         where (c,rest) = getchar st
@@ -80,7 +80,7 @@ sM = StateFunction sM' where
         | (category c) == Comment = applyStateFunction sN $ skiptoeol rest
         | (category c) /= Escape = ([CharToken c], rest, sM)
         where (c,rest) = getchar st
-    sM' st = ([ControlSequence name], rest', nextstate)
+    sM' st = ([ControlSequence ('\\':name)], rest', nextstate)
         where
             (c,rest) = getchar st
             (name, rest', nextstate) = breakup rest

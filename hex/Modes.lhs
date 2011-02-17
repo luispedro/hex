@@ -16,7 +16,7 @@ Some commands are v-mode commands, other h-mode commands. We begin with a
 series of definitions to distinguish the two.
 
 \begin{code}
-isVCommand "vspace" = True
+isVCommand "\\vspace" = True
 isVCommand _ = False
 isHCommand = not . isVCommand
 \end{code}
@@ -32,7 +32,7 @@ vMode env cs = hMode env cs
 \end{code}
 
 \begin{code}
-vMode1 env ((PrimitiveCommand "vspace"):cs) = vMode env cs
+vMode1 env ((PrimitiveCommand "\\vspace"):cs) = vMode env cs
 \end{code}
 
 \code{hMode'} is \emph{restricted horizontal mode}: it produces a list of
@@ -66,9 +66,9 @@ paragraph e cs = (par',rest')
         (par, rest) = break isParagraphBreak cs
         par' = hMode' e par
         rest' = case rest of
-                    ((PrimitiveCommand "par"):rs) -> rs
+                    ((PrimitiveCommand "\\par"):rs) -> rs
                     _ -> rest
-        isParagraphBreak (PrimitiveCommand "par") = True
+        isParagraphBreak (PrimitiveCommand "\\par") = True
         isParagraphBreak (PrimitiveCommand seq) = isVCommand seq
         isParagraphBreak _ = False
 \end{code}
