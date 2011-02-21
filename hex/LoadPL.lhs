@@ -6,11 +6,15 @@ import Data.Char
 
 import String
 import Fonts
-
 \end{code}
 
+A property list (PL) file is a collection of LISP-like s-expressions. This file
+is equivalent to the TFM file, but in an easier to parse form. Eventually, we
+will want to move towards an implementation which parses the TFM file, but for
+now, we have a simple (i.e., slow) implementation of s-expression parsing.
+
 \code{getprop} is a helper function to parse an s-expression of the form
-\emph{start nr )}:
+\emph{(start nr)}, returning a \code{FixWord}.
 
 \begin{code}
 getprop base start input = case find start input of
@@ -18,8 +22,8 @@ getprop base start input = case find start input of
         Just n -> FixWord $ (*base) $ read $ takeWhile (/=')') $ drop (n+ (length start)) input
 \end{code}
 
-The main function is converting a single S-expression to a \code{GliphMetric}
-(if one is found; otherwise \code{Nothing}).
+The main function in this module converts a single S-expression to a
+\code{GliphMetric} (if one is found; otherwise \code{Nothing}).
 
 \begin{code}
 readGliphInformation :: Float -> String -> Maybe GliphMetric
@@ -29,7 +33,10 @@ readGliphInformation' base input = Just $ GliphMetric c w h d it
         c = if isPrefixOf "CHARACTER C " input
                 then input !! (length "CHARACTER C ")
                 else chr $ read $ charactercode input
-        -- The .pl file has character codes in octal. `read` will parse octal if prefixed with "0o"
+\end{code}
+The .pl file has character codes in octal. \code{read} will parse octal if
+prefixed with "0o".
+\begin{code}
         charactercode = ('0':) . ('o':) . takeWhile (`elem` "0123456789") . drop (length "CHARACTER O ")
         w = getprop base "CHARWD R " input
         h = getprop base "CHARHT R " input
@@ -37,9 +44,9 @@ readGliphInformation' base input = Just $ GliphMetric c w h d it
         it = getprop base "CHARIC R " input
 \end{code}
 
-
-In order to call that function we need another one that breaks up a long string
-into many s-expressions. That is performed by \code{breakIntoSExpressions}.
+We need another function that breaks up a long string into many s-expressions.
+That is performed by \code{breakIntoSExpressions}. Note that s-expressions are
+internally simple \code{String}s.
 
 \begin{code}
 breakIntoSExpressions :: String -> [String]
@@ -54,8 +61,8 @@ breakIntoSExpressions ('(':rest) = firstS:(breakIntoSExpressions restS)
 breakIntoSExpressions (c:cs) = breakIntoSExpressions cs
 \end{code}
 
-Finally, we need to parse a few relevant extra information: The \emph{design
-size} and the information on the space:
+Finally, we need to parse a few relevant pieces of extra information: The
+\emph{design size} and the information on the natural size of a space:
 
 \begin{code}
 retrieveDesignSize (s:ss) = if isPrefixOf "DESIGNSIZE" s then retrieveDesignSize' s else retrieveDesignSize ss
@@ -72,7 +79,7 @@ readSpace base (s:ss) = if isPrefixOf "FONTDIMEN" s then spinfo else readSpace b
 \end{code}
 
 Now just need to call the \code{readGliphInformation} function for each
-S-expression.
+S-expression and the functions above for ancilary information.
 
 \begin{code}
 loadPL str = FontInfo fi sp
