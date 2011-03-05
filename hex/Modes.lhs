@@ -73,6 +73,8 @@ paragraph e cs = (par',rest')
         isParagraphBreak _ = False
 \end{code}
 
+\code{hMode} implements horizontal mode, whose output is a series of vertical boxes.
+
 \begin{code}
 hMode :: E.Environment String E.HexType -> [Command] -> [VBox]
 hMode env [] = []
