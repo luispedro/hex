@@ -41,6 +41,8 @@ We also add a couple of convenience converters:
 
 \begin{code}
 dimenFromPoints = Dimen . (*(2^16))
+dimenFromFloatingPoints :: (RealFrac f) => f -> Dimen
+dimenFromFloatingPoints = Dimen . round . (*(2^16))
 dimenFromInches = dimenFromPoints . inchesToPoints
 zeroDimen = Dimen 0
 \end{code}

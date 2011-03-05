@@ -44,7 +44,7 @@ hMode' e = concatenatewords . map toHElement
     where
         Just (E.HexFontInfo fnt) = E.currentFont e
         (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
-        f2d = dimenFromPoints . round . F.fixToFloat
+        f2d = dimenFromFloatingPoints . F.fixToFloat
         toHElement (CharCommand (TypedChar _ Space)) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
         toHElement (CharCommand (TypedChar c cat)) = EBox $ Box
                                 { boxType=H
