@@ -78,9 +78,10 @@ data (BoxType t) => Glue t = Glue
             , size :: Dimen
             , shrinkage :: Dimen
             , expandable :: Dimen
+            , infLevel :: Integer
             } deriving (Eq)
 instance (BoxType t) => Show (Glue t) where
-    show (Glue t w s e) = printf "%sG[[w(%s)s(%s)e(%s)]]" (codefor t) (show w) (show s) (show e)
+    show (Glue t w s e i) = printf "%sG[[w(%s)s(%s)e(%s)i(%s)]]" (codefor t) (show w) (show s) (show e) (show i)
 
 type HGlue = Glue H
 type VGlue = Glue V
@@ -90,6 +91,7 @@ spaceGlue = Glue
             , size=(dimenFromPoints 12)
             , expandable=(dimenFromPoints 6)
             , shrinkage=(dimenFromPoints 3)
+            , infLevel=0
             }
 \end{code}
 

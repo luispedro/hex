@@ -43,7 +43,7 @@ do not worry about that for now.
 
 \begin{code}
 spaceEGlue = B.EGlue $ B.spaceGlue
-fixGlue (B.Glue _ s _ _)= B.Box
+fixGlue (B.Glue _ s _ _ _)= B.Box
                 { B.boxType=B.H
                 , B.width=s
                 , B.depth=zeroDimen
