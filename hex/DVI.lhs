@@ -215,7 +215,7 @@ tex_den = 473628672 :: Integer
 tex_mag = 1000 :: Integer
 
 pointsTointernal :: Integer -> Integer
-pointsTointernal = (* (256*256))
+pointsTointernal = id
 \end{code}
 
 There are two parameters that I'm still not sure how to compute, so I'll just
@@ -243,8 +243,8 @@ newpage = do
 
 putstr [] = return ()
 putstr (c:cs) = (put1 $ toInteger $ ord c) >> (putstr cs)
-move_down = down4 . pointsTointernal . nrPoints
-move_right = right4 . pointsTointernal . nrPoints
+move_down = down4 . pointsTointernal . nrScaledPoints
+move_right = right4 . pointsTointernal . nrScaledPoints
 
 defineFont fnt@(FontDef c s d a l t) = do
     nfonts <- getNFonts

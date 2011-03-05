@@ -1,15 +1,17 @@
 \section{Measures}
 \begin{code}
 module Measures where
+
+import Ratio
 \end{code}
 
 In this section, we declare code to deal with dimensions.
 
-For the moment, we will use \textit{points} as our basic measure.
+The basic unit is \emph{scaled points}, i.e., points times $2^{16}$.
 
 \begin{code}
 data Dimen = Dimen
-            { nrPoints :: Integer
+            { nrScaledPoints :: Integer
             } deriving (Eq)
 
 instance Show Dimen where
@@ -22,6 +24,10 @@ instance Ord Dimen where
 (Dimen np0) `dsub` (Dimen np1) = Dimen $ np0 - np1
 (Dimen np0) `dgt` (Dimen np1) = np0 > np1
 (Dimen np0) `dmax` (Dimen np1) = Dimen $ max np0 np1
+dmul :: Dimen -> Rational -> Dimen
+(Dimen np0) `dmul` f = Dimen $ round $ (toRational np0) * f
+dratio :: Dimen -> Dimen -> Rational
+(Dimen np0) `dratio` (Dimen np1) = np0 % np1
 \end{code}
 
 We write conversions from other metrics that are used. For now, we will only
@@ -29,14 +35,13 @@ define \textit{inches}:
 
 \begin{code}
 inchesToPoints = round . (*72)
-dimenFromInches = Dimen . inchesToPoints
 \end{code}
 
-We also add a couple of convinience converters, including a more descriptive
-synonym for the \code{Dimen} constructor:
+We also add a couple of convenience converters:
 
 \begin{code}
-dimenFromPoints = Dimen
+dimenFromPoints = Dimen . (*(2^16))
+dimenFromInches = dimenFromPoints . inchesToPoints
 zeroDimen = Dimen 0
 \end{code}
 
