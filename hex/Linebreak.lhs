@@ -93,7 +93,7 @@ uses the \emph{first fit} algorithm.
 \begin{code}
 breakParagraphIntoLines :: Dimen -> [B.HElement] -> [B.VBox]
 breakParagraphIntoLines _ [] = []
-breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes first):(breakParagraphIntoLines lineWidth rest)
+breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth first):(breakParagraphIntoLines lineWidth rest)
     where
         (first,rest) = splitAt (firstLine zeroDimen les) les
         firstLine _ [] = 0

@@ -147,3 +147,27 @@ mergeBoxes t bs = Box
             , boxContents=(boxList bs)
             }
 \end{code}
+
+This is the equivalent of the \TeX{} level \tex{hbox to} construct:
+
+\begin{code}
+hboxto :: Dimen -> [HElement] -> [HElement]
+hboxto target es = converted
+    where
+        naturalsize = (foldr1 dplus $ map sizeof es)
+        newsize = (foldr1 dplus $ map sizeof converted)
+        sizeof :: HElement -> Dimen
+        sizeof (EGlue g) = size g
+        sizeof (EBox b) = width b
+        sizeof _ = zeroDimen
+        update g f = g{size=(size g) `dplus` ( (operation g) `dmul` f)}
+        (diffsize, operation) = if naturalsize `dgt` target
+                                    then (naturalsize `dsub` target, shrinkage)
+                                    else (target `dsub` naturalsize, expandable)
+        total = (foldr1 dplus $ map (\e -> case e of EGlue g -> operation g; _ -> zeroDimen) es)
+        factor = if diffsize `dgt` total then 1.0 else diffsize `dratio` total
+        converted = map transform es
+        transform e = case e of
+                    EGlue g -> EGlue $ update g factor
+                    _ -> e
+\end{code}
