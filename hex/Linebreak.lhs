@@ -93,7 +93,7 @@ uses the \emph{first fit} algorithm.
 \begin{code}
 breakParagraphIntoLines :: Dimen -> [B.HElement] -> [B.VBox]
 breakParagraphIntoLines _ [] = []
-breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth first):(breakParagraphIntoLines lineWidth rest)
+breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ cleanEnds first):(breakParagraphIntoLines lineWidth rest)
     where
         (first,rest) = splitAt (firstLine zeroDimen les) les
         firstLine _ [] = 0
@@ -106,6 +106,18 @@ breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto l
         toBox (B.EBox b) = Just b
         toBox (B.EGlue g) = Just $ fixGlue g
         toBox _ = Nothing
+        cleanEnds = removeFirst . removeLast
+        removeFirst [] = []
+        removeFirst (e:es) = case e of
+            B.EGlue _ -> removeFirst es
+            _ -> (e:es)
+        removeLast [] = []
+        removeLast (e:es) = case e of
+            B.EGlue _ -> if nomore es then [] else (e:removeLast es)
+            _ -> (e:removeLast es)
+        nomore [] = True
+        nomore (B.EGlue _:es) = nomore es
+        nomore _ = False
 \end{code}
 
 The interface function is \code{breakintolines}:
