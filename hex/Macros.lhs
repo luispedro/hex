@@ -15,7 +15,10 @@ After expansion, we no longer have tokens: we have commands. For the moment, we
 have only very simple commands:
 
 \begin{code}
-data Command = CharCommand TypedChar | PrimitiveCommand String
+data Command =
+        CharCommand TypedChar
+        | PrimitiveCommand String
+        | HexCommand String String
 
 fromToken (ControlSequence seq) = PrimitiveCommand seq
 fromToken (CharToken tc) = CharCommand tc
@@ -28,6 +31,7 @@ instance Show Command where
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
     show (CharCommand (TypedChar _ Space)) = "< >"
     show (CharCommand tc) = "<" ++ show tc ++ ">"
+    show (HexCommand cmd msg) = "(" ++ cmd ++ ":" ++ msg ++ ")"
 \end{code}
 
 Our implementation of macros is very simple: they are lists of functions. So for example
@@ -45,6 +49,7 @@ data Macro = Macro { nargs :: Int
                    , expansion :: [[[Token]] -> [Token]]
                    }
 \end{code}
+
 
 In order to build an expansion element, we need to map instances of
 \tex{\#\emph{n}} to \code{(!! (n-1))} and other tokens to \code{const t}.
@@ -106,30 +111,50 @@ breakAtGroupEnd n st = breakAtGroupEnd' n t st'
                     BeginGroup -> n + 1
                     EndGroup -> n - 1
                     _ -> n
-                tokenCategory (CharToken tc) = category tc
-                tokenCategory _ = Invalid -- It doesn't matter what
 \end{code}
 
-The work horse of this module is the \code{expand1} function.
+\begin{code}
+tokenCategory (CharToken tc) = category tc
+tokenCategory _ = Invalid -- It doesn't matter what
+\end{code}
+
+The work horse of this module are the \code{expand1} and \code{expand1'}
+functions. When a macro is not found, we insert an \code{error} command into
+the stream. It is the downstream responsibility to deal with it.
+
+The first function just attempts to extract the macro
 
 \begin{code}
 expand1 :: MacroEnvironment -> TokenStream -> TokenStream
-expand1 env st = expand1' t r
-    where
-        (t,r) = gettoken st
-        expand1' (ControlSequence seq) r = streamenqueue rest expanded
-            where
-                expanded = (concat $ map (\f -> f arguments) (expansion macro))
-                Just macro = E.lookup seq env
-                (arguments,rest) = getargs (nargs macro) r
-                getargs :: Int -> TokenStream -> ([[Token]], TokenStream)
-                getargs 0 rest = ([],rest)
-                getargs n st = ([a]++as,rest)
-                    where
-                        (a,rs) = gettokenorgroup st
-                        (as,rest) = getargs (n-1) rs
-        --expand1' _ _ = st
+expand1 env st = let (ControlSequence seq, rest) = gettoken st
+                    in case E.lookup seq env of
+                        Just macro -> expand1' macro rest
+                        Nothing -> streamenqueue rest $ macronotfounderror seq
 \end{code}
+
+If found, the macro is expanded by \code{expand1'}
+\begin{code}
+expand1' :: Macro -> TokenStream -> TokenStream
+expand1' macro st = streamenqueue rest expanded
+    where
+        expanded = (concat $ map (\f -> f arguments) (expansion macro))
+        (arguments,rest) = getargs (nargs macro) st
+        getargs :: Int -> TokenStream -> ([[Token]], TokenStream)
+        getargs 0 rest = ([],rest)
+        getargs n st = ([a]++as,rest)
+            where
+                (a,rs) = gettokenorgroup st
+                (as,rest) = getargs (n-1) rs
+\end{code}
+
+If there is an error, we insert a special token sequence:
+
+\begin{code}
+macronotfounderror seq = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
+    where
+        errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ "Macro `" ++ seq ++ "` not defined."
+\end{code}
+
 \begin{code}
 expand :: MacroEnvironment -> TokenStream -> [Command]
 expand _ st | emptyTokenStream st = []
@@ -210,12 +235,23 @@ expand' env (ControlSequence seq) st
             isBeginGroup _ = False
 \end{code}
 
+Errors are a special case:
+
+\begin{code}
+expand' env (ControlSequence "error") st = (HexCommand "error" errormsg):(expand env rest)
+    where
+        (errortoks, rest) = gettokenorgroup st
+        errormsg = map (\t -> case t of (CharToken (TypedChar c _)) -> c) errortoks
+\end{code}
+
 \begin{code}
 expand' env t@(CharToken tc) st
     | (category tc) == BeginGroup = (fromToken t):(expand (E.push env) (updateCharStream st pushst))
     | (category tc) == EndGroup = (fromToken t):(expand (E.pop env) (updateCharStream st popst))
     | otherwise = (fromToken t):(expand env st)
 expand' env t st = expand env $ expand1 env $ streampush st t
+\end{code}
 
+\begin{code}
 emptyenv = E.empty
 \end{code}
