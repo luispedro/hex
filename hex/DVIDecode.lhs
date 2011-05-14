@@ -4,6 +4,8 @@ module Main where
 
 import System.Environment
 import qualified Data.ByteString.Lazy as B
+import qualified IO
+import System.IO
 import Data.Char
 
 import DVI
@@ -186,12 +188,24 @@ a look at the codes that are failing.
 -- decode (d:ds) = (("unknown" ++ (build1 d)):decode ds)
 \end{code}
 
+A little helper function for unix like file specification, where either
+\code{-} or \emph{no file name} can both stand for \code{stdin}:
+
+\begin{code}
+inputfile :: [String] -> IO Handle
+inputfile [] = do
+    hSetBinaryMode IO.stdin True
+    return IO.stdin
+inputfile ["-"] = inputfile []
+inputfile [fname] = openBinaryFile fname IO.ReadMode
+\end{code}
+
 The \code{main} function is trivial:
 
 \begin{code}
 main = do
     args <- getArgs
-    input <- B.readFile (args !! 0)
+    input <- (inputfile args) >>= B.hGetContents
     putStr $ unlines $ decode $ map (fromInteger . toInteger) $ B.unpack input
 \end{code}
 
