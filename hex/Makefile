@@ -19,7 +19,7 @@ SOURCES :=  \
 hex: Main.lhs $(SOURCES)
 	ghc --make -O2 $^ -o $@
 
-hextest: Tests.lhs $(SOURCES)
+hextest: Tests.hs $(SOURCES)
 	ghc --make -O $^ -o $@
 
 dvidecode: DVIDecode.lhs DVI.lhs
