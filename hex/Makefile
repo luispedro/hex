@@ -26,4 +26,4 @@ dvidecode: DVIDecode.lhs DVI.lhs
 	ghc --make -O2 $^ -o $@
 
 clean:
-	rm -f *.o *.lhi hex hextest
+	rm -f *.o *.lhi hex hextest dvidecode
