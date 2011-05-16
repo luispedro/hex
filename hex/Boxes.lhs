@@ -63,8 +63,8 @@ data (BoxType t) => Box t = Box
             , width :: Dimen
             , boxContents :: BoxContents
             } deriving (Eq)
-
 \end{code}
+
 For convenience, we have two synonyms for h- and v-boxes.
 \begin{code}
 type HBox = Box H
@@ -91,14 +91,6 @@ instance (BoxType t) => Show (Glue t) where
 
 type HGlue = Glue H
 type VGlue = Glue V
-
-spaceGlue = Glue
-            { glueType=H
-            , size=(dimenFromPoints 12)
-            , expandable=(dimenFromPoints 6)
-            , shrinkage=(dimenFromPoints 3)
-            , infLevel=0
-            }
 \end{code}
 
 The final type of element we can have are \emph{penalties}, h- or v-penalties:

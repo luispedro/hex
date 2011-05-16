@@ -37,12 +37,9 @@ leFlag (B.EGlue _) = False
 leFlag (B.EPenalty p) = B.flag p
 \end{code}
 
-We now define some basic constants: a space and infinite and minus-infinite
-penalties. A space is not actually constant as it depends on the font, but we
-do not worry about that for now.
+A helper function to fix a glue to a particular size.
 
 \begin{code}
-spaceEGlue = B.EGlue $ B.spaceGlue
 fixGlue (B.Glue _ s _ _ _)= B.Box
                 { B.boxType=B.H
                 , B.width=s
@@ -50,6 +47,10 @@ fixGlue (B.Glue _ s _ _ _)= B.Box
                 , B.height=zeroDimen
                 , B.boxContents=(B.Kern s)
                 }
+\end{code}
+
+We now define some basic constants: infinite and minus-infinite penalties.
+\begin{code}
 penalty p = B.EPenalty $ B.Penalty B.H p False
 infPenalty = 10000
 minfPenalty = (-10000)
@@ -65,6 +66,13 @@ preprocessParagraph pars = pars ++
                                 [ penalty infPenalty
                                 , spaceEGlue
                                 , penalty minfPenalty]
+    where spaceEGlue = B.EGlue $ B.Glue
+            { B.glueType=B.H
+            , B.size=zeroDimen
+            , B.expandable=zeroDimen
+            , B.shrinkage=zeroDimen
+            , B.infLevel=1
+            }
 \end{code}
 
 
