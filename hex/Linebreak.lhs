@@ -120,7 +120,8 @@ breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto l
         nomore _ = False
 \end{code}
 
-The interface function is \code{breakintolines}:
+The interface function is \code{breakintolines}, which converts a list of
+horizontal elements into a list of lines.
 
 \begin{code}
 breakintolines :: Dimen -> [B.HElement] -> [B.VBox]

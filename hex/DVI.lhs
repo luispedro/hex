@@ -25,6 +25,10 @@ type DVIByte = Word8
 
 In order to implement the backlinking, we need to keep track of the current
 position in the stream and, most importantly, the previous \emph{bop} position.
+We also keep track of the total number of pages, the maximum vertical and
+horizontal positions, the current and maximum push levels, and the font
+definitions. All of these are necessary either throughout or at the end, when
+outputting the footer.
 
 \begin{code}
 data FontDef = FontDef  { checkSum :: Integer
@@ -100,6 +104,13 @@ appendFont fnt = modify appendFont
     where
         appendFont st@(DVIStream {fontDefs=fs}) = st { fontDefs=(fs ++ [fnt]) }
 
+\end{code}
+
+Integers are represented in big-endian ordering. The format supports 1, 2, 3,
+and~4 Byte numbers. A very general \code{putn} function handles $n$~Byte
+numbers.
+
+\begin{code}
 putn :: Integer -> Integer -> State DVIStream ()
 putn 0 b = return ()
 putn n b = do
@@ -109,6 +120,11 @@ put1 = putn 1
 put2 = putn 2
 put3 = putn 3
 put4 = putn 4
+\end{code}
+
+Another common operation is to put a string of repeated Bytes of lenght $k$.
+
+\begin{code}
 putk 0 _ = return ()
 putk n (x:xs) = (put1 x) >> (putk (n-1) xs)
 \end{code}
@@ -155,13 +171,13 @@ w0 = put1 147
 w1 b = (put1 148) >> (put1 b)
 w2 b = (put1 149) >> (put2 b)
 w3 b = (put1 150) >> (put3 b)
-w4 b = (put3 151) >> (put4 b)
+w4 b = (put3 151) >> (put4 b) -- FIXME CHECK THIS!
 
 x0 = put1 152
 x1 b = (put1 153) >> (put1 b)
 x2 b = (put1 154) >> (put2 b)
 x3 b = (put1 155) >> (put3 b)
-x4 b = (put3 156) >> (put4 b)
+x4 b = (put3 156) >> (put4 b) -- FIXME CHECK THIS
 
 pre i num den mag k x = do
     put1 247
@@ -226,7 +242,9 @@ magic_s = 0x29b33da
 magic_u = 0x1d5c147
 \end{code}
 
-Based on these low-level functions, we define a higher level interface.
+Based on these low-level functions, we define a higher level interface. This
+interface could be implemented by another set of output routines, such as those
+outputting PDF.
 
 \begin{code}
 startwcomment comment = pre 2 tex_num tex_den tex_mag k x

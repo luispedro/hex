@@ -1,9 +1,12 @@
 \section{Boxes}
 
-We need a special GHC extension here for use below
+We need to declare a special GHC extension here for use below
+
 \begin{code}
 {-# LANGUAGE TypeSynonymInstances #-}
 \end{code}
+
+Now, we can start:
 
 \begin{code}
 module Boxes where
@@ -33,7 +36,8 @@ instance BoxType V where
 \end{code}
 
 For the moment, a box can contain only a few types of things: text (as a
-string), a kern (which can also be a vspace), or a list of other boxes.
+string), a kern (which represents a vspace for vboxes), or a list of other
+boxes.
 
 \begin{code}
 data BoxContents = TextContent String
@@ -71,7 +75,9 @@ instance (BoxType b) => Show (Box b) where
 \end{code}
 
 We also define ``glue'' here (as D.~E. Knuth himself points out, this should
-have been called ``springs'', but glue stuck). As above, we can have h- and v-glue.
+have been called ``springs'', but the word glue stuck). As above, we can have
+h- and v-glue.
+
 \begin{code}
 data (BoxType t) => Glue t = Glue
             { glueType :: t
@@ -94,6 +100,8 @@ spaceGlue = Glue
             , infLevel=0
             }
 \end{code}
+
+The final type of element we can have are \emph{penalties}, h- or v-penalties:
 
 \begin{code}
 data (BoxType t) => Penalty t = Penalty
@@ -126,7 +134,7 @@ type HElement = Element H
 type VElement = Element V
 \end{code}
 
-A final utility function for dealing with boxes: merging them. This is the
+A simple utility function for dealing with boxes: merging them. This is the
 piece of code that requires the \code{TypeSynonymInstances} declared above.
 The usage of a class is only a way to get a polymorphic \code{boxList}
 function.
@@ -148,7 +156,9 @@ mergeBoxes t bs = Box
             }
 \end{code}
 
-This is the equivalent of the \TeX{} level \tex{hbox to} construct:
+The \code{hboxto} is the equivalent of the \TeX{} level \tex{hbox to}
+construct, it stretches or shrinks the glues to make the whole list of elements
+as close as possible to the given dimensions.
 
 \begin{code}
 hboxto :: Dimen -> [HElement] -> [HElement]

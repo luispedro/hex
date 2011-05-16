@@ -1,10 +1,15 @@
 \section{Streams}
+A character stream is an object which is either empty or can return a typed
+char using \code{getchar}. The stream has a list of Char and a conversion table
+to transform them into typed chars.
+
 \begin{code}
 module CharStream where
 \end{code}
 
 Character codes are defined by a table that the user can manipulate. This table
-obeys namespace rules.
+obeys namespace rules. Therefore, we need to import the \code{Environment}
+module.
 
 \begin{code}
 import Chars
@@ -24,7 +29,6 @@ easier to curry.
 annotate ::  CategoryTable -> Char -> TypedChar
 annotate table c = TypedChar{value=c, category=E.lookupWithDefault Other c table}
 \end{code}
-
 
 This encodes a typed character stream
 

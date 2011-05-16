@@ -36,12 +36,18 @@ skiptoeol st
     where (c,st') = getchar st
 \end{code}
 
-Now, the implementation of the two easy states: S \& N.
+In order to have the state functions return themselves, we need to define them
+as a datatype. Unfortunately, we also need to define the ugly
+\code{applyStateFunction} helper.
 
 \begin{code}
 newtype StateFunction = StateFunction ( TypedCharStream -> ([Token], TypedCharStream, StateFunction) )
 applyStateFunction (StateFunction s) st = s st
+\end{code}
 
+Now, the implementation of the two easy states: S \& N.
+
+\begin{code}
 sN = StateFunction sN' where
     sN' st
         | emptyStream st = ([],st,sN)
@@ -61,10 +67,10 @@ sS = StateFunction sS' where
 \code{sM} does most of the real work of transforming \code{TypedChar}s into
 \code{Token}s.
 
-Almost everything is a CharToken, except single non-letters or words following
-an \code{Escape}. A word is a sequence of \code{Letter}s followed by
-non-\code{Letter}. Therefore, getting a csname is only done in two steps: if it
-is single character, just stop there; otherwise, invoke \code{breakup'}.
+Almost everything is a \code{CharToken}, except single non-letters or a word
+following an \code{Escape}. A word is a sequence of \code{Letter}s followed by
+non-\code{Letter}. Therefore, getting a csname is done in two steps: if it is
+single character, just stop there; otherwise, invoke \code{breakup'}.
 
 The rule of what the next state is are a bit convoluted, but they're taken from
 the Texbook.
@@ -74,6 +80,7 @@ the Texbook.
 sM = StateFunction sM' where
     sM' st
         | emptyStream st = ([], st, sM)
+                                -- Maybe below should be (TypedChar '\n' Space) ?
         | (category c) == EOL = ([CharToken (TypedChar ' ' Space)], rest, sN)
         | (category c) == Space = ([CharToken c], rest, sS)
         | (category c) == Comment = applyStateFunction sN $ skiptoeol rest
@@ -99,6 +106,11 @@ sM = StateFunction sM' where
                     (c,rest) = getchar st
 \end{code}
 
+Similar to \code{TypedCharStream}, we define a \code{TokenStream} which
+transforms the typed chars into \code{Token}s. The biggest difference is the
+\code{queue} functionality, which allows one to push back tokens into the
+queue.
+
 \begin{code}
 data TokenStream = TokenStream
                 { charsource :: TypedCharStream
@@ -107,7 +119,6 @@ data TokenStream = TokenStream
                 }
 newTokenStream :: TypedCharStream -> TokenStream
 newTokenStream cs = TokenStream cs sN []
-
 \end{code}
 
 The main function of this module is \code{gettoken}, which returns a pair
@@ -115,7 +126,6 @@ The main function of this module is \code{gettoken}, which returns a pair
 interface.
 
 \begin{code}
-
 gettoken st | emptyTokenStream st = error "hex.Tokens.gettoken: empty stream"
 gettoken tSt@TokenStream{queue=(t:ts)} = (t,tSt{queue=ts})
 gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} =
@@ -124,21 +134,35 @@ gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} =
 
 \end{code}
 
-To get a few tokens in a row, we can call \code{gettokentil}
+To get a few tokens in a row, we can call \code{gettokentil}. The matching
+token is left in the queue.
 
 \begin{code}
-
 gettokentil st cond
     | emptyTokenStream st = ([], st)
     | (cond c) = ([],st)
     | otherwise = let (c',st'') = gettokentil st' cond in (c:c', st'')
     where (c,st') = gettoken st
 
+\end{code}
+
+We define a few helper functions to manipulate the stream.
+
+\begin{code}
 droptoken = snd . gettoken
 streampush st@TokenStream{queue=ts} t = st{queue=(t:ts)}
 streamenqueue st@TokenStream{queue=ts} nts = st{queue=(nts ++ ts)}
 tokenliststream ts = streamenqueue (newTokenStream $ TypedCharStream [] []) ts
+\end{code}
 
+\code{emptyTokenStream} is surprisingly tricky. In fact, we need to look ahead
+to see if there is anything left to read. For example if the input consists of
+a few lines of comments, there are still many chars left, but the token stream
+will be empty. If the state functions were defined slightly differently (to
+always read as much as they could), this function could be simpler, but the
+state functions would be potentially more complex.
+
+\begin{code}
 emptyTokenStream TokenStream{queue=(t:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
@@ -146,13 +170,16 @@ emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
         where (q,st',s') = applyStateFunction s st
 \end{code}
 
-We also add a function to manipulate the underlying stream:
+We also add a function to manipulate the underlying character stream.
 
 \begin{code}
 updateCharStream t@TokenStream{charsource=s} f = t{charsource=(f s)}
 \end{code}
 
-We add a simple helper function:
+For debugging and testing purposes, we use a simple helper function. The reason
+that it is not so simple for real usage is that some tokens might cause the
+manipulation of the character stream (for example, by changing the character
+code table).
 
 \begin{code}
 chars2tokens str = ts

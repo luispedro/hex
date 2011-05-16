@@ -23,6 +23,8 @@ data HexType =
 \end{code}
 
 An environment is a nested sequence of mappings, which we implement as a list.
+The head mapping is the deeper element. As we search for an element, we look
+for environments through the list and return the first match found.
 
 \begin{code}
 type BaseEnvironment a b = M.Map a b
@@ -30,7 +32,7 @@ type Environment a b = [BaseEnvironment a b]
 \end{code}
 
 An empty environment is \emph{not} an empty list, but a list with an empty
-mapping:
+mapping. The list should never become empty.
 
 \begin{code}
 empty :: Environment a b
@@ -66,7 +68,9 @@ insert :: (Ord a) => a -> b -> Environment a b -> Environment a b
 insert name val (e:es)= (M.insert name val e:es)
 \end{code}
 
-Global insertion is insertion at the last element.
+Global insertion is insertion at the last element. This is actually incorrect,
+but I am not 100% sure how \TeX{} handles global insertions in the case where
+the name exists in an intermediate namespace.% FIXME
 
 \begin{code}
 globalinsert name val (e:[]) = [M.insert name val e]

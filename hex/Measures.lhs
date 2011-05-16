@@ -5,9 +5,8 @@ module Measures where
 import Ratio
 \end{code}
 
-In this section, we declare code to deal with dimensions.
-
-The basic unit is \emph{scaled points}, i.e., points times $2^{16}$.
+In this section, we deal with dimensions. The basic unit is \emph{scaled
+points}, i.e., points times $2^{16}$.
 
 \begin{code}
 data Dimen = Dimen
@@ -20,6 +19,12 @@ instance Show Dimen where
 instance Ord Dimen where
     compare (Dimen np0) (Dimen np1) = compare np0 np1
 
+\end{code}
+
+For manipulating dimensions, we define a bunch of arithmetic operators, all
+with names prefixed with \emph{d}:
+
+\begin{code}
 (Dimen np0) `dplus` (Dimen np1) = Dimen $ np0 + np1
 (Dimen np0) `dsub` (Dimen np1) = Dimen $ np0 - np1
 (Dimen np0) `dgt` (Dimen np1) = np0 > np1
@@ -47,7 +52,8 @@ dimenFromInches = dimenFromPoints . inchesToPoints
 zeroDimen = Dimen 0
 \end{code}
 
-Eventually, this module will grow. For now, we define only paper size:
+Eventually, this module will grow. For now, we define only paper size and hard
+code the size of American letter paper:
 
 \begin{code}
 data PaperSize = PaperSize 
