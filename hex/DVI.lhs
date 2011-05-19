@@ -171,13 +171,13 @@ w0 = put1 147
 w1 b = (put1 148) >> (put1 b)
 w2 b = (put1 149) >> (put2 b)
 w3 b = (put1 150) >> (put3 b)
-w4 b = (put3 151) >> (put4 b) -- FIXME CHECK THIS!
+w4 b = (put1 151) >> (put4 b)
 
 x0 = put1 152
 x1 b = (put1 153) >> (put1 b)
 x2 b = (put1 154) >> (put2 b)
 x3 b = (put1 155) >> (put3 b)
-x4 b = (put3 156) >> (put4 b) -- FIXME CHECK THIS
+x4 b = (put1 156) >> (put4 b)
 
 pre i num den mag k x = do
     put1 247
