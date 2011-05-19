@@ -1,0 +1,8 @@
+\def\a{a}%
+\a%
+{%
+    \a%
+    \global\def\a{b}%
+    \a%
+}%
+\a%

@@ -237,6 +237,16 @@ expand' env (ControlSequence seq) st
             isBeginGroup _ = False
 \end{code}
 
+We handle \code{\\global} by simply transforming it into \code{\\gdef} or
+\code{\\xdef}.
+
+\begin{code}
+expand' env (ControlSequence "\\global") st
+    | next == "\\def" = expand' env (ControlSequence "\\gdef") rest
+    | next == "\\edef" = expand' env (ControlSequence "\\xdef") rest
+    where (ControlSequence next, rest) = gettoken st
+\end{code}
+
 Errors are a special case:
 
 \begin{code}
