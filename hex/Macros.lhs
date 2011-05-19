@@ -187,7 +187,7 @@ expand' env (ControlSequence "\\noexpand") st = (fromToken t:expand env r)
 following leads to an error:
 
 \begin{tex}
-\expandafter\a\def\a\{Ana\}
+\expandafter\a\def\a\{Anna\}
 \end{tex}
 
 Therefore, the environment cannot change in the inner expansion.
