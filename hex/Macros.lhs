@@ -223,14 +223,16 @@ directly or its expansion.
 \begin{code}
 expand' env (ControlSequence seq) st
     | isprimitive seq = (PrimitiveCommand seq) : (expand env st)
-    | (seq == "\\def") || (seq == "\\edef") = expand env' rest
+    | seq `elem` ["\\def", "\\gdef", "\\edef", "\\xdef"] = expand env' rest
         where
-            env' = E.insert name macro env
+            edef = seq `elem` ["\\edef", "\\xdef"]
+            insertfunction = if seq `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
+            env' = insertfunction name macro env
             macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
             (substitutiontext,rest) = breakAtGroupEnd 0 $ droptoken afterargs
-            substitution = if seq == "\\def" then substitutiontext else map toToken $ expand env $ tokenliststream substitutiontext
+            substitution = if edef then substitutiontext else map toToken $ expand env $ tokenliststream substitutiontext
             isBeginGroup (CharToken tc) = (category tc) == BeginGroup
             isBeginGroup _ = False
 \end{code}

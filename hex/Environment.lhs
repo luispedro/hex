@@ -68,13 +68,13 @@ insert :: (Ord a) => a -> b -> Environment a b -> Environment a b
 insert name val (e:es)= (M.insert name val e:es)
 \end{code}
 
-Global insertion is insertion at the last element. This is actually incorrect,
-but I am not 100% sure how \TeX{} handles global insertions in the case where
-the name exists in an intermediate namespace.% FIXME
+Global insertion is achieved by removing the element from all of the
+intermediate local environments and inserting it in the last one. See the tests
+\code{expanded/global} and \code{expanded/global_intermediate} for use cases.
 
 \begin{code}
 globalinsert name val (e:[]) = [M.insert name val e]
-globalinsert name val (e:es) = (e:(globalinsert name val es))
+globalinsert name val (e:es) = ((M.delete name e):(globalinsert name val es))
 \end{code}
 
 We define a few special names by coding them in functions:
