@@ -13,6 +13,12 @@ newtype Scaled = Scaled Integer
 scale x = Scaled $ round $ x * (2^16)
 \end{code}
 
+And we add a few conversion functions:
+\begin{code}
+scaledToRational :: Scaled -> Rational
+scaledToRational (Scaled sp) = sp % (2^16)
+\end{code}
+
 In this section, we deal with dimensions. The basic unit is \emph{scaled
 points}, i.e., points times $2^{16}$.
 

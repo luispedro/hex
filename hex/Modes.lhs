@@ -73,13 +73,23 @@ paragraph e cs = (par',rest')
         isParagraphBreak _ = False
 \end{code}
 
+\begin{code}
+spreadlines :: Scaled -> [VBox] -> [VBox]
+spreadlines _ [] = []
+spreadlines baselineskip (v:vs) = (v:k:spreadlines baselineskip vs)
+    where
+        k = Box { boxType=V, height=ht, depth=zeroDimen, width=zeroDimen, boxContents=(Kern ht) }
+        ht = (height v) `dmul` (scaledToRational baselineskip)
+\end{code}
+
 \code{hMode} implements horizontal mode, whose output is a series of vertical boxes.
 
 \begin{code}
 hMode :: E.Environment String E.HexType -> [Command] -> [VBox]
 hMode env [] = []
-hMode env cs = (breakintolines linewidth firstParagraph) ++ (vMode env rest)
+hMode env cs = (spreadlines baselineskip $ breakintolines linewidth firstParagraph) ++ (vMode env rest)
     where
         (firstParagraph, rest) = paragraph env cs
         Just (E.HexDimen linewidth) = E.lookup "textwidth" env
+        Just (E.HexScaledNumber baselineskip) = E.lookup "baselineskip" env
 \end{code}
