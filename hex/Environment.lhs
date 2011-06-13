@@ -19,7 +19,7 @@ data HexType =
         HexDimen Dimen
         | HexString String
         | HexFontInfo FontInfo
-
+        | HexScaledNumber Scaled
 \end{code}
 
 An environment is a nested sequence of mappings, which we implement as a list.

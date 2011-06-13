@@ -5,6 +5,14 @@ module Measures where
 import Ratio
 \end{code}
 
+Many operations in \TeX{} are performed with fixed point numbers, so we define
+them here:
+
+\begin{code}
+newtype Scaled = Scaled Integer
+scale x = Scaled $ round $ x * (2^16)
+\end{code}
+
 In this section, we deal with dimensions. The basic unit is \emph{scaled
 points}, i.e., points times $2^{16}$.
 
