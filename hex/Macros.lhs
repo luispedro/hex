@@ -232,7 +232,8 @@ expand' env (ControlSequence seq) st
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
             (substitutiontext,rest) = breakAtGroupEnd 0 $ droptoken afterargs
-            substitution = if edef then substitutiontext else map toToken $ expand env $ tokenliststream substitutiontext
+            substitution = if edef then expandedsubtext else substitutiontext
+            expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
             isBeginGroup (CharToken tc) = (category tc) == BeginGroup
             isBeginGroup _ = False
 \end{code}
