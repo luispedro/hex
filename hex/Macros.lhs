@@ -15,10 +15,14 @@ After expansion, we no longer have tokens: we have commands. For the moment, we
 have only very simple commands:
 
 \begin{code}
+data HexCommand =
+        ErrorCommand String
+        | InputCommand String
+
 data Command =
         CharCommand TypedChar
         | PrimitiveCommand String
-        | HexCommand String String
+        | InternalCommand HexCommand
 
 fromToken (ControlSequence seq) = PrimitiveCommand seq
 fromToken (CharToken tc) = CharCommand tc
@@ -26,12 +30,16 @@ fromToken (CharToken tc) = CharCommand tc
 toToken (PrimitiveCommand c) = ControlSequence c
 toToken (CharCommand tc) = CharToken tc
 
+instance Show HexCommand where
+    show (ErrorCommand errmsg) = "error:"++errmsg
+    show (InputCommand fname) = "input:"++fname
+
 instance Show Command where
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
     show (CharCommand (TypedChar _ Space)) = "< >"
     show (CharCommand tc) = "<" ++ show tc ++ ">"
-    show (HexCommand cmd msg) = "(" ++ cmd ++ ":" ++ msg ++ ")"
+    show (InternalCommand cmd) = "(" ++ show cmd ++ ")"
 \end{code}
 
 Our implementation of macros is very simple: they are lists of functions. So for example
@@ -251,7 +259,7 @@ expand' env (ControlSequence "\\global") st
 Errors are a special case:
 
 \begin{code}
-expand' env (ControlSequence "error") st = (HexCommand "error" errormsg):(expand env rest)
+expand' env (ControlSequence "error") st = (InternalCommand $ ErrorCommand errormsg):(expand env rest)
     where
         (errortoks, rest) = gettokenorgroup st
         errormsg = map (\t -> case t of (CharToken (TypedChar c _)) -> c) errortoks
