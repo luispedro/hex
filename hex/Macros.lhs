@@ -40,6 +40,7 @@ have only very simple commands:
 data HexCommand =
         ErrorCommand String
         | InputCommand String
+        | MessageCommand String
 
 data Command =
         CharCommand TypedChar
@@ -55,6 +56,7 @@ toToken (CharCommand tc) = CharToken tc
 instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
     show (InputCommand fname) = "input:"++fname
+    show (MessageCommand msg) = "message:"++msg
 
 instance Show Command where
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
@@ -260,16 +262,19 @@ expand' env (ControlSequence "\\global") st
     where (ControlSequence next, rest) = gettoken st
 \end{code}
 
-Errors are a special case:
+We need to special case the internal commands. Errors and messages are similar
+and handled by the same function:
 
 \begin{code}
-expand' env (ControlSequence "error") st = (InternalCommand env rest $ ErrorCommand errormsg):(expand env rest)
+expand' env (ControlSequence cs) st
+    | cs `elem` ["error","\\message"] = (InternalCommand env rest $ cmd arg):(expand env rest)
     where
-        (errortoks, rest) = gettokenorgroup st
-        errormsg = map (\t -> case t of (CharToken (TypedChar c _)) -> c) errortoks
+        cmd = if cs == "error" then ErrorCommand else MessageCommand
+        (argtoks, rest) = gettokenorgroup st
+        arg = map (\t -> case t of (CharToken (TypedChar c _)) -> c) argtoks
 \end{code}
 
-As is the \code{\\input} command:
+The \code{\\input} command has slightly different syntax than most commands:
 
 \begin{code}
 expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCommand fname]
