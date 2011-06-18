@@ -11,37 +11,6 @@ import CharStream
 import qualified Environment as E
 \end{code}
 
-After expansion, we no longer have tokens: we have commands. For the moment, we
-have only very simple commands:
-
-\begin{code}
-data HexCommand =
-        ErrorCommand String
-        | InputCommand String
-
-data Command =
-        CharCommand TypedChar
-        | PrimitiveCommand String
-        | InternalCommand HexCommand
-
-fromToken (ControlSequence seq) = PrimitiveCommand seq
-fromToken (CharToken tc) = CharCommand tc
-
-toToken (PrimitiveCommand c) = ControlSequence c
-toToken (CharCommand tc) = CharToken tc
-
-instance Show HexCommand where
-    show (ErrorCommand errmsg) = "error:"++errmsg
-    show (InputCommand fname) = "input:"++fname
-
-instance Show Command where
-    show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
-    show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
-    show (CharCommand (TypedChar _ Space)) = "< >"
-    show (CharCommand tc) = "<" ++ show tc ++ ">"
-    show (InternalCommand cmd) = "(" ++ show cmd ++ ")"
-\end{code}
-
 Our implementation of macros is very simple: they are lists of functions. So for example
 
 \\def\\macro\#1\#2\{M\#1CR\#2\}
@@ -58,6 +27,44 @@ data Macro = Macro { nargs :: Int
                    }
 \end{code}
 
+Now, an environment simply maps macro names (\code{String}s) to \code{Macro}s.
+
+\begin{code}
+type MacroEnvironment = E.Environment String Macro
+\end{code}
+
+After expansion, we no longer have tokens: we have commands. For the moment, we
+have only very simple commands:
+
+\begin{code}
+data HexCommand =
+        ErrorCommand String
+        | InputCommand String
+
+data Command =
+        CharCommand TypedChar
+        | PrimitiveCommand String
+        | InternalCommand MacroEnvironment TokenStream HexCommand
+
+fromToken (ControlSequence seq) = PrimitiveCommand seq
+fromToken (CharToken tc) = CharCommand tc
+
+toToken (PrimitiveCommand c) = ControlSequence c
+toToken (CharCommand tc) = CharToken tc
+
+instance Show HexCommand where
+    show (ErrorCommand errmsg) = "error:"++errmsg
+    show (InputCommand fname) = "input:"++fname
+
+instance Show Command where
+    show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
+    show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
+    show (CharCommand (TypedChar _ Space)) = "< >"
+    show (CharCommand tc) = "<" ++ show tc ++ ">"
+    show (InternalCommand _ _ cmd) = "(" ++ show cmd ++ ")"
+\end{code}
+
+
 
 In order to build an expansion element, we need to map instances of
 \tex{\#\emph{n}} to \code{(!! (n-1))} and other tokens to \code{const t}.
@@ -68,9 +75,6 @@ buildExpansion [] = []
 buildExpansion ((CharToken tc0):(CharToken tc1):ts)
     | (category tc0) == Parameter = (!! ((read [value tc1])- 1)):(buildExpansion ts)
 buildExpansion (t:ts) = (const [t]):(buildExpansion ts)
-\end{code}
-\begin{code}
-type MacroEnvironment = E.Environment String Macro
 \end{code}
 
 Some control sequences are \emph{primitive}: They should pass by macro
@@ -259,10 +263,27 @@ expand' env (ControlSequence "\\global") st
 Errors are a special case:
 
 \begin{code}
-expand' env (ControlSequence "error") st = (InternalCommand $ ErrorCommand errormsg):(expand env rest)
+expand' env (ControlSequence "error") st = (InternalCommand env rest $ ErrorCommand errormsg):(expand env rest)
     where
         (errortoks, rest) = gettokenorgroup st
         errormsg = map (\t -> case t of (CharToken (TypedChar c _)) -> c) errortoks
+\end{code}
+
+As is the \code{\\input} command:
+
+\begin{code}
+expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCommand fname]
+    where
+        (fname, rest) = getletterseq st
+        getletterseq st
+            | emptyTokenStream st = ([], st)
+            | otherwise = case tok of
+                (ControlSequence _) -> ([], st)
+                (CharToken tc) ->
+                    if (category tc) == Letter then
+                        let (e,r) = getletterseq rest in (((value tc):e),r)
+                        else ([], st)
+            where (tok,rest) = gettoken st
 \end{code}
 
 \begin{code}
