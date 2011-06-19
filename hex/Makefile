@@ -7,6 +7,7 @@ SOURCES :=  \
             DVI.lhs \
             Environment.lhs \
             Fonts.lhs \
+			Hex.lhs \
             Linebreak.lhs \
             LoadPL.lhs \
             Macros.lhs \

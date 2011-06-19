@@ -17,6 +17,7 @@ import Measures (dimenFromInches)
 import Output (outputBoxes)
 import Environment (loadfont)
 import PageBreak (breakpages)
+import Hex (processinputs)
 
 import Defaults (startenv, plaintexenv)
 \end{code}
@@ -51,6 +52,9 @@ function "dvioutput" = \input -> do
     fontinfo <- readFile "data/cmr10.pl"
     B.putStr $ dvioutput fontinfo input
 
+function "hex" = \input -> do
+    processinputs $ expanded input
+    return ()
 
 asBox (Boxes.EBox b) = Just b
 asBox _ = Nothing

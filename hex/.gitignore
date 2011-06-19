@@ -1,5 +1,5 @@
 *.hi
 *.o
-hex
+/hex
 hextest
 dvidecode

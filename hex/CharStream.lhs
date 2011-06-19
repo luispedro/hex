@@ -63,3 +63,10 @@ pushst st@TypedCharStream{table=t} = st{table=E.push t}
 popst st@TypedCharStream{table=t} = st{table=E.pop t}
 \end{code}
 
+We can pre-queue a string:
+
+\begin{code}
+prequeue st@TypedCharStream{remaining=q} nq = st{remaining=(nq++q)}
+\end{code}
+
+
