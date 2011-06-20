@@ -48,7 +48,7 @@ instance Show CharCategory where
 
 In order to be able to go back and forth between these names and the category
 codes, we define a pair of translation functions. Unit tests verify that
-\texttt{(codeCategory $ categoryCode i) == i}, for all relevant $i$.
+\code{(codeCategory $ categoryCode i) == i}, for all relevant $i$.
 
 \begin{code}
 codeCategory :: CharCategory -> Integer
@@ -94,7 +94,7 @@ category.
 \begin{code}
 data TypedChar = TypedChar { value :: Char
                  , category :: CharCategory
-                 }
+                 } deriving (Eq)
 \end{code}
 
 Mostly for debugging, we should be able to visualise these. The default show

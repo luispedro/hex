@@ -1,0 +1,1 @@
+\def\a#1\relax#2{#2#1}\a2\relax1%

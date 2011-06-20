@@ -5,26 +5,44 @@ Macros are the mechanism for TeX scripting.
 \begin{code}
 module Macros where
 
+import List (sortBy)
+
 import Tokens
 import Chars
 import CharStream
 import qualified Environment as E
 \end{code}
 
-Our implementation of macros is very simple: they are lists of functions. So for example
-
-\\def\\macro\#1\#2\{M\#1CR\#2\}
-
-gets mapped to
-
-[const (TypedChar 'M' Letter), (!! 0), const (TypedChar 'C' Letter), const (TypedChar 'R' Letter), (!! 1)]
-
-which when mapped with the argument list ["A", "O"], leads to MACRO
+Macros are simple pairs of argument and replacement token strings
 
 \begin{code}
-data Macro = Macro { nargs :: Int
-                   , expansion :: [[[Token]] -> [Token]]
-                   }
+data Macro = Macro
+                { arglist :: [Token]
+                , replacement :: [Token]
+                } deriving (Eq, Show)
+\end{code}
+
+A small helper function, which reads a number from a token, useful for
+processing \tex{#1} and similar token sequences.
+
+\begin{code}
+readNumberFromToken :: Token -> Int
+readNumberFromToken (CharToken (TypedChar v _)) = read [v]
+readNumberFromToken _ = -1
+\end{code}
+
+To expand a macro, given a set of arguments, use \code{expandmacro}
+
+\begin{code}
+expandmacro :: Macro -> [(Int,[Token])] -> [Token]
+expandmacro macro arguments = expandmacro' (replacement macro)
+    where
+        arguments' = map snd $ sortBy (\(a,_) (b,_) -> (compare a b))  arguments
+        expandmacro' [] = []
+        expandmacro' ((CharToken (TypedChar _ Parameter)):t@(CharToken c):ts) = case category c of
+            Parameter -> (t:expandmacro' ts)
+            _ -> (arguments' !! ((readNumberFromToken t) - 1))++(expandmacro' ts)
+        expandmacro' (t:ts) = (t:expandmacro' ts)
 \end{code}
 
 Now, an environment simply maps macro names (\code{String}s) to \code{Macro}s.
@@ -64,19 +82,6 @@ instance Show Command where
     show (CharCommand (TypedChar _ Space)) = "< >"
     show (CharCommand tc) = "<" ++ show tc ++ ">"
     show (InternalCommand _ _ cmd) = "(" ++ show cmd ++ ")"
-\end{code}
-
-
-
-In order to build an expansion element, we need to map instances of
-\tex{\#\emph{n}} to \code{(!! (n-1))} and other tokens to \code{const t}.
-
-\begin{code}
-buildExpansion :: [Token] -> [[[Token]] -> [Token]]
-buildExpansion [] = []
-buildExpansion ((CharToken tc0):(CharToken tc1):ts)
-    | (category tc0) == Parameter = (!! ((read [value tc1])- 1)):(buildExpansion ts)
-buildExpansion (t:ts) = (const [t]):(buildExpansion ts)
 \end{code}
 
 Some control sequences are \emph{primitive}: They should pass by macro
@@ -151,14 +156,24 @@ If found, the macro is expanded by \code{expand1'}
 expand1' :: Macro -> TokenStream -> TokenStream
 expand1' macro st = streamenqueue rest expanded
     where
-        expanded = (concat $ map (\f -> f arguments) (expansion macro))
-        (arguments,rest) = getargs (nargs macro) st
-        getargs :: Int -> TokenStream -> ([[Token]], TokenStream)
-        getargs 0 rest = ([],rest)
-        getargs n st = ([a]++as,rest)
+        expanded = expandmacro macro arguments
+        arguments :: [(Int,[Token])]
+        (arguments,rest) = getargs (arglist macro) st
+        getargs :: [Token] -> TokenStream -> ([(Int,[Token])], TokenStream)
+        getargs [] rest = ([],rest)
+        getargs ((CharToken (TypedChar _ Parameter)):t:ts) st = (((n,a):as), rest)
             where
+                n = readNumberFromToken t
                 (a,rs) = gettokenorgroup st
-                (as,rest) = getargs (n-1) rs
+                (as,rest) = getargs ts rs
+        getargs (t:ts) st = (as,rest)
+            where
+                (t',rs) = gettoken st
+                (as,rest) =
+                        if t == t' then
+                            getargs ts rs
+                        else
+                            error "Macro expansion error"
 \end{code}
 
 If there is an error, we insert a special token sequence:
@@ -200,8 +215,8 @@ expand' env (ControlSequence "\\let") st = expand env' rest
         macro = case replacement of
                 (ControlSequence seq) -> case E.lookup seq env of
                                             Just macro -> macro
-                                            Nothing -> Macro 0 [const [replacement]]
-                (CharToken tc) -> Macro 0 [const [(CharToken tc)]]
+                                            Nothing -> Macro [] [replacement]
+                (CharToken tc) -> Macro [] [CharToken tc]
 \end{code}
 
 For dealing with \tex{\\noexpand} we add a special case to expand.
@@ -256,7 +271,7 @@ expand' env (ControlSequence seq) st
             edef = seq `elem` ["\\edef", "\\xdef"]
             insertfunction = if seq `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
             env' = insertfunction name macro env
-            macro = Macro ((`div` 2) (length args)) $ buildExpansion substitution
+            macro = Macro args substitution
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
             (substitutiontext,rest) = breakAtGroupEnd 0 $ droptoken afterargs

@@ -12,7 +12,11 @@ Tokens are the next level after annotated characters. A Token is either a
 control sequence or an annotated character.
 
 \begin{code}
-data Token = ControlSequence String | CharToken TypedChar
+data Token =
+    ControlSequence String
+    | CharToken TypedChar
+    deriving (Eq)
+
 instance Show Token where
     show (ControlSequence name) = "[" ++ name ++ "]"
     show (CharToken tc) = show tc
@@ -150,8 +154,20 @@ We define a few helper functions to manipulate the stream.
 
 \begin{code}
 droptoken = snd . gettoken
+\end{code}
+
+We can add tokens to the start of the queue, either one (\code{streampush}) or
+several (\code{streamenqueue}).
+
+\begin{code}
 streampush st@TokenStream{queue=ts} t = st{queue=(t:ts)}
 streamenqueue st@TokenStream{queue=ts} nts = st{queue=(nts ++ ts)}
+\end{code}
+
+Sometimes we want to have a simple stream that only spits out the tokens we
+initialise it with. This is achieved by \code{tokenliststream}:
+
+\begin{code}
 tokenliststream ts = streamenqueue (newTokenStream $ TypedCharStream [] []) ts
 \end{code}
 
