@@ -198,7 +198,9 @@ expand' env (ControlSequence "\\let") st = expand env' rest
         (ControlSequence name,aftername) = gettoken st
         (replacement,rest) = gettoken $ optionalequals aftername
         macro = case replacement of
-                (ControlSequence seq) -> case E.lookup seq env of Just macro -> macro
+                (ControlSequence seq) -> case E.lookup seq env of
+                                            Just macro -> macro
+                                            Nothing -> Macro 0 [const [replacement]]
                 (CharToken tc) -> Macro 0 [const [(CharToken tc)]]
 \end{code}
 
