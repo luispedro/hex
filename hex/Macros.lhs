@@ -169,6 +169,18 @@ macronotfounderror seq = [(ControlSequence "error"),(CharToken (TypedChar '{' Be
         errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ "Macro `" ++ seq ++ "` not defined."
 \end{code}
 
+Both \tex{\let} and \tex{\catcode} allow for an optional equals sign after
+them:
+
+\begin{code}
+optionalequals s = case gettoken s of
+    ((CharToken (TypedChar '=' _)),s') -> s'
+    _ -> s
+\end{code}
+
+The main function, \code{expand} is actually very simple and just forwards to
+\code{expand'}:
+
 \begin{code}
 expand :: MacroEnvironment -> TokenStream -> [Command]
 expand _ st | emptyTokenStream st = []
@@ -176,15 +188,15 @@ expand env st = expand' env t rest
     where (t, rest) = gettoken st
 \end{code}
 
+\code{expand'} is structured as a huge case statement (implemented with Haskell
+pattern matching)
 
 \begin{code}
 expand' env (ControlSequence "\\let") st = expand env' rest
     where
         env' = E.insert name macro env
         (ControlSequence name,aftername) = gettoken st
-        (replacement,rest) = case gettoken aftername of
-                        ((CharToken (TypedChar '=' _)),r) -> gettoken r
-                        (t,r) -> (t,r)
+        (replacement,rest) = gettoken $ optionalequals aftername
         macro = case replacement of
                 (ControlSequence seq) -> case E.lookup seq env of Just macro -> macro
                 (CharToken tc) -> Macro 0 [const [(CharToken tc)]]
@@ -219,7 +231,7 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
     where
         (t, r0) = readChar $ st
         char = tvalue t
-        (eq,r1) = gettoken r0
+        r1 = optionalequals r0
         (nvalue, r2) = readNumber r1
         altered = updateCharStream r2 $ catcode char nvalue
         catcode c v st@TypedCharStream{table=t} = st{table=(E.insert c (categoryCode v) t)}
