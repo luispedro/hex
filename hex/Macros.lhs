@@ -106,12 +106,14 @@ We need a few helper functions. \code{gettokenorgroup} retrieves the next
 
 \begin{code}
 gettokenorgroup :: TokenStream -> ([Token], TokenStream)
-gettokenorgroup st | emptyTokenStream st = error "hex.gettokenorgroup end of file"
-gettokenorgroup st = let (c,r) = gettoken st in gettokenorgroup' c r
+gettokenorgroup st
+    | emptyTokenStream st = error "hex.gettokenorgroup end of file"
+gettokenorgroup st = gettokenorgroup' c r
     where
+        (c,r) = gettoken st
         gettokenorgroup' (CharToken tc) r
             | (category tc) == BeginGroup = breakAtGroupEnd 0 r
-        gettokenorgroup' t r = ([t],r)
+        gettokenorgroup' t r = ([t],maybespace r)
 
 breakAtGroupEnd :: Integer -> TokenStream -> ([Token], TokenStream)
 breakAtGroupEnd _ st

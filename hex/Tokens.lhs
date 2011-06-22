@@ -150,6 +150,17 @@ gettokentil st cond
 
 \end{code}
 
+An often needed operation is to skip an optional space:
+
+\begin{code}
+maybespace st
+    | emptyTokenStream st = st
+    | otherwise = case t of
+        (CharToken c) -> if category c == Space then rest else st
+        _ -> st
+    where (t, rest) = gettoken st
+\end{code}
+
 We define a few helper functions to manipulate the stream.
 
 \begin{code}
