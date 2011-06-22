@@ -173,7 +173,7 @@ expand1' macro st = streamenqueue rest expanded
                         if t == t' then
                             getargs ts rs
                         else
-                            error "Macro expansion error"
+                            error "Macro parameter matching error"
 \end{code}
 
 If there is an error, we insert a special token sequence:
