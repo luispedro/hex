@@ -11,10 +11,16 @@ import Tokens (updateCharStream, TokenStream)
 import CharStream (prequeue)
 \end{code}
 
+Processing \tex{\\input} is achieved by prequeueing the characters in the input
+file.
+
 \begin{code}
 prequeueChars :: [Char] -> TokenStream -> TokenStream
 prequeueChars q st = updateCharStream st (\s -> prequeue s q)
 \end{code}
+
+\code{processinputs} processes the special commands in the \code{Command}
+stream. In particular, it process \tex{\\input} and \tex{\\message}.
 
 \begin{code}
 processinputs :: [Command] -> IO [Command]
