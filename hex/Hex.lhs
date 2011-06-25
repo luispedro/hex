@@ -10,6 +10,8 @@ import System.FilePath.Posix
 import Macros
 import Tokens (updateCharStream, TokenStream)
 import CharStream (prequeue)
+import qualified Environment as E
+type HexEnvironment = E.Environment String E.HexType
 \end{code}
 
 Processing \tex{\\input} is achieved by prequeueing the characters in the input
@@ -29,23 +31,23 @@ readOneOf (n:ns) = (readFile n) `catch` (\e -> if isDoesNotExistError e then rea
 stream. In particular, it process \tex{\\input} and \tex{\\message}.
 
 \begin{code}
-processinputs :: [Command] -> IO [Command]
-processinputs [] = return []
-processinputs ((InternalCommand env' rest (MessageCommand msg)):cs) = (putStrLn msg) >>= (return $ processinputs cs)
-processinputs ((InternalCommand env rest (InputCommand nfname)):_) = do {
+processinputs :: [Command] -> HexEnvironment -> IO [Command]
+processinputs [] e = return []
+processinputs ((InternalCommand env' rest (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
+processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             nextfile <- readOneOf possiblefiles;
-            cs <- processinputs $ expand env $ prequeueChars nextfile rest;
+            cs <- processinputs (expand env $ prequeueChars nextfile rest) (addfileenv nextfile e);
             return cs;
-        } `catch` (\e ->
-            if isDoesNotExistError e then do
+        } `catch` printerror
+    where
+        printerror err =
+            if isDoesNotExistError err then do
                 putStrLn ("Could not open file: `" ++ nfname ++ "`")
                 putStrLn ("\tAttempted to open one of: " ++ (concat $ map (\n -> (n ++ " ")) possiblefiles))
-                cs <- processinputs $ expand env rest
+                cs <- processinputs (expand env rest) e
                 return cs
             else
-                ioError e
-            )
-    where
+                ioError err
         possiblefiles
             | isAbsolute nfname = [nfname]
             | hasExtension nfname = do
@@ -55,9 +57,13 @@ processinputs ((InternalCommand env rest (InputCommand nfname)):_) = do {
                 dir <- searchpath
                 e <- ["hex", "tex"]
                 return (dir </> (nfname <.> e))
-        searchpath = ["."]
+        searchpath = [currentdir, "."]
+        currentdir = case E.lookup "currentfile" e of
+            Just (E.HexString f) -> fst $ splitFileName f
+            Nothing -> ""
+        addfileenv = (E.globalinsert "currentfile") . E.HexString
 
-processinputs (c:cs) = do
-    cs' <- (processinputs cs)
+processinputs (c:cs) e = do
+    cs' <- (processinputs cs e)
     return $ (c:cs')
 \end{code}

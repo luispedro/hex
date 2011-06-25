@@ -20,6 +20,7 @@ import PageBreak (breakpages)
 import Hex (processinputs)
 
 import Defaults (startenv, plaintexenv)
+import qualified Environment as E
 \end{code}
 
 For the moment, hex uses the \textit{hex subcommand} convention for its command
@@ -52,9 +53,12 @@ function "dvioutput" = \input -> do
     fontinfo <- readFile "data/cmr10.pl"
     B.putStr $ dvioutput fontinfo input
 
-function "hex" = \input -> do
-    processinputs $ expanded input
-    return ()
+hex fname = do
+        input <- readFile fname
+        processinputs (expanded input) startingenv
+        return ()
+    where
+        startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv
 
 asBox (Boxes.EBox b) = Just b
 asBox _ = Nothing
@@ -66,7 +70,9 @@ Without any error checking, get the subcommand, the filename, and print out the 
 main :: IO ()
 main = do
     args <- getArgs
-    input <- readFile (args !! 1)
-    function (args !! 0) $ input
+    if (args !! 0) == "hex" then hex (args !! 1) else do {
+        input <- readFile (args !! 1);
+        function (args !! 0) $ input;
+    }
 \end{code}
 
