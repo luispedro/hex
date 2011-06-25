@@ -1,0 +1,5 @@
+\def\txt{a}%
+\def\foo{\txt}%
+\let\bar\foo%
+\def\txt{b}%
+\bar%
