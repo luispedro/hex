@@ -7,7 +7,7 @@ for sub in `ls tests`; do
         if test "$1" = "-v"; then
             echo testing $sub $t ...
         fi
-        ./hex $sub $t | diff -u - tests/$sub/`basename $t hex`output
+        ./hex --mode=$sub $t | diff -u - tests/$sub/`basename $t hex`output
     done
 done
 

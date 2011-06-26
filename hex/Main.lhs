@@ -1,4 +1,5 @@
 \begin{code}
+{-# LANGUAGE DeriveDataTypeable  #-}
 module Main where
 
 import qualified Data.Map as Map
@@ -6,6 +7,7 @@ import System.Environment
 import qualified Data.ByteString.Lazy as B
 import Data.Char
 import Data.Maybe
+import System.Console.CmdArgs
 
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
@@ -53,6 +55,7 @@ function "dvioutput" = \input -> do
     fontinfo <- readFile "data/cmr10.pl"
     B.putStr $ dvioutput fontinfo input
 
+hex "-" = hex "/dev/stdin"
 hex fname = do
         input <- readFile fname
         processinputs (expanded input) startingenv
@@ -64,15 +67,34 @@ asBox (Boxes.EBox b) = Just b
 asBox _ = Nothing
 \end{code}
 
-Without any error checking, get the subcommand, the filename, and print out the results.
+There are currently two options, a mode and a file name:
+
+\begin{code}
+data HexCmd = HexCmd
+                { mode :: String
+                , input :: String
+                } deriving (Eq, Show, Data, Typeable)
+hexcmds = HexCmd
+            { mode = "hex" &= help "Hex mode"
+            , input = "-" &= argPos 0
+            } &=
+            verbosity &=
+            summary "Hex v0.0.2-git (C) Luis Pedro Coelho 2011" &=
+            details ["Hex implement the TeX language"]
+
+\end{code}
+
+Main function does not do a lot of error checking, but just gets the arguments
+and executes the corresponding command:
 
 \begin{code}
 main :: IO ()
 main = do
-    args <- getArgs
-    if (args !! 0) == "hex" then hex (args !! 1) else do {
-        input <- readFile (args !! 1);
-        function (args !! 0) $ input;
-    }
+    HexCmd m f <- cmdArgs hexcmds
+    case m of
+        "hex" -> hex f
+        _ -> do
+            str <- readFile f
+            function m str
 \end{code}
 
