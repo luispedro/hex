@@ -32,6 +32,7 @@ v0.0.3
 - footnotes
 
 Expected: Feb 28 2011
+(Also include \input & \message)
 
 v0.0.4
 ------
