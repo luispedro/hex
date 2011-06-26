@@ -76,7 +76,7 @@ data HexCmd = HexCmd
                 } deriving (Eq, Show, Data, Typeable)
 hexcmds = HexCmd
             { mode = "hex" &= help "Hex mode"
-            , input = "-" &= argPos 0
+            , input = "-" &= argPos 0 &= opt "-"
             } &=
             verbosity &=
             summary "Hex v0.0.2-git (C) Luis Pedro Coelho 2011" &=
@@ -94,7 +94,7 @@ main = do
     case m of
         "hex" -> hex f
         _ -> do
-            str <- readFile f
+            str <- (if f == "-" then getContents else readFile f)
             function m str
 \end{code}
 
