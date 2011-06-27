@@ -58,7 +58,8 @@ breakIntoSExpressions ('(':rest) = firstS:(breakIntoSExpressions restS)
         parseS n ('(':rest) = ('(':f,r) where (f,r) = parseS (n+1) rest
         parseS n (')':rest) = (')':f,r) where (f,r) = parseS (n-1) rest
         parseS n (c:cs) = (c:f,r) where (f,r) = parseS n cs
-breakIntoSExpressions (c:cs) = breakIntoSExpressions cs
+        parseS _ [] = error "File did not balance its parentheses"
+breakIntoSExpressions (_:cs) = breakIntoSExpressions cs
 \end{code}
 
 Finally, we need to parse a few relevant pieces of extra information: The

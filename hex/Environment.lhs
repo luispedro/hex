@@ -66,6 +66,7 @@ manipulating the top of the list:
 \begin{code}
 insert :: (Ord a) => a -> b -> Environment a b -> Environment a b
 insert name val (e:es)= (M.insert name val e:es)
+insert _ _ [] = error "Inserting on an invalid environment"
 \end{code}
 
 Global insertion is achieved by removing the element from all of the
@@ -75,6 +76,7 @@ intermediate local environments and inserting it in the last one. See the tests
 \begin{code}
 globalinsert name val (e:[]) = [M.insert name val e]
 globalinsert name val (e:es) = ((M.delete name e):(globalinsert name val es))
+globalinsert _ _ [] = error "Inserting on an invalid environment"
 \end{code}
 
 We define a few special names by coding them in functions:

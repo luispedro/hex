@@ -1,6 +1,6 @@
 all: hex hextest dvidecode
 .PHONY: all clean
-GHCOPTS := -odir .objs -hidir .objs
+GHCOPTS := -odir .objs -hidir .objs -Wall -fwarn-tabs -fno-warn-missing-signatures
 
 SOURCES :=  \
             Boxes.lhs \

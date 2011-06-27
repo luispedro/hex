@@ -93,7 +93,7 @@ sM = StateFunction sM' where
         where (c,rest) = getchar st
     sM' st = ([ControlSequence ('\\':name)], rest', nextstate)
         where
-            (c,rest) = getchar st
+            (_,rest) = getchar st
             (name, rest', nextstate) = breakup rest
             breakup st
                 | emptyStream st = ([],st,sN)
@@ -190,7 +190,7 @@ always read as much as they could), this function could be simpler, but the
 state functions would be potentially more complex.
 
 \begin{code}
-emptyTokenStream TokenStream{queue=(t:_)} = False
+emptyTokenStream TokenStream{queue=(_:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
     | otherwise = (((length q) == 0) && emptyStream st')

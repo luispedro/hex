@@ -86,6 +86,7 @@ categoryCode 12 = Other
 categoryCode 13 = Active
 categoryCode 14 = Comment
 categoryCode 15 = Invalid
+categoryCode _ = error "Category code is too large"
 \end{code}
 
 Now we define the typed char as consisting of both a character and its

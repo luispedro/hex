@@ -46,13 +46,14 @@ stream. This is a similar interface to the state monad.
 \begin{code}
 getchar :: TypedCharStream -> (TypedChar, TypedCharStream)
 getchar st@TypedCharStream{table=table, remaining=(c:cs)} = (annotate table c, st{remaining=cs})
+getchar _ = error "getchar on an empty stream"
 \end{code}
 
 A simple function to test for an empty stream:
 
 \begin{code}
 emptyStream :: TypedCharStream -> Bool
-emptyStream st@TypedCharStream{remaining=[]} = True
+emptyStream TypedCharStream{remaining=[]} = True
 emptyStream _ = False
 \end{code}
 

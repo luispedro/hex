@@ -60,12 +60,12 @@ data FontInfo = FontInfo
 instance Show FontInfo where
     show (FontInfo fi _) = concat $ map ((++"\n") . show) fi
 
-widthHeightDepth (FontInfo fi _) c = widthHeightDepth' fi c
+widthHeightDepth (FontInfo fi _) c = widthHeightDepth' fi
     where
-        widthHeightDepth' [] c = error ("Not found character:" ++ [c] ++ "(" ++ (show $ ord c) ++ ")")
-        widthHeightDepth' ((GliphMetric ch w h d _):gms) c
+        widthHeightDepth' [] = error ("Not found character:" ++ [c] ++ "(" ++ (show $ ord c) ++ ")")
+        widthHeightDepth' ((GliphMetric ch w h d _):gms)
             | c == ch = (w,h,d)
-            | otherwise = widthHeightDepth' gms c
+            | otherwise = widthHeightDepth' gms
 \end{code}
 
 Currently, there is a single font, which is hard coded: \textsc{cmr10}.

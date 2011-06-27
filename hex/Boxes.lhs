@@ -46,7 +46,7 @@ data BoxContents = TextContent String
                     | HBoxList [HBox] deriving (Eq)
 instance Show BoxContents where
     show (TextContent str) = str
-    show (Kern d) = " "
+    show (Kern _) = " "
     show (HBoxList bcs) = concat $ map (show . boxContents) bcs
     show (VBoxList bcs) = concat $ map (show . boxContents) bcs
 
