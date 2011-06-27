@@ -1,5 +1,6 @@
 all: hex hextest dvidecode
 .PHONY: all clean
+GHCOPTS := -odir .objs -hidir .objs
 
 SOURCES :=  \
             Boxes.lhs \
@@ -18,13 +19,14 @@ SOURCES :=  \
             Tokens.lhs
 
 hex: Main.lhs $(SOURCES)
-	ghc --make -O2 $^ -o $@
+	ghc $(GHCOPTS) --make -O2 $^ -o $@
 
 hextest: Tests.hs $(SOURCES)
-	ghc --make -O $^ -o $@
+	ghc $(GHCOPTS) --make -O $^ -o $@
 
 dvidecode: DVIDecode.lhs DVI.lhs
-	ghc --make -O2 $^ -o $@
+	ghc $(GHCOPTS) --make -O2 $^ -o $@
 
 clean:
-	rm -f *.o *.lhi hex hextest dvidecode
+	rm -rf .objs
+	rm -f hex hextest dvidecode

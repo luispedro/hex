@@ -1,5 +1,4 @@
-*.hi
-*.o
+.objs
 /hex
 hextest
 dvidecode
