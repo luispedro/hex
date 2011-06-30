@@ -100,10 +100,9 @@ putTotalPages p = modify (\st -> st { totalPages=p })
 getFonts = get >>= (return . fontDefs)
 getNFonts :: State DVIStream Integer
 getNFonts = get >>= (return . toInteger . length . fontDefs)
-appendFont fnt = modify appendFont
+appendFont fnt = modify appendFont'
     where
-        appendFont st@(DVIStream {fontDefs=fs}) = st { fontDefs=(fs ++ [fnt]) }
-
+        appendFont' st@(DVIStream {fontDefs=fs}) = st { fontDefs=(fs ++ [fnt]) }
 \end{code}
 
 Integers are represented in big-endian ordering. The format supports 1, 2, 3,
@@ -112,7 +111,7 @@ numbers.
 
 \begin{code}
 putn :: Integer -> Integer -> State DVIStream ()
-putn 0 b = return ()
+putn 0 _ = return ()
 putn n b = do
     putn (n-1) (b `div` 256)
     putByte $ fromInteger $ b `mod` 256
@@ -150,8 +149,8 @@ bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 p = do
         put4 c7
         put4 c8
         put4 c9
-        lastBop <- getLastBop
-        put4 lastBop
+        prevBop <- getLastBop
+        put4 prevBop
         putLastBop thisBop
 
 eop = put1 140
@@ -273,12 +272,12 @@ defineFont fnt@(FontDef c s d a l t) = do
 selectFont = fnt_num
 
 endfile = do
-    lastBop <- getLastBop
+    prevBop <- getLastBop
     fonts <- getFonts
     npages <- getTotalPages
     q <- getCurPos
     mpd <- getMaxPush
-    post lastBop tex_num tex_den tex_mag magic_s magic_u mpd npages
+    post prevBop tex_num tex_den tex_mag magic_s magic_u mpd npages
     putfonts 0 fonts
     pos <- getCurPos
     post_post q 2 (if (pos `mod` 4) == 0 then 4 else 8 - (pos `mod` 4))
