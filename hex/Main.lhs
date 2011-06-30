@@ -2,11 +2,8 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 module Main where
 
-import qualified Data.Map as Map
 import System.Environment
 import qualified Data.ByteString.Lazy as B
-import Data.Char
-import Data.Maybe
 import System.Console.CmdArgs
 
 import CharStream -- (annotate,TypedCharStream)
