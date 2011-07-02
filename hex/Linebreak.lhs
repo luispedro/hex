@@ -75,12 +75,12 @@ preprocessParagraph pars = pars ++
             }
 \end{code}
 
-
-
 In order to break up lines \emph{only at word boundaries}, we merge words
 (sequences of \code{HBox}es separated by \code{Glue} elements) into single
 boxes (words). This is independent of what the words actually consist of (e.g.,
 they may contain symbols or other non-alphabetic elements).
+
+Hyphenation is, currently, not supported.
 
 \begin{code}
 concatenatewords [] = []
@@ -99,9 +99,15 @@ Now we come to the main function: \code{breakParagraphIntoLines}. It currently
 uses the \emph{first fit} algorithm.
 
 \begin{code}
-breakParagraphIntoLines :: Dimen -> [B.HElement] -> [B.VBox]
-breakParagraphIntoLines _ [] = []
-breakParagraphIntoLines lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ cleanEnds first):(breakParagraphIntoLines lineWidth rest)
+breakParagraphIntoLines = firstFit
+\end{code}
+
+And here is the first fit algorithm:
+
+\begin{code}
+firstFit :: Dimen -> [B.HElement] -> [B.VBox]
+firstFit _ [] = []
+firstFit lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ cleanEnds first):(firstFit lineWidth rest)
     where
         (first,rest) = splitAt (firstLine zeroDimen les) les
         firstLine _ [] = 0
