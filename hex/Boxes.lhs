@@ -169,7 +169,6 @@ hboxto target es = converted
         total = (foldr1 dplus $ map (\e -> case e of EGlue g -> operation g; _ -> zeroDimen) es)
         factor = if diffsize `dgt` total then 1.0 else diffsize `dratio` total
         converted = map transform es
-        transform e = case e of
-                    EGlue g -> EGlue $ update g factor
-                    _ -> e
+        transform (EGlue g) = EGlue $ update g factor
+        transform e = e
 \end{code}
