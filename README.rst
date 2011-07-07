@@ -47,6 +47,11 @@ be no functionality for interactive use when an error occurs.
 Files that trigger an error in TeX will not necessarily work the same way in
 hex.
 
+Dependencies
+------------
+
+- cmdargs
+
 Meta-Information
 ----------------
 
