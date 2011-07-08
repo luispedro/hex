@@ -157,7 +157,6 @@ hboxto :: Dimen -> [HElement] -> [HElement]
 hboxto target es = converted
     where
         naturalsize = (foldr1 dplus $ map sizeof es)
-        newsize = (foldr1 dplus $ map sizeof converted)
         sizeof :: HElement -> Dimen
         sizeof (EGlue g) = size g
         sizeof (EBox b) = width b
