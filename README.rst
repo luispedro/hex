@@ -51,6 +51,7 @@ Dependencies
 ------------
 
 - cmdargs
+- vector
 
 Meta-Information
 ----------------

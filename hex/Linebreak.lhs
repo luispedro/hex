@@ -4,6 +4,8 @@ module Linebreak where
 
 import Data.Maybe
 import Data.Ratio
+import qualified Data.Vector as V
+import Data.Vector ((!))
 import Data.List.Extras.Argmax
 import Control.Exception
 
@@ -121,8 +123,8 @@ texBreak w elems = breakat 0 elems $ snd $ bestfit 0 n
         breakat _ _ [] = []
         breakat n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat b (drop (b-n) elems) bs)
         bestfit :: Int -> Int -> (Ratio Integer,[Int])
-        bestfit s e = (bfcache !! s) !! e
-            where bfcache = map (\s -> map (\e -> bestfit' s e) [0..n]) [0..n]
+        bestfit s e = (bfcache ! s) ! e
+            where bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
         bestfit' s e
             | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
             | (e == s+1) = (demerits s e, [s,e])
@@ -133,9 +135,9 @@ texBreak w elems = breakat 0 elems $ snd $ bestfit 0 n
                 (_, firstfit) = bestfit s bestbreak
                 (_, (_:secondfit)) = bestfit bestbreak e
                 recursivebreak = firstfit ++ secondfit
-        demerits s e = assert (e > s) $ (cache !! s) !! e
+        demerits s e = assert (e > s) $ (cache ! s) ! e
             where
-                cache = map (\i -> (map (\j -> demerits' i j) [0..n])) [0..n]
+                cache = V.generate (n+1) (\i -> V.generate (n+1) (demerits' i))
                 demerits' s e
                     | (e == s+1) = singledemerit $ elems !! s
                     | otherwise = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
