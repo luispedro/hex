@@ -126,6 +126,15 @@ type HElement = Element H
 type VElement = Element V
 \end{code}
 
+Elements have a natural size
+
+\begin{code}
+esize :: HElement -> Dimen
+esize (EGlue g) = size g
+esize (EBox b) = width b
+esize _ = zeroDimen
+\end{code}
+
 A simple utility function for dealing with boxes: merging them. This is the
 piece of code that requires the \code{TypeSynonymInstances} declared above.
 The usage of a class is only a way to get a polymorphic \code{boxList}
@@ -156,11 +165,7 @@ as close as possible to the given dimensions.
 hboxto :: Dimen -> [HElement] -> [HElement]
 hboxto target es = converted
     where
-        naturalsize = (foldr1 dplus $ map sizeof es)
-        sizeof :: HElement -> Dimen
-        sizeof (EGlue g) = size g
-        sizeof (EBox b) = width b
-        sizeof _ = zeroDimen
+        naturalsize = (foldr1 dplus $ map esize es)
         update g f = g{size=(size g) `dplus` ( (operation g) `dmul` f)}
         (diffsize, operation) = if naturalsize `dgt` target
                                     then (naturalsize `dsub` target, shrinkage)
