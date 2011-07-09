@@ -3,6 +3,9 @@
 module Linebreak where
 
 import Data.Maybe
+import Data.Ratio
+import Data.List.Extras.Argmax
+import Control.Exception
 
 import Macros
 import qualified Boxes as B
@@ -99,7 +102,72 @@ Now we come to the main function: \code{breakParagraphIntoLines}. It currently
 uses the \emph{first fit} algorithm.
 
 \begin{code}
-breakParagraphIntoLines = firstFit
+breakParagraphIntoLines = texBreak
+\end{code}
+
+Before we implement the function, we need a tiny list manipulation function:
+\begin{code}
+slice lst s e = assert (s <= e) $ take (e - s) $ drop s lst
+\end{code}
+
+\code{texBreak} implements the \TeX{} line breaking algorithm.
+
+\begin{code}
+texBreak :: Dimen -> [B.HElement] -> [B.VBox]
+texBreak _ [] = []
+texBreak w elems = breakat 0 elems $ snd $ bestfit 0 n
+    where
+        n = length elems
+        breakat _ _ [] = []
+        breakat n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat b (drop (b-n) elems) bs)
+        bestfit :: Int -> Int -> (Ratio Integer,[Int])
+        bestfit s e = (bfcache !! s) !! e
+            where bfcache = map (\s -> map (\e -> bestfit' s e) [0..n]) [0..n]
+        bestfit' s e
+            | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
+            | (e == s+1) = (demerits s e, [s,e])
+            | otherwise = if bestval < demerits s e then (bestval, recursivebreak)  else (demerits s e, [s,e])
+            where
+                (bestbreak,bestval) = argminWithMin valuebreak [(s+1)..(e-1)]
+                valuebreak m = (tdemerits s m) + (tdemerits m e)
+                (_, firstfit) = bestfit s bestbreak
+                (_, (_:secondfit)) = bestfit bestbreak e
+                recursivebreak = firstfit ++ secondfit
+        demerits s e = assert (e > s) $ (cache !! s) !! e
+            where
+                cache = map (\i -> (map (\j -> demerits' i j) [0..n])) [0..n]
+                demerits' s e
+                    | (e == s+1) = singledemerit $ elems !! s
+                    | otherwise = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
+                    where
+                        r = fit (slice elems s e)
+                        singledemerit (B.EPenalty _) = plus_inf
+                        singledemerit (B.EGlue _) = plus_inf
+                        singledemerit (B.EBox b) = 100*r*r*r
+                            where r = let wb = B.width b in if wb `dgt` w then wb `dratio` w else w `dratio` wb
+        fit elems = sum $ map ((^3) . stretchof) $ zip nbox elems
+            where
+                nbox = B.hboxto w elems
+                stretchof ((B.EGlue p),(B.EGlue a)) = delta `dratio` param
+                    where
+                        delta = (B.size a) `dsub` (B.size p)
+                        param = if (B.size a) `dgt` (B.size p) then (B.expandable p) else (B.shrinkage p)
+                stretchof _ = 0
+        tdemerits s e = sum $ map (\(a,b) -> demerits a b) (pairs $ snd $ bestfit s e)
+        pairs [] = []
+        pairs [e] = []
+        pairs (e0:e1:es) = ((e0,e1):pairs (e1:es))
+        plus_inf = 100000000
+\end{code}
+
+\begin{code}
+packagebox :: Dimen -> [B.HElement] -> B.VBox
+packagebox width boxes = B.mergeBoxes B.V $ toBoxes $ B.hboxto width boxes
+    where
+        toBoxes = catMaybes . (map toBox)
+        toBox (B.EBox b) = Just b
+        toBox (B.EGlue g) = Just $ fixGlue g
+        toBox _ = Nothing
 \end{code}
 
 And here is the first fit algorithm:
