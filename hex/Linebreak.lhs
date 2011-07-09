@@ -67,7 +67,7 @@ implemented, they will guarantee that the last line of a paragraph is correctly
 broken and filled out.
 
 \begin{code}
-preprocessParagraph pars = pars ++ 
+preprocessParagraph pars = pars ++
                                 [ penalty infPenalty
                                 , spaceEGlue
                                 , penalty minfPenalty]
@@ -107,21 +107,20 @@ uses the \emph{first fit} algorithm.
 breakParagraphIntoLines = texBreak
 \end{code}
 
-Before we implement the function, we need a tiny list manipulation function:
-\begin{code}
-slice lst s e = assert (s <= e) $ take (e - s) $ drop s lst
-\end{code}
-
 \code{texBreak} implements the \TeX{} line breaking algorithm.
+
+\begin{code}
+breakat _ _ _ [] = []
+breakat w n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat w b (drop (b-n) elems) bs)
+\end{code}
 
 \begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
-texBreak w elems = breakat 0 elems $ snd $ bestfit 0 n
+texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
     where
-        n = length elems
-        breakat _ _ [] = []
-        breakat n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat b (drop (b-n) elems) bs)
+        velems = V.fromList elems
+        n = V.length velems
         bestfit :: Int -> Int -> (Ratio Integer,[Int])
         bestfit s e = (bfcache ! s) ! e
             where bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
@@ -130,8 +129,13 @@ texBreak w elems = breakat 0 elems $ snd $ bestfit 0 n
             | (e == s+1) = (demerits s e, [s,e])
             | otherwise = if bestval < demerits s e then (bestval, recursivebreak)  else (demerits s e, [s,e])
             where
-                (bestbreak,bestval) = argminWithMin valuebreak [(s+1)..(e-1)]
-                valuebreak m = (tdemerits s m) + (tdemerits m e)
+                (bestbreak,bestval) = trybreaks plus_inf [(s+1)..(e-1)]
+                minsum lim a b = if a > lim then lim else min lim (a+b)
+                trybreaks v [m] = (m, minsum v (tdemerits s m) (tdemerits m e))
+                trybreaks v (m:ms) = if vm < rm then (m, vm) else (r, rm)
+                        where
+                            vm = minsum v (tdemerits s m) (tdemerits m e)
+                            (r,rm) = trybreaks vm ms
                 (_, firstfit) = bestfit s bestbreak
                 (_, (_:secondfit)) = bestfit bestbreak e
                 recursivebreak = firstfit ++ secondfit
@@ -139,23 +143,27 @@ texBreak w elems = breakat 0 elems $ snd $ bestfit 0 n
             where
                 cache = V.generate (n+1) (\i -> V.generate (n+1) (demerits' i))
                 demerits' s e
-                    | (e == s+1) = singledemerit $ elems !! s
+                    | (e == s+1) = singledemerit $ velems ! s
                     | otherwise = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
                     where
-                        r = fit (slice elems s e)
+                        r = fit $ V.slice s (e-s) velems
                         singledemerit (B.EPenalty _) = plus_inf
                         singledemerit (B.EGlue _) = plus_inf
                         singledemerit (B.EBox b) = 100*r*r*r
-                            where r = let wb = B.width b in if wb `dgt` w then wb `dratio` w else w `dratio` wb
-        fit elems = sum $ map ((^3) . stretchof) $ zip nbox elems
+                            where r = let wb = B.width b in if wb `dgt` textwidth then wb `dratio` textwidth else textwidth `dratio` wb
+        fit es = sum $ map ((^3) . stretchof) $ zip nbox les
             where
-                nbox = B.hboxto w elems
+                les = V.toList es
+                nbox = B.hboxto textwidth les
                 stretchof ((B.EGlue p),(B.EGlue a)) = delta `dratio` param
                     where
                         delta = (B.size a) `dsub` (B.size p)
                         param = if (B.size a) `dgt` (B.size p) then (B.expandable p) else (B.shrinkage p)
                 stretchof _ = 0
-        tdemerits s e = sum $ map (\(a,b) -> demerits a b) (pairs $ snd $ bestfit s e)
+        tdemerits s e = (tcache ! s) ! e
+            where
+                tcache = V.generate (n+1) (\s -> V.generate (n+1) (tdemerits' s))
+                tdemerits' s e = sum $ map (\(a,b) -> demerits a b) (pairs $ snd $ bestfit s e)
         pairs [] = []
         pairs [e] = []
         pairs (e0:e1:es) = ((e0,e1):pairs (e1:es))
