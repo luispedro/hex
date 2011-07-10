@@ -150,9 +150,9 @@ instance BoxListable VBox where
 
 mergeBoxes t bs = Box
             { boxType=t
-            , width=(foldr1 dplus $ map width bs)
-            , depth=(foldr1 dmax $ map depth bs)
-            , height=(foldr1 dmax $ map height bs)
+            , width=(foldr dplus zeroDimen $ map width bs)
+            , depth=(foldr dmax zeroDimen $ map depth bs)
+            , height=(foldr dmax zeroDimen $ map height bs)
             , boxContents=(boxList bs)
             }
 \end{code}
