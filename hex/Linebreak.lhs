@@ -156,14 +156,15 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                         then (dtable ! s ! e,[s,e])
                         else (bestval,(s:bestbreak:(tail $ snd $ bestfit bestbreak e)))
             where
-                (bestbreak,bestval) = trybreaks (e,dtable ! s ! e) $ map (s+) $ V.toList $ vargsort $ V.slice s (e-s) (dtable ! s)
+                (bestbreak,bestval) = trybreaks (e,dtable ! s ! e) $ V.toList $ vargsort $ V.slice s (e-s) (dtable ! s)
                 trybreaks :: (Int,Ratio Integer) -> [Int] -> (Int, Ratio Integer)
                 trybreaks r [] = r
                 trybreaks (b,v) (m:ms) = if v <= vm
                         then trybreaks (b,v) ms
-                        else trybreaks (m,vm) ms
+                        else trybreaks (p,vm) ms
                     where
-                        vm = minsum v (dtable ! s ! m) (fst $ bestfit m e)
+                        p = s + m
+                        vm = minsum v (dtable ! s ! p) (fst $ bestfit p e)
         dtable = V.generate (n+1) (\i -> V.generate (n+1) (demerit i))
         demerit s e
             | (e == s+1) = singledemerit $ velems ! s
