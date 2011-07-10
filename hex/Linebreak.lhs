@@ -1,6 +1,9 @@
 \section{Line Breaking}
 \begin{code}
-module Linebreak where
+module Linebreak (
+    breakintolines,
+    concatenatewords,
+    ) where
 
 import Data.Maybe
 import Data.Ratio
