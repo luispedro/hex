@@ -164,16 +164,15 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                         else trybreaks (m,vm) ms
                     where
                         vm = minsum v (dtable ! s ! m) (fst $ bestfit m e)
-        dtable = V.generate (n+1) (\i -> V.generate (n+1) (dtable' i))
+        dtable = V.generate (n+1) (\i -> V.generate (n+1) (demerit i))
+        demerit s e
+            | (e == s+1) = singledemerit $ velems ! s
+            | otherwise = dfor s e
             where
-                dtable' s e
-                    | (e == s+1) = singledemerit $ velems ! s
-                    | otherwise = dfor e s
-                    where
-                        singledemerit (B.EPenalty _) = plus_inf
-                        singledemerit (B.EGlue _) = plus_inf
-                        singledemerit (B.EBox _) = dfor e s
-        dfor e s = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
+                singledemerit (B.EPenalty _) = plus_inf
+                singledemerit (B.EGlue _) = plus_inf
+                singledemerit (B.EBox _) = dfor s e
+        dfor s e = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
             where
                 r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
                 delta = naturalsize `dsub` textwidth
