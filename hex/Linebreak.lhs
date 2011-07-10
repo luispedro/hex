@@ -9,14 +9,9 @@ import Data.Maybe
 import Data.Ratio
 import qualified Data.Vector as V
 import Data.Vector ((!))
-import Data.List.Extras.Argmax
-import Control.Exception
 
-import Macros
 import qualified Boxes as B
 import Measures
-import Tokens
-import Chars
 \end{code}
 
 Line breaking is one of TeX's traditional strengths.
@@ -29,13 +24,13 @@ Digital Typography by D.~E. Knuth.
 
 leWidth (B.EBox hb) = B.width hb
 leWidth (B.EGlue g) = B.size g
-leWidth (B.EPenalty p) = zeroDimen
-leStretch (B.EBox hb) = zeroDimen
+leWidth (B.EPenalty _) = zeroDimen
+leStretch (B.EBox _) = zeroDimen
 leStretch (B.EGlue g) = B.expandable g
-leStretch (B.EPenalty p) = zeroDimen
-leShrink (B.EBox hb) = zeroDimen
+leStretch (B.EPenalty _) = zeroDimen
+leShrink (B.EBox _) = zeroDimen
 leShrink (B.EGlue g) = B.shrinkage g
-leShrink (B.EPenalty p) = zeroDimen
+leShrink (B.EPenalty _) = zeroDimen
 lePenalty (B.EBox _) = 0
 lePenalty (B.EGlue _) = 0
 lePenalty (B.EPenalty p) = B.value p
@@ -91,12 +86,13 @@ Hyphenation is, currently, not supported.
 
 \begin{code}
 concatenatewords [] = []
-concatenatewords (le@(B.EGlue g):les) = (le:concatenatewords les)
+concatenatewords (le@(B.EGlue _):les) = (le:concatenatewords les)
 concatenatewords cs = (first:concatenatewords rest)
     where
         (firstelems,rest) = break (not . isBox) cs
         first = merge $ map getBox firstelems
         getBox (B.EBox b) = b
+        getBox _ = error "hex.concatenatewords.getBox: Not a box!"
         merge bs = B.EBox $ B.mergeBoxes B.H bs
         isBox (B.EBox _) = True
         isBox _ = False
@@ -129,7 +125,7 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
 
         bestfit :: Int -> Int -> (Ratio Integer,[Int])
         bestfit s e = (bfcache ! s) ! e
-            where bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
+        bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
         bestfit' s e
             | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
             | (e == s+1) = (dtable ! s ! e, [s,e])
@@ -157,7 +153,7 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                     where
                         singledemerit (B.EPenalty _) = plus_inf
                         singledemerit (B.EGlue _) = plus_inf
-                        singledemerit (B.EBox b) = dfor e s
+                        singledemerit (B.EBox _) = dfor e s
         dfor e s = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
             where
                 r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
@@ -167,13 +163,7 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                 texpandable = ex_e `dsub` ex_s
                 (nt_s,ex_s,sh_s) = nat_exp_shr ! s
                 (nt_e,ex_e,sh_e) = nat_exp_shr ! e
-        tdemerits s e = (tcache ! s) ! e
-            where
-                tcache = V.generate (n+1) (\s -> V.generate (n+1) (tdemerits' s))
-                tdemerits' s e = sumds 0 $ snd $ bestfit s e
-                sumds v [] = v
-                sumds v [_] = v
-                sumds v (b0:b1:bs) = sumds (v + (dtable ! b0 ! b1)) (b1:bs)
+        tdemerits s e = fst $ bestfit s e
 
         num `sdratio` denom =
             if denom `dgt` zeroDimen
