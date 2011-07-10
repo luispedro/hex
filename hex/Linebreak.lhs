@@ -14,7 +14,6 @@ import qualified Boxes as B
 import Measures
 import Tokens
 import Chars
-
 \end{code}
 
 Line breaking is one of TeX's traditional strengths.
@@ -121,53 +120,66 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
     where
         velems = V.fromList elems
         n = V.length velems
+
+        nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
+        props (w,st,sh) (B.EGlue g) = (w `dplus` (B.size g), st `dplus` (B.expandable g), sh `dplus` (B.shrinkage g))
+        props (w,st,sh) (B.EBox b) = (w `dplus` (B.width b), st, sh)
+        props s _ = s
+
         bestfit :: Int -> Int -> (Ratio Integer,[Int])
         bestfit s e = (bfcache ! s) ! e
             where bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
         bestfit' s e
             | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
             | (e == s+1) = (demerits s e, [s,e])
-            | otherwise = if bestval < demerits s e then (bestval, recursivebreak)  else (demerits s e, [s,e])
+            | otherwise =
+                    if bestbreak == e
+                        then (demerits s e,[s,e])
+                        else (bestval,(s:bestbreak:(tail $ snd $ bestfit bestbreak e)))
             where
-                (bestbreak,bestval) = trybreaks plus_inf [(s+1)..(e-1)]
-                minsum lim a b = if a > lim then lim else min lim (a+b)
-                trybreaks v [m] = (m, minsum v (tdemerits s m) (tdemerits m e))
-                trybreaks v (m:ms) = if vm < rm then (m, vm) else (r, rm)
-                        where
-                            vm = minsum v (tdemerits s m) (tdemerits m e)
-                            (r,rm) = trybreaks vm ms
-                (_, firstfit) = bestfit s bestbreak
-                (_, (_:secondfit)) = bestfit bestbreak e
-                recursivebreak = firstfit ++ secondfit
+                (bestbreak,bestval) = trybreaks (e,demerits s e) [(s+1)..(e-1)]
+                minsum :: Ratio Integer -> Ratio Integer -> Ratio Integer -> Ratio Integer
+                minsum lim a b = if a >= lim then lim else min lim (a+b)
+                trybreaks :: (Int,Ratio Integer) -> [Int] -> (Int, Ratio Integer)
+                trybreaks r [] = r
+                trybreaks (b,v) (m:ms) =
+                        if v <= vm
+                            then trybreaks (b,v) ms
+                            else trybreaks (m,vm) ms
+                    where
+                        vm = minsum v (demerits s m) (tdemerits m e)
         demerits s e = assert (e > s) $ (cache ! s) ! e
             where
                 cache = V.generate (n+1) (\i -> V.generate (n+1) (demerits' i))
                 demerits' s e
                     | (e == s+1) = singledemerit $ velems ! s
-                    | otherwise = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
+                    | otherwise = dfor e s
                     where
-                        r = fit $ V.slice s (e-s) velems
                         singledemerit (B.EPenalty _) = plus_inf
                         singledemerit (B.EGlue _) = plus_inf
-                        singledemerit (B.EBox b) = 100*r*r*r
-                            where r = let wb = B.width b in if wb `dgt` textwidth then wb `dratio` textwidth else textwidth `dratio` wb
-        fit es = sum $ map ((^3) . stretchof) $ zip nbox les
+                        singledemerit (B.EBox b) = dfor e s
+        dfor e s = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
             where
-                les = V.toList es
-                nbox = B.hboxto textwidth les
-                stretchof ((B.EGlue p),(B.EGlue a)) = delta `dratio` param
-                    where
-                        delta = (B.size a) `dsub` (B.size p)
-                        param = if (B.size a) `dgt` (B.size p) then (B.expandable p) else (B.shrinkage p)
-                stretchof _ = 0
+                r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
+                delta = naturalsize `dsub` textwidth
+                naturalsize = nt_e `dsub` nt_s
+                tshrinkage = sh_e `dsub` sh_s
+                texpandable = ex_e `dsub` ex_s
+                (nt_s,ex_s,sh_s) = nat_exp_shr ! s
+                (nt_e,ex_e,sh_e) = nat_exp_shr ! e
+                num `sdratio` denom =
+                    if denom `dgt` zeroDimen
+                        then num `dratio` denom
+                        else if num `dgt` zeroDimen then plus_inf else neg_inf
         tdemerits s e = (tcache ! s) ! e
             where
                 tcache = V.generate (n+1) (\s -> V.generate (n+1) (tdemerits' s))
-                tdemerits' s e = sum $ map (\(a,b) -> demerits a b) (pairs $ snd $ bestfit s e)
-        pairs [] = []
-        pairs [e] = []
-        pairs (e0:e1:es) = ((e0,e1):pairs (e1:es))
-        plus_inf = 100000000
+                tdemerits' s e = sumds 0 $ snd $ bestfit s e
+                sumds v [] = v
+                sumds v [_] = v
+                sumds v (b0:b1:bs) = sumds (v + (demerits b0 b1)) (b1:bs)
+        plus_inf = (1000000000000000000 :: Ratio Integer)
+        neg_inf = (-1000000000000000000 :: Ratio Integer)
 \end{code}
 
 \begin{code}
