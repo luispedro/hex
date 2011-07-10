@@ -125,9 +125,7 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
         n = V.length velems
 
         nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
-        props (w,st,sh) (B.EGlue g) = (w `dplus` (B.size g), st `dplus` (B.expandable g), sh `dplus` (B.shrinkage g))
-        props (w,st,sh) (B.EBox b) = (w `dplus` (B.width b), st, sh)
-        props s _ = s
+        props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 
         bestfit :: Int -> Int -> (Ratio Integer,[Int])
         bestfit s e = (bfcache ! s) ! e
@@ -170,10 +168,6 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                 texpandable = ex_e `dsub` ex_s
                 (nt_s,ex_s,sh_s) = nat_exp_shr ! s
                 (nt_e,ex_e,sh_e) = nat_exp_shr ! e
-                num `sdratio` denom =
-                    if denom `dgt` zeroDimen
-                        then num `dratio` denom
-                        else if num `dgt` zeroDimen then plus_inf else neg_inf
         tdemerits s e = (tcache ! s) ! e
             where
                 tcache = V.generate (n+1) (\s -> V.generate (n+1) (tdemerits' s))
@@ -181,6 +175,11 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                 sumds v [] = v
                 sumds v [_] = v
                 sumds v (b0:b1:bs) = sumds (v + (demerits b0 b1)) (b1:bs)
+
+        num `sdratio` denom =
+            if denom `dgt` zeroDimen
+                then num `dratio` denom
+                else if num `dgt` zeroDimen then plus_inf else neg_inf
         plus_inf = (1000000000000000000 :: Ratio Integer)
         neg_inf = (-1000000000000000000 :: Ratio Integer)
 \end{code}
