@@ -53,6 +53,7 @@ Dependencies
 - cmdargs
 - list-extras
 - vector
+- vector-algorithms
 
 Meta-Information
 ----------------

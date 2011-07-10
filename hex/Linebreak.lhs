@@ -9,6 +9,8 @@ import Data.Maybe
 import Data.Ratio
 import qualified Data.Vector as V
 import Data.Vector ((!))
+import Data.Vector.Algorithms.Intro (sortBy)
+import Control.Monad.ST
 
 import qualified Boxes as B
 import Measures
@@ -112,6 +114,27 @@ breakat _ _ _ [] = []
 breakat w n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat w b (drop (b-n) elems) bs)
 \end{code}
 
+We need to use a argsort function for vectors, which we define here:
+
+\begin{code}
+vargsort :: (Ord e) => V.Vector e -> V.Vector Int
+vargsort vec = runST $ do
+        indices <- V.unsafeThaw $ V.enumFromN 0 $ V.length vec
+        sortBy comparison indices
+        V.unsafeFreeze indices
+    where comparison i j = if (vec ! i) == (vec ! j)
+                    then compare i j
+                    else compare (vec ! i) (vec ! j)
+\end{code}
+
+\code{minsum} is a small helper function which computes $\min{\ell, a + b}$,
+but does not evaluate \code{b} if it is not necessary (we assume $a,b > 0$).
+
+\begin{code}
+minsum :: Ratio Integer -> Ratio Integer -> Ratio Integer -> Ratio Integer
+minsum lim a b = if a >= lim then lim else min lim (a+b)
+\end{code}
+
 \begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
@@ -129,22 +152,18 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
         bestfit' s e
             | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
             | (e == s+1) = (dtable ! s ! e, [s,e])
-            | otherwise =
-                    if bestbreak == e
+            | otherwise = if bestbreak == e
                         then (dtable ! s ! e,[s,e])
                         else (bestval,(s:bestbreak:(tail $ snd $ bestfit bestbreak e)))
             where
-                (bestbreak,bestval) = trybreaks (e,dtable ! s ! e) [(s+1)..(e-1)]
-                minsum :: Ratio Integer -> Ratio Integer -> Ratio Integer -> Ratio Integer
-                minsum lim a b = if a >= lim then lim else min lim (a+b)
+                (bestbreak,bestval) = trybreaks (e,dtable ! s ! e) $ map (s+) $ V.toList $ vargsort $ V.slice s (e-s) (dtable ! s)
                 trybreaks :: (Int,Ratio Integer) -> [Int] -> (Int, Ratio Integer)
                 trybreaks r [] = r
-                trybreaks (b,v) (m:ms) =
-                        if v <= vm
-                            then trybreaks (b,v) ms
-                            else trybreaks (m,vm) ms
+                trybreaks (b,v) (m:ms) = if v <= vm
+                        then trybreaks (b,v) ms
+                        else trybreaks (m,vm) ms
                     where
-                        vm = minsum v (dtable ! s ! m) (tdemerits m e)
+                        vm = minsum v (dtable ! s ! m) (fst $ bestfit m e)
         dtable = V.generate (n+1) (\i -> V.generate (n+1) (dtable' i))
             where
                 dtable' s e
@@ -163,8 +182,6 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                 texpandable = ex_e `dsub` ex_s
                 (nt_s,ex_s,sh_s) = nat_exp_shr ! s
                 (nt_e,ex_e,sh_e) = nat_exp_shr ! e
-        tdemerits s e = fst $ bestfit s e
-
         num `sdratio` denom =
             if denom `dgt` zeroDimen
                 then num `dratio` denom
