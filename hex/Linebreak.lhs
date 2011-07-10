@@ -132,13 +132,13 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
             where bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
         bestfit' s e
             | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
-            | (e == s+1) = (demerits s e, [s,e])
+            | (e == s+1) = (dtable ! s ! e, [s,e])
             | otherwise =
                     if bestbreak == e
-                        then (demerits s e,[s,e])
+                        then (dtable ! s ! e,[s,e])
                         else (bestval,(s:bestbreak:(tail $ snd $ bestfit bestbreak e)))
             where
-                (bestbreak,bestval) = trybreaks (e,demerits s e) [(s+1)..(e-1)]
+                (bestbreak,bestval) = trybreaks (e,dtable ! s ! e) [(s+1)..(e-1)]
                 minsum :: Ratio Integer -> Ratio Integer -> Ratio Integer -> Ratio Integer
                 minsum lim a b = if a >= lim then lim else min lim (a+b)
                 trybreaks :: (Int,Ratio Integer) -> [Int] -> (Int, Ratio Integer)
@@ -148,11 +148,10 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                             then trybreaks (b,v) ms
                             else trybreaks (m,vm) ms
                     where
-                        vm = minsum v (demerits s m) (tdemerits m e)
-        demerits s e = assert (e > s) $ (cache ! s) ! e
+                        vm = minsum v (dtable ! s ! m) (tdemerits m e)
+        dtable = V.generate (n+1) (\i -> V.generate (n+1) (dtable' i))
             where
-                cache = V.generate (n+1) (\i -> V.generate (n+1) (demerits' i))
-                demerits' s e
+                dtable' s e
                     | (e == s+1) = singledemerit $ velems ! s
                     | otherwise = dfor e s
                     where
@@ -174,7 +173,7 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
                 tdemerits' s e = sumds 0 $ snd $ bestfit s e
                 sumds v [] = v
                 sumds v [_] = v
-                sumds v (b0:b1:bs) = sumds (v + (demerits b0 b1)) (b1:bs)
+                sumds v (b0:b1:bs) = sumds (v + (dtable ! b0 ! b1)) (b1:bs)
 
         num `sdratio` denom =
             if denom `dgt` zeroDimen
