@@ -151,19 +151,19 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
         bfcache = V.generate (n+1) bestfit'
         bestfit' s
             | (s >= n) = (0,[]) -- error "hex.texBreak.bestfit': Trying to bestfit past the end!"
-            | otherwise = if bestbreak == (n-s-1)
-                        then (demerits_s ! (n-s-1), [s,n])
-                        else (bestval,(s:s+1+bestbreak:(tail $ snd $ bestfit $ s+1+bestbreak)))
+            | otherwise = (bestval,(s:bestbreak))
             where
-                (bestbreak,bestval) = trybreaks (0, demerits_s ! 0) $ V.toList $ vargsort demerits_s
+                (bestbreak,bestval) = trybreaks (snd $ bestfit (s+1), demerits_s ! 0) $ V.toList $ vargsort demerits_s
                 demerits_s = dtable ! s
-                trybreaks :: (Int,Ratio Integer) -> [Int] -> (Int, Ratio Integer)
+                trybreaks :: ([Int],Ratio Integer) -> [Int] -> ([Int], Ratio Integer)
                 trybreaks r [] = r
-                trybreaks (b,v) (m:ms) = if v <= vm
+                trybreaks (b,v) (m:ms) = if first == plus_inf then (b,v) else if v <= vm
                         then trybreaks (b,v) ms
-                        else trybreaks (m,vm) ms
+                        else trybreaks (breaks,vm) ms
                     where
-                        vm = minsum v (demerits_s ! m) (fst $ bestfit (s+m+1))
+                        (valm, breaks) = bestfit (s+m+1)
+                        vm= minsum v first valm
+                        first = (demerits_s ! m)
         dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit i))
         demerit s ell
             | ell == 0 = singledemerit $ velems ! s
