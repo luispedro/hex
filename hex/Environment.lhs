@@ -43,7 +43,7 @@ Lookup is done by looking through the list for the first match.
 
 \begin{code}
 lookup :: (Ord a) => a -> Environment a b -> Maybe b
-lookup name [] = Nothing
+lookup _ [] = Nothing
 lookup name (e:es) = case M.lookup name e of
                 Just val -> Just val
                 Nothing -> lookup name es

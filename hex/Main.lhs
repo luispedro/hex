@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 module Main where
 
-import System.Environment
 import qualified Data.ByteString.Lazy as B
 import System.Console.CmdArgs
 
@@ -52,10 +51,13 @@ function "dvioutput" = \input -> do
     fontinfo <- readFile "data/cmr10.pl"
     B.putStr $ dvioutput fontinfo input
 
+function hmode = \_ -> do
+    putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
+
 hex "-" = hex "/dev/stdin"
 hex fname = do
         input <- readFile fname
-        processinputs (expanded input) startingenv
+        _ <- processinputs (expanded input) startingenv
         return ()
     where
         startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv

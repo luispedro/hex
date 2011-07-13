@@ -54,9 +54,9 @@ breakIntoSExpressions [] = []
 breakIntoSExpressions ('(':rest) = firstS:(breakIntoSExpressions restS)
     where
         (firstS,restS) = parseS 0 rest
-        parseS 0 (')':rest) = ([],rest)
-        parseS n ('(':rest) = ('(':f,r) where (f,r) = parseS (n+1) rest
-        parseS n (')':rest) = (')':f,r) where (f,r) = parseS (n-1) rest
+        parseS 0 (')':ss) = ([],ss)
+        parseS n ('(':ss) = ('(':f,r) where (f,r) = parseS (n+1) ss
+        parseS n (')':ss) = (')':f,r) where (f,r) = parseS (n-1) ss
         parseS n (c:cs) = (c:f,r) where (f,r) = parseS n cs
         parseS _ [] = error "File did not balance its parentheses"
 breakIntoSExpressions (_:cs) = breakIntoSExpressions cs
@@ -70,6 +70,7 @@ retrieveDesignSize (s:ss) = if isPrefixOf "DESIGNSIZE" s then retrieveDesignSize
     where
         retrieveDesignSize' :: String -> Float
         retrieveDesignSize' = read . drop (length "DESIGNSIZE R ")
+retrieveDesignSize [] = error "hex.LoadPL.retrieveDesignSize applied to empty string"
 
 readSpace base (s:ss) = if isPrefixOf "FONTDIMEN" s then spinfo else readSpace base ss
     where
@@ -77,6 +78,7 @@ readSpace base (s:ss) = if isPrefixOf "FONTDIMEN" s then spinfo else readSpace b
         w = getprop base "SPACE R " s
         st = getprop base "STRETCH R " s
         shr = getprop base "SHRINK R " s
+readSpace _ [] = error "hex.LoadPL.readSpace applied to empty string"
 \end{code}
 
 Now just need to call the \code{readGliphInformation} function for each

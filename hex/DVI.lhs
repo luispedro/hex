@@ -11,10 +11,9 @@ simple to implement and are supported by \TeX. Therefore, in order to be full
 import Measures
 
 import qualified Data.ByteString.Lazy as B
-import Control.Monad.State (State, modify, get, put)
+import Control.Monad.State (State, modify, get)
 import Data.Word
 import Data.Char
-import Data.Ratio
 \end{code}
 
 A DVI file is a sequence of 8-bit bytes.
@@ -126,6 +125,7 @@ Another common operation is to put a string of repeated Bytes of lenght $k$.
 \begin{code}
 putk 0 _ = return ()
 putk n (x:xs) = (put1 x) >> (putk (n-1) xs)
+putk _ [] = error "hex.DVI.putk: empty string"
 \end{code}
 
 Now, we set down the DVI format (from the TeX Program source code). Our

@@ -204,9 +204,9 @@ And here is the first fit algorithm:
 \begin{code}
 firstFit :: Dimen -> [B.HElement] -> [B.VBox]
 firstFit _ [] = []
-firstFit lineWidth les = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ cleanEnds first):(firstFit lineWidth rest)
+firstFit lineWidth lelems = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ cleanEnds first):(firstFit lineWidth rest)
     where
-        (first,rest) = splitAt (firstLine zeroDimen les) les
+        (first,rest) = splitAt (firstLine zeroDimen lelems) lelems
         firstLine _ [] = 0
         firstLine (Dimen 0) (le:les) = 1 + (firstLine (leWidth le) les)
         firstLine n (le:les)

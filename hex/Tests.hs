@@ -6,12 +6,9 @@ module Main where
 -- Import basic functionality and our own modules
 
 import Test.Framework.TH
-import Test.Framework
 import Test.HUnit
 import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
-
-import Debug.Trace
 
 import Chars
 import CharStream

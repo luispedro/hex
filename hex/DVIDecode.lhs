@@ -198,6 +198,7 @@ inputfile [] = do
     return IO.stdin
 inputfile ["-"] = inputfile []
 inputfile [fname] = openBinaryFile fname IO.ReadMode
+inputfile _ = error "hex.DVIDecode.inputfile: Too many files."
 \end{code}
 
 The \code{main} function is trivial:

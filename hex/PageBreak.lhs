@@ -13,10 +13,10 @@ The algorithm is simply \emph{best fit}:
 \begin{code}
 breakpages :: Dimen -> [VBox] -> [VBox]
 breakpages _ [] = []
-breakpages size (vb:vbs) = (first:breakpages size rest)
+breakpages textheight (vb:vbs) = (first:breakpages textheight rest)
     where
         first = mergeBoxes V (vb:first')
-        (first',rest) = breakpages' (size `dsub` (theight vb)) vbs
+        (first',rest) = breakpages' (textheight `dsub` (theight vb)) vbs
         theight b = (height b) `dplus` (depth b)
         breakpages' _ [] = ([], [])
         breakpages' s (vb:vbs)
