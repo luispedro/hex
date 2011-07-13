@@ -138,7 +138,7 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 \begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
-texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
+texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
     where
         velems = V.fromList elems
         n = V.length velems
@@ -146,33 +146,32 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0 n
         nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
         props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 
-        bestfit :: Int -> Int -> (Ratio Integer,[Int])
-        bestfit s e = (bfcache ! s) ! e
-        bfcache = V.generate (n+1) (\s -> V.generate (n+1) (bestfit' s))
-        bestfit' s e
-            | (s >= e) = error "hex.texBreak.bestfit': Trying to fit an empty array!"
-            | (e == s+1) = (dtable ! s ! e, [s,e])
-            | otherwise = if bestbreak == e
-                        then (dtable ! s ! e,[s,e])
-                        else (bestval,(s:bestbreak:(tail $ snd $ bestfit bestbreak e)))
+        bestfit :: Int -> (Ratio Integer,[Int])
+        bestfit s = bfcache ! s
+        bfcache = V.generate (n+1) bestfit'
+        bestfit' s
+            | (s >= n) = (0,[]) -- error "hex.texBreak.bestfit': Trying to bestfit past the end!"
+            | otherwise = if bestbreak == (n-s-1)
+                        then (demerits_s ! (n-s-1), [s,n])
+                        else (bestval,(s:s+1+bestbreak:(tail $ snd $ bestfit $ s+1+bestbreak)))
             where
-                (bestbreak,bestval) = trybreaks (e,dtable ! s ! e) $ V.toList $ vargsort $ V.slice s (e-s) (dtable ! s)
+                (bestbreak,bestval) = trybreaks (0, demerits_s ! 0) $ V.toList $ vargsort demerits_s
+                demerits_s = dtable ! s
                 trybreaks :: (Int,Ratio Integer) -> [Int] -> (Int, Ratio Integer)
                 trybreaks r [] = r
                 trybreaks (b,v) (m:ms) = if v <= vm
                         then trybreaks (b,v) ms
-                        else trybreaks (p,vm) ms
+                        else trybreaks (m,vm) ms
                     where
-                        p = s + m
-                        vm = minsum v (dtable ! s ! p) (fst $ bestfit p e)
-        dtable = V.generate (n+1) (\i -> V.generate (n+1) (demerit i))
-        demerit s e
-            | (e == s+1) = singledemerit $ velems ! s
-            | otherwise = dfor s e
+                        vm = minsum v (demerits_s ! m) (fst $ bestfit (s+m+1))
+        dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit i))
+        demerit s ell
+            | ell == 0 = singledemerit $ velems ! s
+            | otherwise = dfor s (s+1+ell)
             where
                 singledemerit (B.EPenalty _) = plus_inf
                 singledemerit (B.EGlue _) = plus_inf
-                singledemerit (B.EBox _) = dfor s e
+                singledemerit (B.EBox _) = dfor s (s+1)
         dfor s e = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
             where
                 r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
