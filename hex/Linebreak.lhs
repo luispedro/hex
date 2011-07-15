@@ -60,6 +60,8 @@ infPenalty = 10000
 minfPenalty = (-10000)
 \end{code}
 
+In order to handle divisions by zero, we introduce infinities and the safe
+ratio function (infinities are also used elsewhere):
 
 \begin{code}
 num `sdratio` denom =
