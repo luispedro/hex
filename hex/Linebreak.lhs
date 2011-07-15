@@ -8,7 +8,7 @@ module Linebreak (
 import Data.Maybe
 import Data.Ratio
 import qualified Data.Vector as V
-import Data.Vector ((!))
+import Data.Vector ((!),(!?))
 import Data.Vector.Algorithms.Intro (sortBy)
 import Control.Monad.ST
 
@@ -156,12 +156,9 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
         nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
         props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 
-        canbreak 0 = False
-        canbreak i
-            | i == n = False
-            | otherwise = case (velems ! (i-1), velems ! i) of
-            (_,B.EPenalty _) -> True
-            (B.EBox _, B.EGlue _) -> True
+        canbreak i = case (velems !? (i-1), velems !? i) of
+            (Just _,Just (B.EPenalty _)) -> True
+            (Just (B.EBox _), Just (B.EGlue _)) -> True
             _ -> False
 
         bestfit :: Int -> (Ratio Integer,[Int])
