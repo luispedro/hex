@@ -148,7 +148,7 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 \begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
-texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
+texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bfcache ! 0
     where
         velems = V.fromList elems
         n = V.length velems
@@ -162,13 +162,11 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
             _ -> False
 
         bestfit :: Int -> (Ratio Integer,[Int])
-        bestfit s = bfcache ! s
-        bfcache = V.generate (n+1) bestfit'
-        bestfit' s
+        bestfit s
             | (s >= n) = (0,[]) -- error "hex.texBreak.bestfit': Trying to bestfit past the end!"
             | otherwise = case V.toList $ vargsort demerits_s of
                     [] -> error "hex.texBreak.trybreaks: empty!"
-                    (m:ms) -> let (val_m,fit_m) = bestfit (s+m+1) in
+                    (m:ms) -> let (val_m,fit_m) = bfcache ! (s+m+1) in
                                     trybreaks ((demerits_s ! m) + val_m, s:fit_m) ms
             where
                 demerits_s = dtable ! s
@@ -178,14 +176,16 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
                         then trybreaks cur ms
                         else trybreaks (vm, s:breaks) ms
                     where
-                        (valm, breaks) = bestfit (s+m+1)
+                        (valm, breaks) = bfcache ! (s+m+1)
                         vm = minsum v first valm
                         first = (demerits_s ! m)
+
+        bfcache = V.generate (n+1) bestfit
         dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit i))
-        demerit s ell = if canbreak e then dfor s e else plus_inf
-            where e = s + ell + 1
-        dfor s e = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
+        demerit s ell = if canbreak e then badness else plus_inf
             where
+                e = s + ell + 1
+                badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
                 r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
                 delta = naturalsize `dsub` textwidth
                 naturalsize = nt_e `dsub` nt_s
