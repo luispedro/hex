@@ -60,6 +60,16 @@ infPenalty = 10000
 minfPenalty = (-10000)
 \end{code}
 
+
+\begin{code}
+num `sdratio` denom =
+    if denom `dgt` zeroDimen
+        then num `dratio` denom
+        else if num `dgt` zeroDimen then plus_inf else neg_inf
+plus_inf = (1000000000000000000 :: Ratio Integer)
+neg_inf = (-1000000000000000000 :: Ratio Integer)
+\end{code}
+
 In order to make everything work out, we need to add special markers to the end
 of the paragraph. Currently, they are not used, but, when the full algorithm is
 implemented, they will guarantee that the last line of a paragraph is correctly
@@ -146,6 +156,14 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
         nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
         props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 
+        canbreak 0 = False
+        canbreak i
+            | i == n = False
+            | otherwise = case (velems ! (i-1), velems ! i) of
+            (_,B.EPenalty _) -> True
+            (B.EBox _, B.EGlue _) -> True
+            _ -> False
+
         bestfit :: Int -> (Ratio Integer,[Int])
         bestfit s = bfcache ! s
         bfcache = V.generate (n+1) bestfit'
@@ -167,13 +185,8 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
                         vm = minsum v first valm
                         first = (demerits_s ! m)
         dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit i))
-        demerit s ell
-            | ell == 0 = singledemerit $ velems ! s
-            | otherwise = dfor s (s+1+ell)
-            where
-                singledemerit (B.EPenalty _) = plus_inf
-                singledemerit (B.EGlue _) = plus_inf
-                singledemerit (B.EBox _) = dfor s (s+1)
+        demerit s ell = if canbreak e then dfor s e else plus_inf
+            where e = s + ell + 1
         dfor s e = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
             where
                 r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
@@ -183,12 +196,6 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bestfit 0
                 texpandable = ex_e `dsub` ex_s
                 (nt_s,ex_s,sh_s) = nat_exp_shr ! s
                 (nt_e,ex_e,sh_e) = nat_exp_shr ! e
-        num `sdratio` denom =
-            if denom `dgt` zeroDimen
-                then num `dratio` denom
-                else if num `dgt` zeroDimen then plus_inf else neg_inf
-        plus_inf = (1000000000000000000 :: Ratio Integer)
-        neg_inf = (-1000000000000000000 :: Ratio Integer)
 \end{code}
 
 \begin{code}
