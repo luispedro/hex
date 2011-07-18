@@ -19,11 +19,11 @@ breakpages textheight (vb:vbs) = (first:breakpages textheight rest)
         (first',rest) = breakpages' (textheight `dsub` (theight vb)) vbs
         theight b = (height b) `dplus` (depth b)
         breakpages' _ [] = ([], [])
-        breakpages' s (vb:vbs)
-            | hfirst `dgt` s = ([], (vb:vbs))
-            | otherwise = ((vb:h),t)
+        breakpages' s (v:vs)
+            | hfirst `dgt` s = ([], (v:vs))
+            | otherwise = ((v:h),t)
             where
-                hfirst = theight vb
-                (h,t) = breakpages' (s `dsub` hfirst) vbs
+                hfirst = theight v
+                (h,t) = breakpages' (s `dsub` hfirst) vs
 
 \end{code}
