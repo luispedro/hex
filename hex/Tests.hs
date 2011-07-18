@@ -18,6 +18,8 @@ import Macros
 import Linebreak
 import Modes (vMode, paragraph)
 import Defaults (startenv, plaintexenv)
+import Measures
+import qualified Boxes as B
 
 -- The main driver
 
@@ -49,3 +51,24 @@ case_stringnotfind = (find "abc" "012abd") @=? Nothing
 -- Tests for line breaking
 case_paragraphs = (length p, length r) @=? (0,0)
         where (p,r) = (paragraph undefined [PrimitiveCommand  "\\par"])
+
+-- Test B.hboxto
+textwidth = dimenFromInches 5
+hbox3elems = B.hboxto textwidth elems
+    where
+        di = dimenFromInches
+        elems = [
+                B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.TextContent "S")),
+                B.EGlue (B.Glue B.H (di 1) (di 2) (di 2) 0),
+                B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.TextContent "E"))
+                ]
+case_hbox_width = (totalwidth hbox3elems) @?= textwidth
+    where
+        totalwidth [] = zeroDimen
+        totalwidth (e:es) = (totalwidth es) `dplus` case e of
+            B.EGlue g -> (B.size g)
+            B.EBox b -> (B.width b)
+case_hbox_nr_elems = (length hbox3elems) @?= 3
+case_hbox_glue =
+    case (hbox3elems !! 1) of
+        B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
