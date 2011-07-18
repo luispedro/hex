@@ -53,21 +53,26 @@ case_paragraphs = (length p, length r) @=? (0,0)
         where (p,r) = (paragraph undefined [PrimitiveCommand  "\\par"])
 
 -- Test B.hboxto
-textwidth = dimenFromInches 5
+di = dimenFromInches
+textwidth = di 5
+totalwidth = (foldr1 dplus) . (map B.esize)
 hbox3elems = B.hboxto textwidth elems
     where
-        di = dimenFromInches
         elems = [
                 B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.TextContent "S")),
                 B.EGlue (B.Glue B.H (di 1) (di 2) (di 2) 0),
                 B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.TextContent "E"))
                 ]
-case_hbox_width = (totalwidth hbox3elems) @?= textwidth
+hbox3elems_sh = B.hboxto textwidth elems
     where
-        totalwidth [] = zeroDimen
-        totalwidth (e:es) = (totalwidth es) `dplus` case e of
-            B.EGlue g -> (B.size g)
-            B.EBox b -> (B.width b)
+        elems = [
+                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.TextContent "S")),
+                B.EGlue (B.Glue B.H (di 2) (di 2) (di 2) 0),
+                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.TextContent "E"))
+                ]
+case_hbox_width = (totalwidth hbox3elems) @?= textwidth
+case_hbox_width_sh = (totalwidth hbox3elems_sh) @?= textwidth
+
 case_hbox_nr_elems = (length hbox3elems) @?= 3
 case_hbox_glue =
     case (hbox3elems !! 1) of

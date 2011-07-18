@@ -166,10 +166,10 @@ hboxto :: Dimen -> [HElement] -> [HElement]
 hboxto target es = converted
     where
         naturalsize = (foldr1 dplus $ map esize es)
-        update g f = g{size=(size g) `dplus` ( (operation g) `dmul` f)}
-        (diffsize, operation) = if naturalsize `dgt` target
-                                    then (naturalsize `dsub` target, shrinkage)
-                                    else (target `dsub` naturalsize, expandable)
+        update g f = g{size=(size g) `dop` ( (operation g) `dmul` f)}
+        (diffsize, operation, dop) = if naturalsize `dgt` target
+                                    then (naturalsize `dsub` target, shrinkage, dsub)
+                                    else (target `dsub` naturalsize, expandable, dplus)
         total = (foldr1 dplus $ map (\e -> case e of EGlue g -> operation g; _ -> zeroDimen) es)
         factor = if diffsize `dgt` total then 1.0 else diffsize `dratio` total
         converted = map transform es
