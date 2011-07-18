@@ -126,6 +126,7 @@ breakat _ _ _ [] = []
 breakat w n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat w b (drop (b-n) elems) bs)
 \end{code}
 
+
 We need to use a argsort function for vectors, which we define here:
 
 \begin{code}
@@ -199,28 +200,8 @@ texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bfcache ! 0
 
 \begin{code}
 packagebox :: Dimen -> [B.HElement] -> B.VBox
-packagebox width boxes = B.mergeBoxes B.V $ toBoxes $ B.hboxto width boxes
+packagebox width boxes = B.mergeBoxes B.V $ toBoxes $ B.hboxto width $ cleanEnds boxes
     where
-        toBoxes = catMaybes . (map toBox)
-        toBox (B.EBox b) = Just b
-        toBox (B.EGlue g) = Just $ fixGlue g
-        toBox _ = Nothing
-\end{code}
-
-And here is the first fit algorithm:
-
-\begin{code}
-firstFit :: Dimen -> [B.HElement] -> [B.VBox]
-firstFit _ [] = []
-firstFit lineWidth lelems = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ cleanEnds first):(firstFit lineWidth rest)
-    where
-        (first,rest) = splitAt (firstLine zeroDimen lelems) lelems
-        firstLine _ [] = 0
-        firstLine (Dimen 0) (le:les) = 1 + (firstLine (leWidth le) les)
-        firstLine n (le:les)
-            | n' > lineWidth = 0
-            | otherwise = 1 + (firstLine n' les)
-            where n' = (n `dplus` (leWidth le))
         toBoxes = catMaybes . (map toBox)
         toBox (B.EBox b) = Just b
         toBox (B.EGlue g) = Just $ fixGlue g
@@ -237,6 +218,27 @@ firstFit lineWidth lelems = (B.mergeBoxes B.V $ toBoxes $ B.hboxto lineWidth $ c
         nomore [] = True
         nomore (B.EGlue _:es) = nomore es
         nomore _ = False
+
+\end{code}
+
+And here is the first fit algorithm:
+
+\begin{code}
+firstFit :: Dimen -> [B.HElement] -> [B.VBox]
+firstFit textwidth elems = breakat textwidth 0 elems $ firstFitBreaks textwidth elems
+
+firstFitBreaks :: Dimen -> [B.HElement] -> [Int]
+firstFitBreaks _ [] = []
+firstFitBreaks textwidth lelems = (0:restbreaks)
+    where
+        restbreaks = map (+first) $ firstFitBreaks textwidth $ drop first lelems
+        first = firstLine zeroDimen lelems
+        firstLine _ [] = 0
+        firstLine (Dimen 0) (le:les) = 1 + (firstLine (leWidth le) les)
+        firstLine n (le:les)
+            | n' > textwidth = 0
+            | otherwise = 1 + (firstLine n' les)
+            where n' = (n `dplus` (leWidth le))
 \end{code}
 
 The interface function is \code{breakintolines}, which converts a list of
