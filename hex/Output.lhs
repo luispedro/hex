@@ -9,8 +9,6 @@ import qualified Environment as E
 import qualified Fonts as F
 import Boxes
 import DVI
-import Measures
-import Linebreak
 \end{code}
 
 This module gets a sequence of boxes and outputs them. It is at a slightly
@@ -31,8 +29,9 @@ putvbox b = do
         putvboxcontent (TextContent s) = putstr s
         putvboxcontent (Kern d) = move_right d
         putvboxcontent (HBoxList bs) = putvboxcontentmany $ map boxContents bs
+        putvboxcontent _ = error "hex.Output.putvboxcontent: Cannot handle this type"
         putvboxcontentmany [] = return ()
-        putvboxcontentmany (b:bs) = (putvboxcontent b) >> (putvboxcontentmany bs)
+        putvboxcontentmany (x:xs) = (putvboxcontent x) >> (putvboxcontentmany xs)
 \end{code}
 
 Now we can put down a sequence of lines easily. This function could have been
@@ -52,12 +51,13 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
         Just (E.HexDimen margintop) = E.lookup "margintop" env
         Just (E.HexDimen marginright) = E.lookup "marginright" env
         vboxes (VBoxList vb) = vb
+        vboxes _ = error "hex.Output.putpages.vboxes: Not a vbox list!"
         putpage page = do
-            newpage
+            _ <- newpage
             push
             move_down margintop
             move_right marginright
-            defineFont F.cmr10
+            _ <- defineFont F.cmr10
             selectFont 0
             putlines $ vboxes $ boxContents page
             pop
@@ -68,9 +68,9 @@ The exported function puts all of the pages down:
 
 \begin{code}
 outputBoxes :: E.Environment String E.HexType -> [VBox] -> B.ByteString
-outputBoxes env pages = stream $ execState (outputBoxes' pages) emptyStream
+outputBoxes env pages = stream $ execState outputBoxes' emptyStream
     where
-        outputBoxes' pages = do
+        outputBoxes' = do
             startfile
             putpages env pages
             endfile

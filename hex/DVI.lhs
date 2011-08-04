@@ -134,8 +134,10 @@ function names correspond to DVI commands, with the exception of the
 \code{setchar} which takes an argument.
 
 \begin{code}
-setchar c | c < 128 = put1 c
-nop = 138
+setchar c
+    | c < 128 = put1 c
+    | otherwise = error "hex.DVI.setchar: c >= 128!"
+nop = (138 :: Integer)
 bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 p = do
         thisBop <- getCurPos
         put1 139
