@@ -43,21 +43,21 @@ function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 function "loadPL" = putStrLn . show . loadPL
 
-function "breaklines" = \input -> do
+function "breaklines" = \inputstr -> do
     fontinfo <- readFile "data/cmr10.pl"
-    putStrLn $ concat $ (map (++"\n")) $ (map show) $ filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $ (map Boxes.boxContents) $ breaklines (loadfont fontinfo startenv) input
+    putStrLn $ concat $ (map (++"\n")) $ (map show) $ filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $ (map Boxes.boxContents) $ breaklines (loadfont fontinfo startenv) inputstr
 
-function "dvioutput" = \input -> do
+function "dvioutput" = \inputstr -> do
     fontinfo <- readFile "data/cmr10.pl"
-    B.putStr $ dvioutput fontinfo input
+    B.putStr $ dvioutput fontinfo inputstr
 
 function hmode = \_ -> do
     putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
 hex "-" = hex "/dev/stdin"
 hex fname = do
-        input <- readFile fname
-        _ <- processinputs (expanded input) startingenv
+        inputstr <- readFile fname
+        _ <- processinputs (expanded inputstr) startingenv
         return ()
     where
         startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv
