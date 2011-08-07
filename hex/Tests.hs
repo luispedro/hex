@@ -11,13 +11,11 @@ import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 
 import Chars
-import CharStream
 import Tokens
 import String
 import Macros
-import Linebreak
-import Modes (vMode, paragraph)
-import Defaults (startenv, plaintexenv)
+import Modes (paragraph)
+import Defaults (plaintexenv)
 import Measures
 import qualified Boxes as B
 
@@ -77,3 +75,5 @@ case_hbox_nr_elems = (length hbox3elems) @?= 3
 case_hbox_glue =
     case (hbox3elems !! 1) of
         B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
+        _ -> error "should have matched!"
+
