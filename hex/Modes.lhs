@@ -5,7 +5,6 @@ module Modes where
 import qualified Environment as E
 import qualified Fonts as F
 import Chars
-import Tokens
 import Macros
 import Measures
 import Boxes
@@ -25,14 +24,15 @@ The two modes are intertwined. Switching to a different mode is simply a tail
 call to the other mode.
 
 \begin{code}
-vMode env [] = []
-vMode env cs@((PrimitiveCommand seq):_)
-    | isVCommand seq = vMode1 env cs
+vMode _ [] = []
+vMode env cs@((PrimitiveCommand csname):_)
+    | isVCommand csname = vMode1 env cs
 vMode env cs = hMode env cs
 \end{code}
 
 \begin{code}
 vMode1 env ((PrimitiveCommand "\\vspace"):cs) = vMode env cs
+vMode1 _ _ = error "hex.Modes.vMode1: Can only handle PrimitiveCommand"
 \end{code}
 
 \code{hMode'} is \emph{restricted horizontal mode}: it produces a list of
@@ -46,13 +46,14 @@ hMode' e = concatenatewords . map toHElement
         (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
         f2d = dimenFromFloatingPoints . F.fixToFloat
         toHElement (CharCommand (TypedChar _ Space)) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
-        toHElement (CharCommand (TypedChar c cat)) = EBox $ Box
+        toHElement (CharCommand (TypedChar c _)) = EBox $ Box
                                 { boxType=H
                                 , width=(f2d w)
                                 , height=(f2d h)
                                 , depth=(f2d d)
                                 , boxContents=typesetChar c
                                 } where (w,h,d) = F.widthHeightDepth fnt c
+        toHElement _ = error "hex.Modes.hmode'.toHElement: can only handle CharCommand"
 \end{code}
 
 We begin by breaking a sequence of commands into paragraphs. \code{paragraph}
@@ -69,7 +70,7 @@ paragraph e cs = (par',rest')
                     ((PrimitiveCommand "\\par"):rs) -> rs
                     _ -> rest
         isParagraphBreak (PrimitiveCommand "\\par") = True
-        isParagraphBreak (PrimitiveCommand seq) = isVCommand seq
+        isParagraphBreak (PrimitiveCommand csname) = isVCommand csname
         isParagraphBreak _ = False
 \end{code}
 
@@ -86,7 +87,7 @@ spreadlines baselineskip (v:vs) = (v:k:spreadlines baselineskip vs)
 
 \begin{code}
 hMode :: E.Environment String E.HexType -> [Command] -> [VBox]
-hMode env [] = []
+hMode _ [] = []
 hMode env cs = (spreadlines baselineskip $ breakintolines linewidth firstParagraph) ++ (vMode env rest)
     where
         (firstParagraph, rest) = paragraph env cs
