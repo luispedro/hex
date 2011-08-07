@@ -9,14 +9,17 @@ import Test.Framework.TH
 import Test.HUnit
 import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
+import System.IO.Unsafe
 
 import Chars
 import Tokens
 import String
 import Macros
 import Modes (paragraph)
-import Defaults (plaintexenv)
+import Defaults (plaintexenv, startenv)
 import Measures
+import qualified Environment as E
+import qualified Fonts as F
 import qualified Boxes as B
 
 -- The main driver
@@ -76,4 +79,15 @@ case_hbox_glue =
     case (hbox3elems !! 1) of
         B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
         _ -> error "should have matched!"
+
+case_font = ((F.fixToFloat w) > 5) @?= True
+    where
+        (w,_,_) = F.widthHeightDepth fnt '"'
+        e = unsafePerformIO cmr10fonte
+        Just (E.HexFontInfo fnt) = E.currentFont e
+
+
+cmr10fonte = do
+    fontinfo <- readFile "data/cmr10.pl"
+    return $ E.loadfont fontinfo startenv
 
