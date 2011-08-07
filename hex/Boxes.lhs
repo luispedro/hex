@@ -71,7 +71,7 @@ type HBox = Box H
 type VBox = Box V
 
 instance (BoxType b) => Show (Box b) where
-    show (Box t h d w _) = printf "%sB[[h(%s)d(%s)w(%s)]]" (codefor t) (show h) (show d) (show w)
+    show (Box t h d w _) = printf "%sB[[w(%s)d(%s)h(%s)]]" (codefor t) (show w) (show d) (show h)
 \end{code}
 
 We also define ``glue'' here (as D.~E. Knuth himself points out, this should
