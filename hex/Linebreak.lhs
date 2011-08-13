@@ -16,7 +16,7 @@ import qualified Boxes as B
 import Measures
 \end{code}
 
-Line breaking is one of TeX's traditional strengths.
+Line breaking is one of \TeX{}'s traditional strengths.
 
 For line breaking, we need to first transform all of the elements into line
 elements. We are following the chapter ``Breaking Paragraphs Into Lines'' in
@@ -85,7 +85,7 @@ preprocessParagraph pars = pars ++
     where spaceEGlue = B.EGlue $ B.Glue
             { B.glueType=B.H
             , B.size=zeroDimen
-            , B.expandable=zeroDimen
+            , B.expandable=(dimenFromInches 1000)
             , B.shrinkage=zeroDimen
             , B.infLevel=1
             }
@@ -116,7 +116,7 @@ Now we come to the main function: \code{breakParagraphIntoLines}. It currently
 uses the \emph{first fit} algorithm.
 
 \begin{code}
-breakParagraphIntoLines = texBreak
+breakParagraphIntoLines w = (texBreak w) . preprocessParagraph
 \end{code}
 
 \code{texBreak} implements the \TeX{} line breaking algorithm.
@@ -151,7 +151,7 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 \begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
-texBreak textwidth elems = breakat textwidth 0 elems $ snd $ bfcache ! 0
+texBreak textwidth elems = breakat textwidth 0 elems $ tail $ snd $ bfcache ! 0
     where
         velems = V.fromList elems
         n = V.length velems
