@@ -95,19 +95,19 @@ sM = StateFunction sM' where
         where
             (_,rest) = getchar st
             (name, rest', nextstate) = breakup rest
-            breakup st
-                | emptyStream st = ([],st,sN)
-                | (category c) == Space = ([value c], rest, sS)
-                | (category c) /= Letter = ([value c], rest, sM)
-                | otherwise = breakup' [] st
-                where (c,rest) = getchar st
-            breakup' acc st
-                | emptyStream st = (acc,st,sS)
-                | (category c) == Space = (acc, rest, sS)
-                | (category c) /= Letter = (acc, st, sM)
-                | otherwise = breakup' (acc ++ [value c]) rest
+            breakup st'
+                | emptyStream st' = ([], st', sN)
+                | (category c) == Space = ([value c], brest, sS)
+                | (category c) /= Letter = ([value c], brest, sM)
+                | otherwise = breakup' [] st'
+                where (c,brest) = getchar st'
+            breakup' acc st'
+                | emptyStream st' = (acc, st', sS)
+                | (category c) == Space = (acc, brest, sS)
+                | (category c) /= Letter = (acc, st', sM)
+                | otherwise = breakup' (acc ++ [value c]) brest
                 where
-                    (c,rest) = getchar st
+                    (c,brest) = getchar st'
 \end{code}
 
 Similar to \code{TypedCharStream}, we define a \code{TokenStream} which
@@ -194,7 +194,7 @@ emptyTokenStream TokenStream{queue=(_:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
     | otherwise = (((length q) == 0) && emptyStream st')
-        where (q,st',s') = applyStateFunction s st
+        where (q,st',_) = applyStateFunction s st
 \end{code}
 
 We also add a function to manipulate the underlying character stream.

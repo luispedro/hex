@@ -27,7 +27,7 @@ easier to curry.
 
 \begin{code}
 annotate ::  CategoryTable -> Char -> TypedChar
-annotate table c = TypedChar{value=c, category=E.lookupWithDefault Other c table}
+annotate tab c = TypedChar{value=c, category=E.lookupWithDefault Other c tab}
 \end{code}
 
 This encodes a typed character stream
@@ -45,7 +45,7 @@ stream. This is a similar interface to the state monad.
 
 \begin{code}
 getchar :: TypedCharStream -> (TypedChar, TypedCharStream)
-getchar st@TypedCharStream{table=table, remaining=(c:cs)} = (annotate table c, st{remaining=cs})
+getchar st@TypedCharStream{table=tab, remaining=(c:cs)} = (annotate tab c, st{remaining=cs})
 getchar _ = error "getchar on an empty stream"
 \end{code}
 
