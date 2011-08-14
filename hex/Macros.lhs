@@ -36,6 +36,7 @@ To expand a macro, given a set of arguments, use \code{expandmacro}
 \begin{code}
 expandmacro :: Macro -> [(Int,[Token])] -> [Token]
 expandmacro macro arguments = expandmacro' (replacement macro)
+
     where
         arguments' = map snd $ sortBy (\(a,_) (b,_) -> (compare a b))  arguments
         expandmacro' [] = []
@@ -65,11 +66,12 @@ data Command =
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
 
-fromToken (ControlSequence seq) = PrimitiveCommand seq
+fromToken (ControlSequence csname) = PrimitiveCommand csname
 fromToken (CharToken tc) = CharCommand tc
 
 toToken (PrimitiveCommand c) = ControlSequence c
 toToken (CharCommand tc) = CharToken tc
+toToken _ = error "hex.Macros.toToken: Cannot handle this case"
 
 instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
@@ -111,27 +113,27 @@ gettokenorgroup st
 gettokenorgroup st = gettokenorgroup' c r
     where
         (c,r) = gettoken st
-        gettokenorgroup' (CharToken tc) r
-            | (category tc) == BeginGroup = breakAtGroupEnd 0 r
-        gettokenorgroup' t r = ([t],maybespace r)
+        gettokenorgroup' (CharToken tc) r'
+            | (category tc) == BeginGroup = breakAtGroupEnd 0 r'
+        gettokenorgroup' t r' = ([t],maybespace r')
 
 breakAtGroupEnd :: Integer -> TokenStream -> ([Token], TokenStream)
 breakAtGroupEnd _ st
     | emptyTokenStream st = error "hex.breakAtGroupEnd: unexpected end of file."
-breakAtGroupEnd n st = breakAtGroupEnd' n t st'
+breakAtGroupEnd n st = breakAtGroupEnd' n tok st'
     where
-        (t,st') = gettoken st
+        (tok,st') = gettoken st
         breakAtGroupEnd' 0 t@(CharToken tc) rest
             | (category tc) == EndGroup = ([], rest)
-            | otherwise = let (tail, r) = breakAtGroupEnd 0 rest in (t:tail, r)
+            | otherwise = let (ts, r) = breakAtGroupEnd 0 rest in (t:ts, r)
 
-        breakAtGroupEnd' n t rest = (t:tail, r)
+        breakAtGroupEnd' n' t rest = (t:ts, r)
             where
-                (tail,r) = breakAtGroupEnd n' rest
-                n' = case tokenCategory t of
-                    BeginGroup -> n + 1
-                    EndGroup -> n - 1
-                    _ -> n
+                (ts,r) = breakAtGroupEnd n'' rest
+                n'' = case tokenCategory t of
+                    BeginGroup -> n' + 1
+                    EndGroup -> n' - 1
+                    _ -> n'
 \end{code}
 
 \begin{code}
@@ -147,10 +149,10 @@ The first function just attempts to extract the macro
 
 \begin{code}
 expand1 :: MacroEnvironment -> TokenStream -> TokenStream
-expand1 env st = let (ControlSequence seq, rest) = gettoken st
-                    in case E.lookup seq env of
+expand1 env st = let (ControlSequence csname, rest) = gettoken st
+                    in case E.lookup csname env of
                         Just macro -> expand1' macro rest
-                        Nothing -> streamenqueue rest $ macronotfounderror seq
+                        Nothing -> streamenqueue rest $ macronotfounderror csname
 \end{code}
 
 If found, the macro is expanded by \code{expand1'}
@@ -162,16 +164,16 @@ expand1' macro st = streamenqueue rest expanded
         arguments :: [(Int,[Token])]
         (arguments,rest) = getargs (arglist macro) st
         getargs :: [Token] -> TokenStream -> ([(Int,[Token])], TokenStream)
-        getargs [] rest = ([],rest)
-        getargs ((CharToken (TypedChar _ Parameter)):t:ts) st = (((n,a):as), rest)
+        getargs [] rest' = ([],rest')
+        getargs ((CharToken (TypedChar _ Parameter)):t:ts) st' = (((n,a):as), rest')
             where
                 n = readNumberFromToken t
-                (a,rs) = gettokenorgroup st
-                (as,rest) = getargs ts rs
-        getargs (t:ts) st = (as,rest)
+                (a,rs) = gettokenorgroup st'
+                (as,rest') = getargs ts rs
+        getargs (t:ts) st' = (as,rest')
             where
-                (t',rs) = gettoken st
-                (as,rest) =
+                (t',rs) = gettoken st'
+                (as,rest') =
                         if t == t' then
                             getargs ts rs
                         else
@@ -181,9 +183,9 @@ expand1' macro st = streamenqueue rest expanded
 If there is an error, we insert a special token sequence:
 
 \begin{code}
-macronotfounderror seq = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
+macronotfounderror csname = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
     where
-        errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ "Macro `" ++ seq ++ "` not defined."
+        errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ "Macro `" ++ csname ++ "` not defined."
 \end{code}
 
 Both \tex{\let} and \tex{\catcode} allow for an optional equals sign after
@@ -213,11 +215,11 @@ expand' env (ControlSequence "\\let") st = expand env' rest
     where
         env' = E.insert name macro env
         (ControlSequence name,aftername) = gettoken st
-        (replacement,rest) = gettoken $ optionalequals aftername
-        macro = case replacement of
-                (ControlSequence seq) -> case E.lookup seq env of
-                                            Just macro -> macro
-                                            Nothing -> Macro [] [replacement]
+        (rep,rest) = gettoken $ optionalequals aftername
+        macro = case rep of
+                (ControlSequence csname) -> case E.lookup csname env of
+                                            Just m -> m
+                                            Nothing -> Macro [] [rep]
                 (CharToken tc) -> Macro [] [CharToken tc]
 \end{code}
 
@@ -237,7 +239,7 @@ following leads to an error:
 
 Therefore, the environment cannot change in the inner expansion.
 \begin{code}
-expand' env t@(ControlSequence "\\expandafter") st = expand env $ streampush rest guard
+expand' env (ControlSequence "\\expandafter") st = expand env $ streampush rest guard
         where
             (guard, afterguard) = gettoken st
             rest = expand1 env afterguard
@@ -253,8 +255,8 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
         r1 = optionalequals r0
         (nvalue, r2) = readNumber r1
         altered = updateCharStream r2 $ catcode char nvalue
-        catcode c v st@TypedCharStream{table=t} = st{table=(E.insert c (categoryCode v) t)}
-        readNumber st = let (ts, r) = gettokentil st (not . (`elem` "0123456789") . tvalue) in (read $ map tvalue ts, r)
+        catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
+        readNumber st' = let (ts, r) = gettokentil st' (not . (`elem` "0123456789") . tvalue) in (read $ map tvalue ts, r)
         readChar = gettoken . droptoken
         tvalue (CharToken tc) = value tc
         tvalue (ControlSequence ['\\',c]) = c
@@ -266,12 +268,12 @@ difference is whether the \code{substitution} is the code that was presently
 directly or its expansion.
 
 \begin{code}
-expand' env (ControlSequence seq) st
-    | isprimitive seq = (PrimitiveCommand seq) : (expand env st)
-    | seq `elem` ["\\def", "\\gdef", "\\edef", "\\xdef"] = expand env' rest
+expand' env (ControlSequence csname) st
+    | isprimitive csname = (PrimitiveCommand csname) : (expand env st)
+    | csname `elem` ["\\def", "\\gdef", "\\edef", "\\xdef"] = expand env' rest
         where
-            edef = seq `elem` ["\\edef", "\\xdef"]
-            insertfunction = if seq `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
+            edef = csname `elem` ["\\edef", "\\xdef"]
+            insertfunction = if csname `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
             env' = insertfunction name macro env
             macro = Macro args substitution
             (ControlSequence name,aftername) = gettoken st
@@ -302,7 +304,9 @@ expand' env (ControlSequence cs) st
     where
         cmd = if cs == "error" then ErrorCommand else MessageCommand
         (argtoks, rest) = gettokenorgroup st
-        arg = map (\t -> case t of (CharToken (TypedChar c _)) -> c) argtoks
+        arg = map charof argtoks
+        charof (CharToken (TypedChar c _)) = c
+        charof _ = error "hex.Macros.expand'.charof: Unexpected token"
 \end{code}
 
 The \code{\\input} command has slightly different syntax than most commands:
@@ -311,15 +315,15 @@ The \code{\\input} command has slightly different syntax than most commands:
 expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCommand fname]
     where
         (fname, rest) = getletterseq st
-        getletterseq st
-            | emptyTokenStream st = ([], st)
+        getletterseq st'
+            | emptyTokenStream st' = ([], st')
             | otherwise = case tok of
-                (ControlSequence _) -> ([], st)
+                (ControlSequence _) -> ([], st')
                 (CharToken tc) ->
                     if (category tc) == Letter then
-                        let (e,r) = getletterseq rest in (((value tc):e),r)
-                        else ([], st)
-            where (tok,rest) = gettoken st
+                        let (e,r) = getletterseq rest' in (((value tc):e),r)
+                        else ([], st')
+            where (tok,rest') = gettoken st'
 \end{code}
 
 \begin{code}
