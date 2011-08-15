@@ -27,13 +27,15 @@ them here:
 
 \begin{code}
 newtype Scaled = Scaled Integer
-scale x = Scaled $ round $ x * (2^16)
+scalefactor :: (RealFrac f) => f
+scalefactor = fromInteger (2::Integer)^(16::Integer)
+scale x = Scaled $ round $ x * scalefactor
 \end{code}
 
 And we add a few conversion functions:
 \begin{code}
 scaledToRational :: Scaled -> Rational
-scaledToRational (Scaled sp) = sp % (2^16)
+scaledToRational (Scaled sp) = sp % (round (scalefactor :: Float))
 \end{code}
 
 In this section, we deal with dimensions. The basic unit is \emph{scaled
@@ -70,15 +72,16 @@ We write conversions from other metrics that are used. For now, we will only
 define \textit{inches}:
 
 \begin{code}
-inchesToPoints = round . (*72)
+inchesToPoints :: Double -> Double
+inchesToPoints = (*72.0)
 \end{code}
 
 We also add a couple of convenience converters:
 
 \begin{code}
-dimenFromPoints = Dimen . (*(2^16))
+dimenFromPoints = Dimen . round . (*scalefactor)
 dimenFromFloatingPoints :: (RealFrac f) => f -> Dimen
-dimenFromFloatingPoints = Dimen . round . (*(2^16))
+dimenFromFloatingPoints = Dimen . round . (*scalefactor)
 dimenFromInches = dimenFromPoints . inchesToPoints
 zeroDimen = Dimen 0
 \end{code}

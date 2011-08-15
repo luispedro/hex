@@ -48,7 +48,7 @@ have the DVI output routines figure themselves out.
 
 \begin{code}
 startenv =
-        E.globalinsert "baselineskip" (E.HexScaledNumber (scale 1.25)) $
+        E.globalinsert "baselineskip" (E.HexScaledNumber (scale (1.25 :: Double))) $
         E.globalinsert "textwidth" (E.HexDimen (dimenFromInches 6)) $
         E.globalinsert "margintop" (E.HexDimen zeroDimen) $
         E.globalinsert "marginright" (E.HexDimen zeroDimen) $
