@@ -4,18 +4,19 @@ GHCOPTS := -odir .objs -hidir .objs -Wall -fwarn-tabs -fno-warn-missing-signatur
 
 SOURCES :=  \
             Boxes.lhs \
-			Chars.lhs \
+            Chars.lhs \
             CharStream.lhs \
+            Defaults.lhs \
             DVI.lhs \
             Environment.lhs \
             Fonts.lhs \
-			Hex.lhs \
+            Hex.lhs \
             Linebreak.lhs \
             LoadPL.lhs \
             Macros.lhs \
             Measures.lhs \
             Modes.lhs \
-			PageBreak.lhs \
+            PageBreak.lhs \
             Output.lhs \
             String.lhs \
             Tokens.lhs
