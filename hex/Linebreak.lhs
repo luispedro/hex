@@ -147,7 +147,7 @@ vargsort vec = runST $ do
 \end{code}
 
 \code{minsum} is a small helper function which computes $\min{\ell, a + b}$,
-but does not evaluate \code{b} if it is not necessary (we assume $a,b > 0$).
+but does not evaluate \code{b} if it is not necessary (we assume $a,b \ge 0$).
 
 \begin{code}
 minsum :: Ratio Integer -> Ratio Integer -> Ratio Integer -> Ratio Integer
