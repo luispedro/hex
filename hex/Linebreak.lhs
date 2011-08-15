@@ -36,9 +36,9 @@ leShrink (B.EPenalty _) = zeroDimen
 lePenalty (B.EBox _) = 0
 lePenalty (B.EGlue _) = 0
 lePenalty (B.EPenalty p) = B.value p
-leFlag (B.EBox _) = False
-leFlag (B.EGlue _) = False
-leFlag (B.EPenalty p) = B.flag p
+--leFlag (B.EBox _) = False
+--leFlag (B.EGlue _) = False
+--leFlag (B.EPenalty p) = B.flag p
 \end{code}
 
 A helper function to fix a glue to a particular size.
@@ -112,11 +112,17 @@ concatenatewords cs = (first:concatenatewords rest)
         isBox _ = False
 \end{code}
 
-Now we come to the main function: \code{breakParagraphIntoLines}. It currently
-uses the \emph{first fit} algorithm.
+Now we come to the main function: \code{breakParagraphIntoLines} and a small
+toggle switch (currently hardcoded) to choose between the \emph{first fit} and
+the \emph{tex fit} algorithms.
 
 \begin{code}
-breakParagraphIntoLines w = (texBreak w) . preprocessParagraph
+useTexFit = True
+\end{code}
+
+\begin{code}
+breakParagraphIntoLines w = (algo w) . preprocessParagraph
+    where algo = if useTexFit then texBreak else firstFit
 \end{code}
 
 \code{texBreak} implements the \TeX{} line breaking algorithm.
@@ -175,7 +181,7 @@ texBreak textwidth elems = breakat textwidth 0 elems $ tail $ snd $ bfcache ! 0
                 demerits_s = dtable ! s
                 trybreaks :: (Ratio Integer, [Int]) -> [Int] -> (Ratio Integer, [Int])
                 trybreaks r [] = r
-                trybreaks cur@(v,b) (m:ms) = if first == plus_inf then cur else if v <= vm
+                trybreaks cur@(v,_) (m:ms) = if first == plus_inf then cur else if v <= vm
                         then trybreaks cur ms
                         else trybreaks (vm, s:breaks) ms
                     where
@@ -185,9 +191,10 @@ texBreak textwidth elems = breakat textwidth 0 elems $ tail $ snd $ bfcache ! 0
 
         bfcache = V.generate (n+1) bestfit
         dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit i))
-        demerit s ell = if canbreak e then badness else plus_inf
+        demerit s ell = if canbreak e then badness + curpenalty else plus_inf
             where
                 e = s + ell + 1
+                curpenalty = fromInteger $ lePenalty $ velems ! e
                 badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
                 r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
                 delta = naturalsize `dsub` textwidth
