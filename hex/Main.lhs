@@ -8,7 +8,7 @@ import System.Console.CmdArgs
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
 import Tokens
-import Macros (expand, emptyenv)
+import Macros (expand)
 import LoadPL (loadPL)
 import Modes (vMode)
 import Measures (dimenFromInches)
@@ -32,7 +32,7 @@ table maps strings to these functions.
 \begin{code}
 chars = map (annotate plaintexenv)
 tokens = chars2tokens
-expanded str = expand emptyenv $ newTokenStream $ TypedCharStream plaintexenv str
+expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
 breaklines env = (vMode env) . expanded
 dvioutput fontinfo = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (breaklines env)
     where env = loadfont fontinfo startenv

@@ -1,7 +1,12 @@
 Our first module defines the tagged characters used by HeX.
 
 \begin{code}
-module Chars where
+module Chars
+    ( CharCategory(..)
+    , codeCategory
+    , categoryCode
+    , TypedChar(..)
+    ) where
 \end{code}
 
 Each character, after being read by the parser acquires a character code. In

@@ -1,6 +1,19 @@
 \section{Environment}
 \begin{code}
-module Environment where
+module Environment
+    ( HexType(..)
+    , BaseEnvironment
+    , Environment
+    , empty
+    , lookup
+    , lookupWithDefault
+    , push
+    , pop
+    , insert
+    , globalinsert
+    , currentFont
+    , loadfont
+    ) where
 
 import qualified Data.Map as M
 import Prelude hiding (lookup)
@@ -82,6 +95,7 @@ globalinsert _ _ [] = error "Inserting on an invalid environment"
 We define a few special names by coding them in functions:
 
 \begin{code}
+-- FIXME: This should be currentfont (note case)
 currentFont = lookup "currentfont"
 loadfont = (globalinsert "currentfont") . HexFontInfo . loadPL
 \end{code}

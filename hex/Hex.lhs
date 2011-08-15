@@ -3,7 +3,9 @@
 This is the main driver of the programme.
 
 \begin{code}
-module Hex where
+module Hex
+    ( processinputs
+    ) where
 import System.IO.Error
 import System.FilePath.Posix
 

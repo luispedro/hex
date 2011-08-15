@@ -1,6 +1,21 @@
 \section{Tokens}
 \begin{code}
-module Tokens where
+module Tokens
+    ( Token(..)
+    , skiptoeol
+    , TokenStream(..)
+    , newTokenStream
+    , gettoken
+    , gettokentil
+    , maybespace
+    , droptoken
+    , streampush
+    , streamenqueue
+    , tokenliststream
+    , emptyTokenStream
+    , updateCharStream
+    , chars2tokens
+    ) where
 
 import Chars
 import CharStream

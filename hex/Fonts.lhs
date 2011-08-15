@@ -1,6 +1,15 @@
 \section{Fonts}
 \begin{code}
-module Fonts where
+module Fonts
+    ( fontName
+    , FixWord(..)
+    , fixToFloat
+    , GliphMetric(..)
+    , SpaceInfo(..)
+    , FontInfo(..)
+    , widthHeightDepth
+    , cmr10
+    ) where
 import DVI
 import Data.Word
 import Data.Char

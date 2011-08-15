@@ -1,5 +1,7 @@
 \begin{code}
-module LoadPL where
+module LoadPL
+    ( loadPL
+    ) where
 import List (isPrefixOf)
 import Data.Maybe (catMaybes)
 import Data.Char

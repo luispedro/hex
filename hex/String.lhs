@@ -4,7 +4,9 @@ Haskell does not have a very complete system for basic string manipulation. We
 remedy that situation by writing some functions ourselves.
 
 \begin{code}
-module String where
+module String
+    ( find
+    ) where
 
 import List (isPrefixOf)
 \end{code}

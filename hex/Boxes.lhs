@@ -9,7 +9,27 @@ We need to declare a special GHC extension here for use below
 Now, we can start:
 
 \begin{code}
-module Boxes where
+module Boxes
+    ( H(..)
+    , V(..)
+    , BoxContents(..)
+    , typesetChar
+    , Box(..)
+    , HBox
+    , VBox
+    , Glue(..)
+    , HGlue
+    , VGlue
+    , Penalty(..)
+    , HPenalty
+    , VPenalty
+    , Element(..)
+    , HElement
+    , VElement
+    , esize
+    , mergeBoxes
+    , hboxto
+    ) where
 import Text.Printf
 
 import Measures

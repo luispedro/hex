@@ -1,6 +1,10 @@
 \section{Modes}
 \begin{code}
-module Modes where
+module Modes
+    ( hMode
+    , vMode
+    , paragraph
+    ) where
 
 import qualified Environment as E
 import qualified Fonts as F

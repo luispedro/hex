@@ -1,6 +1,23 @@
 \section{DVI: Device Independent Files}
 \begin{code}
-module DVI where
+module DVI
+    ( FontDef(..)
+    , DVIByte
+    , push
+    , pop
+    , eop
+    , emptyStream
+    , stream
+    , startwcomment
+    , startfile
+    , newpage
+    , putstr
+    , move_down
+    , move_right
+    , defineFont
+    , selectFont
+    , endfile
+    ) where
 \end{code}
 
 Device independent files are by now a legacy technology, but they are very

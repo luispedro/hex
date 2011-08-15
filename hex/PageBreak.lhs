@@ -1,6 +1,8 @@
 \section{Page Breaking}
 \begin{code}
-module PageBreak where
+module PageBreak
+    ( breakpages
+    ) where
 
 import Measures
 import Boxes

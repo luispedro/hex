@@ -1,6 +1,8 @@
 \section{Output}
 \begin{code}
-module Output where
+module Output
+    ( outputBoxes
+    ) where
 
 import qualified Data.ByteString.Lazy as B
 import Control.Monad.State

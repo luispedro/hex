@@ -4,7 +4,16 @@ char using \code{getchar}. The stream has a list of Char and a conversion table
 to transform them into typed chars.
 
 \begin{code}
-module CharStream where
+module CharStream
+    ( CategoryTable
+    , annotate
+    , TypedCharStream(..)
+    , getchar
+    , emptyStream
+    , pushst
+    , popst
+    , prequeue
+    ) where
 \end{code}
 
 Character codes are defined by a table that the user can manipulate. This table

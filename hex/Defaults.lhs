@@ -1,6 +1,9 @@
 \section{Defaults}
 \begin{code}
-module Defaults where
+module Defaults
+    ( plaintexenv
+    , startenv
+    ) where
 
 import qualified Data.Map as M
 

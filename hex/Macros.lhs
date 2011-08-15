@@ -3,7 +3,11 @@
 Macros are the mechanism for TeX scripting.
 
 \begin{code}
-module Macros where
+module Macros
+    ( expand
+    , Command(..)
+    , HexCommand(..)
+    ) where
 
 import List (sortBy)
 
@@ -334,6 +338,3 @@ expand' env t@(CharToken tc) st
 expand' env t st = expand env $ expand1 env $ streampush st t
 \end{code}
 
-\begin{code}
-emptyenv = E.empty
-\end{code}

@@ -1,6 +1,23 @@
 \section{Measures}
 \begin{code}
-module Measures where
+module Measures
+    ( Scaled
+    , scale
+    , scaledToRational
+    , Dimen(..)
+    , zeroDimen
+    , dimenFromInches
+    , dimenFromPoints
+    , dimenFromFloatingPoints
+    , dplus
+    , dsub
+    , dmul
+    , dratio
+    , dgt
+    , dmax
+    , inchesToPoints
+    , PaperSize(..)
+    ) where
 
 import Ratio
 \end{code}
@@ -75,6 +92,6 @@ data PaperSize = PaperSize
                 , paperHeight :: Dimen
                 } deriving (Eq)
 
-letterPaper = PaperSize (dimenFromInches 8.5) (dimenFromInches 11)
+-- letterPaper = PaperSize (dimenFromInches 8.5) (dimenFromInches 11)
 \end{code}
 
