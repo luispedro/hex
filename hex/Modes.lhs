@@ -21,7 +21,6 @@ series of definitions to distinguish the two.
 \begin{code}
 isVCommand "\\vspace" = True
 isVCommand _ = False
-isHCommand = not . isVCommand
 \end{code}
 
 The two modes are intertwined. Switching to a different mode is simply a tail

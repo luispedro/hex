@@ -55,7 +55,7 @@ breakIntoSExpressions :: String -> [String]
 breakIntoSExpressions [] = []
 breakIntoSExpressions ('(':rest) = firstS:(breakIntoSExpressions restS)
     where
-        (firstS,restS) = parseS 0 rest
+        (firstS,restS) = parseS (0 :: Integer) rest
         parseS 0 (')':ss) = ([],ss)
         parseS n ('(':ss) = ('(':f,r) where (f,r) = parseS (n+1) ss
         parseS n (')':ss) = (')':f,r) where (f,r) = parseS (n-1) ss

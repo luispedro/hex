@@ -25,6 +25,7 @@ prequeueChars q st = updateCharStream st (\s -> prequeue s q)
 \end{code}
 
 \begin{code}
+readOneOf [] = error "hex.hex.readOneOf: empty set"
 readOneOf [n] = readFile n
 readOneOf (n:ns) = (readFile n) `catch` (\e -> if isDoesNotExistError e then readOneOf ns else ioError e)
 \end{code}
@@ -34,8 +35,8 @@ stream. In particular, it process \tex{\\input} and \tex{\\message}.
 
 \begin{code}
 processinputs :: [Command] -> HexEnvironment -> IO [Command]
-processinputs [] e = return []
-processinputs ((InternalCommand env' rest (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
+processinputs [] _ = return []
+processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
 processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             nextfile <- readOneOf possiblefiles;
             cs <- processinputs (expand env $ prequeueChars nextfile rest) (addfileenv nextfile e);
@@ -57,12 +58,13 @@ processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
                 return (dir </> nfname)
             | otherwise = do
                 dir <- searchpath
-                e <- ["hex", "tex"]
-                return (dir </> (nfname <.> e))
+                ext <- ["hex", "tex"]
+                return (dir </> (nfname <.> ext))
         searchpath = [currentdir, "."]
         currentdir = case E.lookup "currentfile" e of
             Just (E.HexString f) -> fst $ splitFileName f
             Nothing -> ""
+            _ -> error "hex.hex.currentdir: environment is messed up"
         addfileenv = (E.globalinsert "currentfile") . E.HexString
 
 processinputs (c:cs) e = do
