@@ -20,6 +20,7 @@ language.
 x << 8 = x * 256
 x << 16 = x * 256 * 256
 x << 24 = x * 256 * 256 * 256
+_ << _ = error "hex.DVIDecode.<<: Only defined for 8,16,24"
 \end{code}
 
 Using these, we can parse the DVI format for 1- to 4-byte integers. Currently,
@@ -55,9 +56,13 @@ would maybe be overkill.
 
 \begin{code}
 get1 (d0:ds) = (build1 d0, ds)
+get1 _ = error "hex.DVIDecode.get1: not enough bytes."
 get2 (d0:d1:ds) = (build2 d0 d1, ds)
+get2 _ = error "hex.DVIDecode.get2: not enough bytes."
 get3 (d0:d1:d2:ds) = (build3 d0 d1 d2, ds)
+get3 _ = error "hex.DVIDecode.get3: not enough bytes."
 get4 (d0:d1:d2:d3:ds) = (build4 d0 d1 d2 d3, ds)
+get4 _ = error "hex.DVIDecode.get4: not enough bytes."
 getk = splitAt
 \end{code}
 
@@ -80,7 +85,6 @@ decode :: [DVIByte] -> [String]
 decode [] = []
 decode (d:ds)
     | d < 128 = (("char " ++ (show d) ++ "(" ++ [chr $ fromInteger $ toInteger d] ++ ")"):decode ds)
-
 decode (138:ds) = ("nop":decode ds)
 \end{code}
 
@@ -134,20 +138,20 @@ decode (d:ds)
     | d >= 171 && d < (171 + 64) = (("fnt_num" ++ (build1 (d-171))):decode ds)
     -- 171 + 64 = 235
 
-decode (d:r0)
-    | d == 243 = fnt_decode get1
-    | d == 244 = fnt_decode get2
-    | d == 245 = fnt_decode get3
-    | d == 246 = fnt_decode get4
+decode (b:r0)
+    | b == 243 = fnt_decode get1
+    | b == 244 = fnt_decode get2
+    | b == 245 = fnt_decode get3
+    | b == 246 = fnt_decode get4
     where
-        fnt_decode get = (("fnt_def" ++ k ++ c ++ s ++ d ++ a ++ " " ++ (word8sToChars path)):decode rest) where
+        fnt_decode get = (("fnt_def" ++ k ++ c ++ s ++ d ++ a ++ " " ++ (word8sToChars fpath)):decode rest) where
             (k,r1) = get r0
             (c,r2) = get4 r1
             (s,r3) = get4 r2
             (d,r4) = get4 r3
             (a,r5) = get1 r4
             (l,r6) = get1 r5
-            (path,rest) = getk ((read $ tail a)+(read $ tail l)) r6
+            (fpath,rest) = getk ((read $ tail a)+(read $ tail l)) r6
 
 decode (247:r0) = (("pre" ++ i ++ num ++ den ++ mag ++ k ++ " " ++ (word8sToChars text)):decode rest)
     where
@@ -185,7 +189,7 @@ matching fail, but leave open the option of uncommenting the code below to get
 a look at the codes that are failing.
 
 \begin{code}
--- decode (d:ds) = (("unknown" ++ (build1 d)):decode ds)
+decode (d:ds) = (("unknown" ++ (build1 d)):decode ds)
 \end{code}
 
 A little helper function for unix like file specification, where either
