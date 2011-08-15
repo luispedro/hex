@@ -1,4 +1,13 @@
 \section{DVI: Device Independent Files}
+
+There are several functions defined in this module which are defined for
+completion and are not currently used. Therefore, we must supress the warnings.
+
+\begin{code}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
+\end{code}
+
+
 \begin{code}
 module DVI
     ( FontDef(..)
@@ -155,7 +164,7 @@ setchar c
     | c < 128 = put1 c
     | otherwise = error "hex.DVI.setchar: c >= 128!"
 nop = (138 :: Integer)
-bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 p = do
+bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 _p = do
         thisBop <- getCurPos
         put1 139
         put4 c0
@@ -208,7 +217,7 @@ pre i num den mag k x = do
 
 fnt_def code ksize k c s d a l n = do
     put1 code
-    ksize k
+    _ <- ksize k -- ``ksize k`` is expected to be ()
     put4 c
     put4 s
     put4 d
@@ -298,11 +307,11 @@ endfile = do
     mpd <- getMaxPush
     post prevBop tex_num tex_den tex_mag magic_s magic_u mpd npages
     putfonts 0 fonts
-    pos <- getCurPos
-    post_post q 2 (if (pos `mod` 4) == 0 then 4 else 8 - (pos `mod` 4))
+    curpos <- getCurPos
+    post_post q 2 (if (curpos `mod` 4) == 0 then 4 else 8 - (curpos `mod` 4))
     where
         putfonts _ [] = return ()
         putfonts n (f:fs) = putfont n f >> (putfonts (n+1) fs)
-        putfont n (FontDef c s d a l path) = do
-            fnt_def1 n c s d a l (map toInteger path)
+        putfont n (FontDef c s d a l fpath) = do
+            fnt_def1 n c s d a l (map toInteger fpath)
 \end{code}
