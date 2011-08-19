@@ -140,3 +140,7 @@ case_texBreak_small = [0,4] @=? _texBreak w elems
         -- The exact numbers are meaningless, but I want to have exact values
         w = Dimen 50
         elems = [x,sp,x]
+
+case_acc = [0,20,30,50,50,50,50] @=? (map (\(Dimen s,_,_) -> s) $ V.toList $ _acc_sizes $ V.fromList $ _preprocessParagraph elems)
+    where elems = [x,sp,x]
+

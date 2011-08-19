@@ -5,6 +5,7 @@ module Linebreak (
     concatenatewords,
     demerit,
     _texBreak, -- These are internal functions, exported for testing only
+    _preprocessParagraph,
     _acc_sizes,
     ) where
 
@@ -81,7 +82,7 @@ implemented, they will guarantee that the last line of a paragraph is correctly
 broken and filled out.
 
 \begin{code}
-preprocessParagraph pars = pars ++
+_preprocessParagraph pars = pars ++
                                 [ penalty infPenalty
                                 , spaceEGlue
                                 , penalty minfPenalty]
@@ -127,7 +128,7 @@ useTexFit = True
 breakParagraphIntoLines w elems = breakat w elems' $ algo w elems'
     where
         algo = if useTexFit then _texBreak else firstFit
-        elems' = preprocessParagraph elems
+        elems' = _preprocessParagraph elems
 \end{code}
 
 \code{_texBreak} implements the \TeX{} line breaking algorithm.
