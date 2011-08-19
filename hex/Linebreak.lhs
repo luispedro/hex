@@ -128,8 +128,13 @@ breakParagraphIntoLines w = (algo w) . preprocessParagraph
 \code{texBreak} implements the \TeX{} line breaking algorithm.
 
 \begin{code}
-breakat _ _ _ [] = []
-breakat w n elems (b:bs) = (packagebox w $ take (b-n) elems):(breakat w b (drop (b-n) elems) bs)
+breakat w elems breaks = breakat' elems $ diffs breaks
+    where
+        diffs (b0:b1:bs) = ((b1-b0):diffs (b1:bs))
+        diffs [_] = []
+        diffs _ = []
+        breakat' _ [] = []
+        breakat' es (b:bs) = (packagebox w $ take b es):(breakat' (drop b es) bs)
 \end{code}
 
 
@@ -157,7 +162,7 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 \begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
-texBreak textwidth elems = breakat textwidth 0 elems $ tail $ snd $ bfcache ! 0
+texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
     where
         velems = V.fromList elems
         n = V.length velems
@@ -232,7 +237,7 @@ And here is the first fit algorithm:
 
 \begin{code}
 firstFit :: Dimen -> [B.HElement] -> [B.VBox]
-firstFit textwidth elems = breakat textwidth 0 elems $ firstFitBreaks textwidth elems
+firstFit textwidth elems = breakat textwidth elems $ firstFitBreaks textwidth elems
 
 firstFitBreaks :: Dimen -> [B.HElement] -> [Int]
 firstFitBreaks _ [] = []
