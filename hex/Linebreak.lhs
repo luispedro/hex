@@ -3,6 +3,8 @@
 module Linebreak (
     breakintolines,
     concatenatewords,
+    demerit,
+    _acc_sizes, -- This is an internal function, exported for testing only
     ) where
 
 import Data.Maybe
@@ -163,11 +165,14 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenalty else plus_inf
     where
         n = V.length velems
-        canbreak = if e >= n then False else case (velems !? (e-1), velems !? e) of
+        canbreak = if e >= n then False else case (velems !? (e-2), velems !? (e-1)) of
             (Just _,Just (B.EPenalty _)) -> True
             (Just (B.EBox _), Just (B.EGlue _)) -> True
             _ -> False
         e = s + ell + 1
+        ee = case velems ! (e-1) of
+            B.EGlue _ -> e-1
+            _ -> e
         curpenalty = fromInteger $ lePenalty $ velems ! e
         badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
         r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
@@ -176,7 +181,13 @@ demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenal
         tshrinkage = sh_e `dsub` sh_s
         texpandable = ex_e `dsub` ex_s
         (nt_s,ex_s,sh_s) = nat_exp_shr ! s
-        (nt_e,ex_e,sh_e) = nat_exp_shr ! e
+        (nt_e,ex_e,sh_e) = nat_exp_shr ! ee
+\end{code}
+
+\begin{code}
+_acc_sizes velems = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
+    where
+        props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 \end{code}
 
 \begin{code}
@@ -186,10 +197,7 @@ texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
     where
         velems = V.fromList elems
         n = V.length velems
-
-        nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
-        props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
-
+        nat_exp_shr = _acc_sizes velems
 
         bestfit :: Int -> (Ratio Integer,[Int])
         bestfit s

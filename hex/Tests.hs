@@ -10,6 +10,7 @@ import Test.HUnit
 import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
+import qualified Data.Vector as V
 
 import Chars
 import Tokens
@@ -18,6 +19,7 @@ import Macros
 import Modes (paragraph)
 import Defaults (plaintexenv, startenv)
 import Measures
+import Linebreak
 import qualified Environment as E
 import qualified Fonts as F
 import qualified Boxes as B
@@ -90,4 +92,22 @@ case_font = ((F.fixToFloat w) > 5) @?= True
 cmr10fonte = do
     fontinfo <- readFile "data/cmr10.pl"
     return $ E.loadfont fontinfo startenv
+
+case_demerits = [0,0,0,0] @=?
+            [ (demerit w velems nat_exp_shr 0 3)
+            , (demerit w velems nat_exp_shr 2 3)
+            , (demerit w velems nat_exp_shr 4 3)
+            , (demerit w velems nat_exp_shr 10 3)
+            ]
+    where
+        -- The exact numbers are meaningless, but I want to have exact values
+        w = Dimen 50
+        velems = V.fromList elems
+        nat_exp_shr = _acc_sizes velems
+        elems = rep (16 :: Int)
+        rep 0 = []
+        rep n = (x:sp:rep (n-1))
+        sp = B.EGlue (B.Glue B.H (Dimen 10) (Dimen 5) (Dimen 4) 0)
+        x = B.EBox (B.Box B.H zeroDimen zeroDimen (Dimen 20) xc)
+        xc = B.TextContent "x"
 
