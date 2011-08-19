@@ -160,10 +160,10 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 \end{code}
 
 \begin{code}
-demerit textwidth velems nat_exp_shr s ell = if canbreak e then badness + curpenalty else plus_inf
+demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenalty else plus_inf
     where
         n = V.length velems
-        canbreak i = if i >= n then False else case (velems !? (i-1), velems !? i) of
+        canbreak = if e >= n then False else case (velems !? (e-1), velems !? e) of
             (Just _,Just (B.EPenalty _)) -> True
             (Just (B.EBox _), Just (B.EGlue _)) -> True
             _ -> False
