@@ -4,7 +4,8 @@ module Linebreak (
     breakintolines,
     concatenatewords,
     demerit,
-    _acc_sizes, -- This is an internal function, exported for testing only
+    _texBreak, -- These are internal functions, exported for testing only
+    _acc_sizes,
     ) where
 
 import Data.Maybe
@@ -123,13 +124,19 @@ useTexFit = True
 \end{code}
 
 \begin{code}
-breakParagraphIntoLines w = (algo w) . preprocessParagraph
-    where algo = if useTexFit then texBreak else firstFit
+breakParagraphIntoLines w elems = breakat w elems' $ algo w elems'
+    where
+        algo = if useTexFit then _texBreak else firstFit
+        elems' = preprocessParagraph elems
 \end{code}
 
-\code{texBreak} implements the \TeX{} line breaking algorithm.
+\code{_texBreak} implements the \TeX{} line breaking algorithm.
+
+\code{breakat} takes the elements and a list of breaks and returns a list of
+Vboxes.
 
 \begin{code}
+breakat :: Dimen -> [B.HElement] -> [Int] -> [B.VBox]
 breakat w elems breaks = breakat' elems $ diffs breaks
     where
         diffs (b0:b1:bs) = ((b1-b0):diffs (b1:bs))
@@ -191,9 +198,9 @@ _acc_sizes velems = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
 \end{code}
 
 \begin{code}
-texBreak :: Dimen -> [B.HElement] -> [B.VBox]
-texBreak _ [] = []
-texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
+_texBreak :: Dimen -> [B.HElement] -> [Int]
+_texBreak _ [] = []
+_texBreak textwidth elems = snd $ bfcache ! 0
     where
         velems = V.fromList elems
         n = V.length velems
@@ -201,9 +208,9 @@ texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
 
         bestfit :: Int -> (Ratio Integer,[Int])
         bestfit s
-            | (s >= n) = (0,[]) -- error "hex.texBreak.bestfit': Trying to bestfit past the end!"
+            | (s >= n) = (0,[]) -- error "hex._texBreak.bestfit': Trying to bestfit past the end!"
             | otherwise = case V.toList $ vargsort demerits_s of
-                    [] -> error "hex.texBreak.trybreaks: empty!"
+                    [] -> error "hex._texBreak.trybreaks: empty!"
                     (m:ms) -> let (val_m,fit_m) = bfcache ! (s+m+1) in
                                     trybreaks ((demerits_s ! m) + val_m, s:fit_m) ms
             where
@@ -248,14 +255,11 @@ packagebox width boxes = B.mergeBoxes B.V $ toBoxes $ B.hboxto width $ cleanEnds
 And here is the first fit algorithm:
 
 \begin{code}
-firstFit :: Dimen -> [B.HElement] -> [B.VBox]
-firstFit textwidth elems = breakat textwidth elems $ firstFitBreaks textwidth elems
-
-firstFitBreaks :: Dimen -> [B.HElement] -> [Int]
-firstFitBreaks _ [] = []
-firstFitBreaks textwidth lelems = (0:restbreaks)
+firstFit :: Dimen -> [B.HElement] -> [Int]
+firstFit _ [] = []
+firstFit textwidth lelems = (0:restbreaks)
     where
-        restbreaks = map (+first) $ firstFitBreaks textwidth $ drop first lelems
+        restbreaks = map (+first) $ firstFit textwidth $ drop first lelems
         first = firstLine zeroDimen lelems
         firstLine _ [] = 0
         firstLine (Dimen 0) (le:les) = 1 + (firstLine (leWidth le) les)
