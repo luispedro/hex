@@ -105,9 +105,28 @@ case_demerits = [0,0,0,0] @=?
         velems = V.fromList elems
         nat_exp_shr = _acc_sizes velems
         elems = rep (16 :: Int)
-        rep 0 = []
-        rep n = (x:sp:rep (n-1))
-        sp = B.EGlue (B.Glue B.H (Dimen 10) (Dimen 5) (Dimen 4) 0)
-        x = B.EBox (B.Box B.H zeroDimen zeroDimen (Dimen 20) xc)
-        xc = B.TextContent "x"
+
+rep :: Int -> [B.HElement]
+rep 0 = []
+rep n = (x:sp:rep (n-1))
+
+sp = B.EGlue (B.Glue B.H (Dimen 10) (Dimen 5) (Dimen 4) 0)
+x = B.EBox (B.Box B.H zeroDimen zeroDimen (Dimen 20) xc)
+xc = B.TextContent "x"
+
+case_demerits_squeeze = assert $ allsame
+            [ (demerit w velems nat_exp_shr 0 3)
+            , (demerit w velems nat_exp_shr 2 3)
+            , (demerit w velems nat_exp_shr 4 3)
+            , (demerit w velems nat_exp_shr 10 3)
+            ]
+    where
+        -- The exact numbers are meaningless, but I want to have exact values
+        w = Dimen 47
+        velems = V.fromList elems
+        nat_exp_shr = _acc_sizes velems
+        elems = rep (16 :: Int)
+        allsame [a,b] = (a == b)
+        allsame (a:b:bs) = (a == b) && allsame (b:bs)
+        allsame _ = error "allsame"
 
