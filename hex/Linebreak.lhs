@@ -160,6 +160,26 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 \end{code}
 
 \begin{code}
+demerit textwidth velems nat_exp_shr s ell = if canbreak e then badness + curpenalty else plus_inf
+    where
+        n = V.length velems
+        canbreak i = if i >= n then False else case (velems !? (i-1), velems !? i) of
+            (Just _,Just (B.EPenalty _)) -> True
+            (Just (B.EBox _), Just (B.EGlue _)) -> True
+            _ -> False
+        e = s + ell + 1
+        curpenalty = fromInteger $ lePenalty $ velems ! e
+        badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
+        r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
+        delta = naturalsize `dsub` textwidth
+        naturalsize = nt_e `dsub` nt_s
+        tshrinkage = sh_e `dsub` sh_s
+        texpandable = ex_e `dsub` ex_s
+        (nt_s,ex_s,sh_s) = nat_exp_shr ! s
+        (nt_e,ex_e,sh_e) = nat_exp_shr ! e
+\end{code}
+
+\begin{code}
 texBreak :: Dimen -> [B.HElement] -> [B.VBox]
 texBreak _ [] = []
 texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
@@ -170,10 +190,6 @@ texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
         nat_exp_shr = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
         props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 
-        canbreak i = case (velems !? (i-1), velems !? i) of
-            (Just _,Just (B.EPenalty _)) -> True
-            (Just (B.EBox _), Just (B.EGlue _)) -> True
-            _ -> False
 
         bestfit :: Int -> (Ratio Integer,[Int])
         bestfit s
@@ -195,19 +211,7 @@ texBreak textwidth elems = breakat textwidth elems $ snd $ bfcache ! 0
                         first = (demerits_s ! m)
 
         bfcache = V.generate (n+1) bestfit
-        dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit i))
-        demerit s ell = if canbreak e then badness + curpenalty else plus_inf
-            where
-                e = s + ell + 1
-                curpenalty = fromInteger $ lePenalty $ velems ! e
-                badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
-                r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
-                delta = naturalsize `dsub` textwidth
-                naturalsize = nt_e `dsub` nt_s
-                tshrinkage = sh_e `dsub` sh_s
-                texpandable = ex_e `dsub` ex_s
-                (nt_s,ex_s,sh_s) = nat_exp_shr ! s
-                (nt_e,ex_e,sh_e) = nat_exp_shr ! e
+        dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit textwidth velems nat_exp_shr i))
 \end{code}
 
 \begin{code}
