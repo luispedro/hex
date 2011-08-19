@@ -101,6 +101,7 @@ case_demerits = [0,0,0,0] @=?
             ]
     where
         -- The exact numbers are meaningless, but I want to have exact values
+        -- Same thing below
         w = Dimen 50
         velems = V.fromList elems
         nat_exp_shr = _acc_sizes velems
@@ -121,7 +122,6 @@ case_demerits_squeeze = assert $ allsame
             , (demerit w velems nat_exp_shr 10 3)
             ]
     where
-        -- The exact numbers are meaningless, but I want to have exact values
         w = Dimen 47
         velems = V.fromList elems
         nat_exp_shr = _acc_sizes velems
@@ -130,3 +130,13 @@ case_demerits_squeeze = assert $ allsame
         allsame (a:b:bs) = (a == b) && allsame (b:bs)
         allsame _ = error "allsame"
 
+case_texBreak = [0,4,8,12,16,20,24,28,32] @=? _texBreak w elems
+    where
+        w = Dimen 50
+        elems = rep 16
+
+case_texBreak_small = [0,4] @=? _texBreak w elems
+    where
+        -- The exact numbers are meaningless, but I want to have exact values
+        w = Dimen 50
+        elems = [x,sp,x]
