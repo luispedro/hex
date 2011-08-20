@@ -59,6 +59,7 @@ fixGlue (B.Glue _ s _ _ _)= B.Box
 
 We now define some basic constants: infinite and minus-infinite penalties.
 \begin{code}
+penalty :: Integer -> B.HElement
 penalty p = B.EPenalty $ B.Penalty B.H p False
 infPenalty = 10000
 minfPenalty = (-10000)
@@ -173,7 +174,7 @@ minsum lim a b = if a >= lim then lim else min lim (a+b)
 demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenalty else plus_inf
     where
         n = V.length velems
-        canbreak = if e >= n then False else case (velems !? (e-2), velems !? (e-1)) of
+        canbreak = if e > n then False else case (velems !? (e-2), velems !? (e-1)) of
             (Just _,Just (B.EPenalty _)) -> True
             (Just (B.EBox _), Just (B.EGlue _)) -> True
             _ -> False
@@ -181,7 +182,7 @@ demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenal
         ee = case velems ! (e-1) of
             B.EGlue _ -> e-1
             _ -> e
-        curpenalty = fromInteger $ lePenalty $ velems ! e
+        curpenalty = fromInteger $ lePenalty $ velems ! (e-1)
         badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
         r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
         delta = naturalsize `dsub` textwidth

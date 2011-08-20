@@ -130,7 +130,7 @@ case_demerits_squeeze = assert $ allsame
         allsame (a:b:bs) = (a == b) && allsame (b:bs)
         allsame _ = error "allsame"
 
-case_texBreak = [0,4,8,12,16,20,24,28,32] @=? _texBreak w elems
+case_texBreak = [0,4,8,12,16,20,24,28] @=? _texBreak w elems
     where
         w = Dimen 50
         elems = rep 16
@@ -143,4 +143,19 @@ case_texBreak_small = [0,4] @=? _texBreak w elems
 
 case_acc = [0,20,30,50,50,50,50] @=? (map (\(Dimen s,_,_) -> s) $ V.toList $ _acc_sizes $ V.fromList $ _preprocessParagraph elems)
     where elems = [x,sp,x]
+
+case_acc_length = (n+1) @=? (V.length $ _acc_sizes velems)
+    where
+        elems = [x,sp,x]
+        velems = V.fromList $ _preprocessParagraph elems
+        n = V.length velems
+
+case_value_penalty = (-10000) @=? (demerit w velems nat_exp_shr 0 (n-1))
+    where
+        pre_elems = [x,sp,x]
+        elems = _preprocessParagraph pre_elems
+        n = length elems
+        w = Dimen 50
+        velems = V.fromList elems
+        nat_exp_shr = _acc_sizes velems
 
