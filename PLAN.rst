@@ -29,29 +29,37 @@ v0.0.3
 ------
 
 - break up paragraphs like TeX
-- footnotes
 
 Expected: Feb 28 2011
+Released: Aug 22 2011
 (Also include \input & \message)
 
 v0.0.4
 ------
 
+- \if \else \fi handling
 - more fonts
-- images
 
-Expected: Mar 31 2011
+Expected: Oct 31 2011
 
 v0.0.5
 ------
 
+- images
 - basic math formulas
 
-Expected: Apr 30 2011
+Expected: Dec 31 2011
 
 v0.0.6
 ------
 
 - more advanced math formulas
 
-Expected: May 31 2011
+Expected: Jan 31 2012
+
+v0.0.7
+------
+
+- output routines
+- footnotes
+
