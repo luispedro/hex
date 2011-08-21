@@ -135,7 +135,7 @@ case_texBreak = [0,4,8,12,16,20,24,28,32] @=? _texBreak w elems
         w = Dimen 50
         elems = rep 16
 
-case_texBreak_small = [0,4] @=? _texBreak w elems
+case_texBreak_small = [0,6] @=? (_texBreak w $ _preprocessParagraph elems)
     where
         -- The exact numbers are meaningless, but I want to have exact values
         w = Dimen 50
