@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- Unit tests are their own programme.
 
 module Main where
@@ -161,12 +161,17 @@ case_value_penalty = (-10000) @=? (demerit w velems nat_exp_shr 0 (n-1))
         nat_exp_shr = _acc_sizes velems
 
 
-instance Arbitrary (B.Element B.H) where
-    arbitrary = frequency [(5,elements [x]), (1,elements [sp])]
+-- Beh is just for the benefit of the Arbitrary instance
+-- Otherwise, we would have an orphan instance declaration.
+data Beh = Beh { beh :: B.HElement } deriving (Show)
+instance Arbitrary Beh where
+    arbitrary = frequency [(5,elements [Beh x]), (1,elements [Beh sp])]
 
-prop_list elems = valid (_texBreak w $ _preprocessParagraph elems)
+prop_list belems = valid (_texBreak w $ _preprocessParagraph elems)
     where
-        _types = elems :: [B.Element B.H]
+        _types = belems :: [Beh]
+        elems :: [B.HElement]
+        elems = map beh belems
         w = Dimen 50
         valid [] = False
         valid [_] = False
@@ -175,3 +180,4 @@ prop_list elems = valid (_texBreak w $ _preprocessParagraph elems)
         monotonic [] = True
         monotonic [_] = True
         monotonic (a:b:xs) = (a < b) && monotonic (b:xs)
+
