@@ -130,7 +130,7 @@ case_demerits_squeeze = assert $ allsame
         allsame (a:b:bs) = (a == b) && allsame (b:bs)
         allsame _ = error "allsame"
 
-case_texBreak = [0,4,8,12,16,20,24,28] @=? _texBreak w elems
+case_texBreak = [0,4,8,12,16,20,24,28,32] @=? _texBreak w elems
     where
         w = Dimen 50
         elems = rep 16

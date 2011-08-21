@@ -162,14 +162,6 @@ vargsort vec = runST $ do
                     else compare (vec ! i) (vec ! j)
 \end{code}
 
-\code{minsum} is a small helper function which computes $\min{\ell, a + b}$,
-but does not evaluate \code{b} if it is not necessary (we assume $a,b \ge 0$).
-
-\begin{code}
-minsum :: Ratio Integer -> Ratio Integer -> Ratio Integer -> Ratio Integer
-minsum lim a b = if a >= lim then lim else min lim (a+b)
-\end{code}
-
 \begin{code}
 demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenalty else plus_inf
     where
@@ -210,7 +202,8 @@ _texBreak textwidth elems = snd $ bfcache ! 0
 
         bestfit :: Int -> (Ratio Integer,[Int])
         bestfit s
-            | (s >= n) = (0,[]) -- error "hex._texBreak.bestfit': Trying to bestfit past the end!"
+            | (s > n) = error "hex._texBreak.bestfit': Trying to bestfit past the end!"
+            | (s == n) = (0,[n])
             | otherwise = case V.toList $ vargsort demerits_s of
                     [] -> error "hex._texBreak.trybreaks: empty!"
                     (m:ms) -> let (val_m,fit_m) = bfcache ! (s+m+1) in
@@ -224,7 +217,7 @@ _texBreak textwidth elems = snd $ bfcache ! 0
                         else trybreaks (vm, s:breaks) ms
                     where
                         (valm, breaks) = bfcache ! (s+m+1)
-                        vm = minsum v first valm
+                        vm = min v (first + valm)
                         first = (demerits_s ! m)
 
         bfcache = V.generate (n+1) bestfit
