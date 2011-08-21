@@ -176,8 +176,8 @@ demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenal
             _ -> e
         curpenalty = fromInteger $ lePenalty $ velems ! (e-1)
         badness = if r < -1 then plus_inf else 100*(abs r)*(abs r)*(abs r)
-        r = delta `sdratio` (if delta `dgt` zeroDimen then tshrinkage else texpandable)
-        delta = naturalsize `dsub` textwidth
+        r = delta `sdratio` (if delta `dgt` zeroDimen then texpandable else tshrinkage)
+        delta = textwidth `dsub` naturalsize
         naturalsize = nt_e `dsub` nt_s
         tshrinkage = sh_e `dsub` sh_s
         texpandable = ex_e `dsub` ex_s
