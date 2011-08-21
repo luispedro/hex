@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances #-}
 -- Unit tests are their own programme.
 
 module Main where
@@ -7,6 +7,7 @@ module Main where
 
 import Test.Framework.TH
 import Test.HUnit
+import Test.QuickCheck
 import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
@@ -159,3 +160,18 @@ case_value_penalty = (-10000) @=? (demerit w velems nat_exp_shr 0 (n-1))
         velems = V.fromList elems
         nat_exp_shr = _acc_sizes velems
 
+
+instance Arbitrary (B.Element B.H) where
+    arbitrary = frequency [(5,elements [x]), (1,elements [sp])]
+
+prop_list elems = valid (_texBreak w $ _preprocessParagraph elems)
+    where
+        _types = elems :: [B.Element B.H]
+        w = Dimen 50
+        valid [] = False
+        valid [_] = False
+        valid xs | head xs /= 0 = False
+        valid xs = monotonic xs
+        monotonic [] = True
+        monotonic [_] = True
+        monotonic (a:b:xs) = (a < b) && monotonic (b:xs)
