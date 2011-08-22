@@ -45,7 +45,13 @@ function "loadPL" = putStrLn . show . loadPL
 
 function "breaklines" = \inputstr -> do
     fontinfo <- readFile "data/cmr10.pl"
-    putStrLn $ concat $ (map (++"\n")) $ (map show) $ filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $ (map Boxes.boxContents) $ breaklines (loadfont fontinfo startenv) inputstr
+    putStrLn $
+            concat $
+            (map (++"\n")) $
+            (map show) $
+            filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
+            (map Boxes.boxContents) $
+            breaklines (loadfont fontinfo startenv) inputstr
 
 function "dvioutput" = \inputstr -> do
     fontinfo <- readFile "data/cmr10.pl"
