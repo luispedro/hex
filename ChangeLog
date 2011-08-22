@@ -1,0 +1,9 @@
+Version 0.0.3 2011-08-22 by luispedro
+	* \input
+	* \message
+	* TeX paragraph breaking
+	* Better and more testing
+	* Remove all warnings
+	* Delimited parameters for macros
+	* Better build system
+	* Implement \global & \gdef
