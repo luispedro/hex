@@ -1,0 +1,7 @@
+\def\a{a}%
+\ifx\a\b NOT OK\fi%
+\def\b{b}%
+\ifx\a\b NOT OK\fi%
+\def\b{a}%
+\ifx\a\b OK\fi%
+\ifx\a\b OK\else NOT OK\fi%

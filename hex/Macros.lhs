@@ -96,6 +96,10 @@ hide it behind the \code{isprimitive} function so we can easily change it in
 the future.
 
 \begin{code}
+ifstarts :: [String]
+ifstarts =
+    ["\\ifx"
+    ]
 primitives :: [String]
 primitives =
     ["\\par"
@@ -143,6 +147,36 @@ breakAtGroupEnd n st = breakAtGroupEnd' n tok st'
 \begin{code}
 tokenCategory (CharToken tc) = category tc
 tokenCategory _ = Invalid -- It doesn't matter what
+\end{code}
+
+To help with processing \tex{\\if} statements, we need to (1) evaluate them and
+(2) skip over the non-important characters:
+
+\begin{code}
+evaluateif env "\\ifx" st = (cond,st1)
+    where
+        (tok0, st0) = gettoken st
+        (tok1, st1) = gettoken st0
+        cond = case (tok0, tok1) of
+            ((ControlSequence cs0), (ControlSequence cs1)) -> samemacro cs0 cs1
+            _ -> False
+        samemacro cs0 cs1 = case ((E.lookup cs0 env),(E.lookup cs1 env)) of
+            (Nothing, Nothing) -> True
+            (Just m0, Just m1) -> (m0 == m1)
+            _ -> False
+evaluateif _e _ _st = error "hex.Macros.evaluateif: Cannot handle this type"
+\end{code}
+
+Skipping depends on the value of the condition. If the condition is true, we do
+nothing. If the condition is false, we skip until the matching \tex{\\else} or
+\tex{\\fi}.
+
+\begin{code}
+skipif True st = st
+skipif False st = snd $ gettokentil st isElseOrFi
+    where
+        isElseOrFi (ControlSequence c) = c `elem` ["\\else", "\\fi"]
+        isElseOrFi _ = False
 \end{code}
 
 The work horse of this module are the \code{expand1} and \code{expand1'}
@@ -265,6 +299,16 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
         tvalue (CharToken tc) = value tc
         tvalue (ControlSequence ['\\',c]) = c
         tvalue _ = '\0'
+\end{code}
+
+\begin{code}
+expand' env (ControlSequence csname) st
+    | csname `elem` ifstarts = expand env rest
+        where
+            (cond, st') = evaluateif env csname st
+            rest = skipif cond st'
+expand' env (ControlSequence "\\else") st = expand env $ skipif False st
+expand' env (ControlSequence "\\fi") st = expand env st
 \end{code}
 
 Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only

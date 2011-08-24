@@ -1,0 +1,3 @@
+\def\a{a}%
+\def\b{b}%
+\ifx\a\b NOT\else OK\fi%
