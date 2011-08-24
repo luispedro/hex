@@ -173,7 +173,7 @@ nothing. If the condition is false, we skip until the matching \tex{\\else} or
 
 \begin{code}
 skipif True st = st
-skipif False st = snd $ gettokentil st isElseOrFi
+skipif False st = droptoken $ snd $ gettokentil st isElseOrFi
     where
         isElseOrFi (ControlSequence c) = c `elem` ["\\else", "\\fi"]
         isElseOrFi _ = False
