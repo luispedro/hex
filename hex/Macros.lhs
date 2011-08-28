@@ -99,6 +99,7 @@ the future.
 ifstarts :: [String]
 ifstarts =
     ["\\ifx"
+    ,"\\if"
     ]
 primitives :: [String]
 primitives =
@@ -153,7 +154,7 @@ To help with processing \tex{\\if} statements, we need to (1) evaluate them and
 (2) skip over the non-important characters:
 
 \begin{code}
-evaluateif env "\\ifx" st = (cond,st1)
+evaluateif env "\\ifx" st = (cond,0,st1)
     where
         (tok0, st0) = gettoken st
         (tok1, st1) = gettoken st0
@@ -163,6 +164,12 @@ evaluateif env "\\ifx" st = (cond,st1)
         samemacro cs0 cs1 = case ((E.lookup cs0 env),(E.lookup cs1 env)) of
             (Nothing, Nothing) -> True
             (Just m0, Just m1) -> (m0 == m1)
+            _ -> False
+evaluateif env "\\if" st = (cond,(if cond then 2 else 0),st)
+    where
+        (cmd0:cmd1:_) = expand env st
+        cond = case (cmd0,cmd1) of
+            (CharCommand c0, CharCommand c1) ->  (value c0) == (value c1)
             _ -> False
 evaluateif _e _ _st = error "hex.Macros.evaluateif: Cannot handle this type"
 \end{code}
@@ -303,9 +310,9 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
 
 \begin{code}
 expand' env (ControlSequence csname) st
-    | csname `elem` ifstarts = expand env rest
+    | csname `elem` ifstarts = drop toskip $ expand env rest
         where
-            (cond, st') = evaluateif env csname st
+            (cond, toskip, st') = evaluateif env csname st
             rest = skipif cond st'
 expand' env (ControlSequence "\\else") st = expand env $ skipif False st
 expand' env (ControlSequence "\\fi") st = expand env st

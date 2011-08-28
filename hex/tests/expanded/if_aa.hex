@@ -1,0 +1,3 @@
+\def\a{aa}%
+\def\b{bb}%
+\if\a\b c\fi%

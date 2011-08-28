@@ -1,0 +1,4 @@
+\def\a{aaa}%
+\def\b{bb}%
+%
+\if\a\b\fi%
