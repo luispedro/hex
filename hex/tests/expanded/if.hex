@@ -1,0 +1,8 @@
+\def\a{a}%
+\if\a aOK\fi%
+\def\b{b}%
+\if\a\b NOT OK\fi%
+\if\a\b NOT OK\else OK\fi%
+\def\b{a}%
+\if\a\b OK\fi%
+\if\a\b OK\else NOT OK\fi%
