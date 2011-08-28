@@ -1,0 +1,2 @@
+\catcode`A=13%
+\defA#1{#1}A{b}%
