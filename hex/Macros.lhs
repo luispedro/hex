@@ -7,6 +7,7 @@ module Macros
     ( expand
     , Command(..)
     , HexCommand(..)
+    , _breakAtGroupEnd
     ) where
 
 import List (sortBy)
@@ -123,26 +124,29 @@ gettokenorgroup st = gettokenorgroup' c r
     where
         (c,r) = gettoken st
         gettokenorgroup' (CharToken tc) r'
-            | (category tc) == BeginGroup = breakAtGroupEnd 0 r'
+            | (category tc) == BeginGroup = _breakAtGroupEnd 0 r'
         gettokenorgroup' t r' = ([t],maybespace r')
+\end{code}
 
-breakAtGroupEnd :: Integer -> TokenStream -> ([Token], TokenStream)
-breakAtGroupEnd _ st
-    | emptyTokenStream st = error "hex.breakAtGroupEnd: unexpected end of file."
-breakAtGroupEnd n st = breakAtGroupEnd' n tok st'
+
+\code{_breakAtGroupEnd} gets a grouped set of tokens. The interface is a bit
+clumsy (you need to pass the accumulator), but it's an internal function, so it
+does not matter.
+
+\begin{code}
+
+_breakAtGroupEnd :: Integer -> TokenStream -> ([Token], TokenStream)
+_breakAtGroupEnd n st
+    | emptyTokenStream st = error "hex._breakAtGroupEnd: unexpected end of file."
+    | (n == 0) && (tokenCategory tok) == EndGroup = ([],st')
+    | otherwise = (tok:ts, rest)
     where
         (tok,st') = gettoken st
-        breakAtGroupEnd' 0 t@(CharToken tc) rest
-            | (category tc) == EndGroup = ([], rest)
-            | otherwise = let (ts, r) = breakAtGroupEnd 0 rest in (t:ts, r)
-
-        breakAtGroupEnd' n' t rest = (t:ts, r)
-            where
-                (ts,r) = breakAtGroupEnd n'' rest
-                n'' = case tokenCategory t of
-                    BeginGroup -> n' + 1
-                    EndGroup -> n' - 1
-                    _ -> n'
+        (ts,rest) = _breakAtGroupEnd n' st'
+        n' = case tokenCategory tok of
+            BeginGroup -> (n + 1)
+            EndGroup -> (n - 1)
+            _ -> n
 \end{code}
 
 \begin{code}
@@ -333,7 +337,7 @@ expand' env (ControlSequence csname) st
             macro = Macro args substitution
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
-            (substitutiontext,rest) = breakAtGroupEnd 0 $ droptoken afterargs
+            (substitutiontext,rest) = _breakAtGroupEnd 0 $ droptoken afterargs
             substitution = if edef then expandedsubtext else substitutiontext
             expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
             isBeginGroup (CharToken tc) = (category tc) == BeginGroup

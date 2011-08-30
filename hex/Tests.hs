@@ -56,6 +56,10 @@ case_stringnotfind = (find "abc" "012abd") @=? Nothing
 case_paragraphs = (length p, length r) @=? (0,0)
         where (p,r) = (paragraph undefined [PrimitiveCommand  "\\par"])
 
+-- Test for macro parsing
+case_bracebrace = (chars2tokens "{a}") @=? parsed
+    where parsed = fst $ _breakAtGroupEnd 0 (tokenliststream $ chars2tokens "{a}}")
+
 -- Test B.hboxto
 di = dimenFromInches
 textwidth = di 5
