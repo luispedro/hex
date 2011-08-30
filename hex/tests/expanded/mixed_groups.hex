@@ -1,0 +1,7 @@
+\catcode`P=2%
+\def\a{out}%
+{%
+\def\a{in}%
+\a
+P
+\a
