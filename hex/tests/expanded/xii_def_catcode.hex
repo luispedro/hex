@@ -1,0 +1,3 @@
+\def\a#1{\catcode`#1=13}%
+\a{x}\def x{OK}%
+x%
