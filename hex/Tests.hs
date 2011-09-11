@@ -58,7 +58,7 @@ case_paragraphs = (length p, length r) @=? (0,0)
 
 -- Test for macro parsing
 case_bracebrace = (chars2tokens "{a}") @=? parsed
-    where parsed = fst $ _breakAtGroupEnd 0 (tokenliststream $ chars2tokens "{a}}")
+    where parsed = fst $ _breakAtGroupEnd (tokenliststream $ chars2tokens "{a}}")
 
 -- Test B.hboxto
 di = dimenFromInches

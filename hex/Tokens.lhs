@@ -15,6 +15,9 @@ module Tokens
     , emptyTokenStream
     , updateCharStream
     , chars2tokens
+    , TkS(..)
+    , emptyTkS
+    , gettokenM
     ) where
 
 import Chars
@@ -228,4 +231,19 @@ chars2tokens str = ts
     where
        (ts,_) = gettokentil st $ const False
        st = newTokenStream $ TypedCharStream plaintexenv str
+\end{code}
+
+To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
+
+\begin{code}
+data TkS a = TkS { runTkS :: TokenStream -> (a,TokenStream) }
+
+instance Monad TkS where
+    return a = TkS (\tks -> (a,tks))
+    x >>= f = TkS (\tks -> let (a,t') = (runTkS x tks); (b,t'') = (runTkS (f a) t') in (b,t''))
+
+emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tks))
+gettokenM :: TkS Token
+gettokenM = TkS gettoken
+
 \end{code}

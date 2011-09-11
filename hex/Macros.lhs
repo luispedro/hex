@@ -41,7 +41,6 @@ To expand a macro, given a set of arguments, use \code{expandmacro}
 \begin{code}
 expandmacro :: Macro -> [(Int,[Token])] -> [Token]
 expandmacro macro arguments = expandmacro' (replacement macro)
-
     where
         arguments' = map snd $ sortBy (\(a,_) (b,_) -> (compare a b))  arguments
         expandmacro' [] = []
@@ -124,29 +123,30 @@ gettokenorgroup st = gettokenorgroup' c r
     where
         (c,r) = gettoken st
         gettokenorgroup' (CharToken tc) r'
-            | (category tc) == BeginGroup = _breakAtGroupEnd 0 r'
+            | (category tc) == BeginGroup = _breakAtGroupEnd r'
         gettokenorgroup' t r' = ([t],maybespace r')
 \end{code}
 
 
-\code{_breakAtGroupEnd} gets a grouped set of tokens. The interface is a bit
-clumsy (you need to pass the accumulator), but it's an internal function, so it
-does not matter.
+\code{_breakAtGroupEnd} gets a grouped set of tokens.
 
 \begin{code}
 
-_breakAtGroupEnd :: Integer -> TokenStream -> ([Token], TokenStream)
-_breakAtGroupEnd n st
-    | emptyTokenStream st = error "hex._breakAtGroupEnd: unexpected end of file."
-    | (n == 0) && (tokenCategory tok) == EndGroup = ([],st')
-    | otherwise = (tok:ts, rest)
+_breakAtGroupEnd :: TokenStream -> ([Token], TokenStream)
+_breakAtGroupEnd st = runTkS (breakAtGroupEndM 0) st
     where
-        (tok,st') = gettoken st
-        (ts,rest) = _breakAtGroupEnd n' st'
-        n' = case tokenCategory tok of
-            BeginGroup -> (n + 1)
-            EndGroup -> (n - 1)
-            _ -> n
+        breakAtGroupEndM :: Integer -> TkS [Token]
+        breakAtGroupEndM n = do
+            tk <- gettokenM
+            if (n == 0) && (tokenCategory tk) == EndGroup then
+                return []
+             else do
+                rest <- breakAtGroupEndM (n' $ tokenCategory tk)
+                return (tk:rest)
+            where
+                n' BeginGroup = n + 1
+                n' EndGroup = n - 1
+                n' _ = n
 \end{code}
 
 \begin{code}
@@ -337,7 +337,7 @@ expand' env (ControlSequence csname) st
             macro = Macro args substitution
             (ControlSequence name,aftername) = gettoken st
             (args,afterargs) = gettokentil aftername isBeginGroup
-            (substitutiontext,rest) = _breakAtGroupEnd 0 $ droptoken afterargs
+            (substitutiontext,rest) = _breakAtGroupEnd $ droptoken afterargs
             substitution = if edef then expandedsubtext else substitutiontext
             expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
             isBeginGroup (CharToken tc) = (category tc) == BeginGroup
