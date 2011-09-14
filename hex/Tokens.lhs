@@ -18,6 +18,7 @@ module Tokens
     , TkS(..)
     , emptyTkS
     , gettokenM
+    , skiptokenM
     ) where
 
 import Chars
@@ -245,5 +246,5 @@ instance Monad TkS where
 emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tks))
 gettokenM :: TkS Token
 gettokenM = TkS gettoken
-
+skiptokenM = (gettokenM >> return ())
 \end{code}

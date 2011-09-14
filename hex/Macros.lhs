@@ -211,23 +211,35 @@ expand1' macro st = streamenqueue rest expanded
     where
         expanded = expandmacro macro arguments
         arguments :: [(Int,[Token])]
-        (arguments,rest) = getargs (arglist macro) st
-        getargs :: [Token] -> TokenStream -> ([(Int,[Token])], TokenStream)
-        getargs [] rest' = ([],rest')
-        getargs ((CharToken (TypedChar _ Parameter)):t:ts) st' = (((n,a):as), rest')
-            where
-                n = readNumberFromToken t
-                (a,rs) = gettokenorgroup st'
-                (as,rest') = getargs ts rs
-        getargs (t:ts) st' = (as,rest')
-            where
-                (t',rs) = gettoken st'
-                (as,rest') =
-                        if t == t' then
-                            getargs ts rs
-                        else
-                            error "Macro parameter matching error"
+        (arguments,rest) = runTkS (getargs (todelims $ arglist macro)) st
 \end{code}
+
+\begin{code}
+data Delim = DelimParameter Int | DelimToken Token | DelimEmpty
+todelims [] = [DelimEmpty]
+todelims (t:n:ts) | (tokenCategory t) == Parameter = (DelimParameter (readNumberFromToken n)):(todelims ts)
+todelims (t:ts) = (DelimToken t):(todelims ts)
+
+getargs (DelimEmpty:_) = return []
+getargs (DelimParameter n:d:ds) = do
+    val <- getargtil d
+    rest <- getargs (d:ds)
+    return ((n,val):rest)
+getargs (DelimToken _:ds) = skiptokenM >> getargs ds
+getargs _ = error "getargs"
+getargtil DelimEmpty = do
+    first <- TkS gettokenorgroup
+    return first
+getargtil d@(DelimToken end) = do
+    first <- TkS gettokenorgroup
+    if (length first) == 1 && (head first) == end then
+        return first
+     else do
+         rest <- getargtil d
+         return (first ++ rest)
+getargtil (DelimParameter _) = TkS gettokenorgroup
+\end{code}
+
 
 If there is an error, we insert a special token sequence:
 
