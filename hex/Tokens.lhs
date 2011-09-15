@@ -19,6 +19,7 @@ module Tokens
     , emptyTkS
     , gettokenM
     , skiptokenM
+    , peektokenM
     ) where
 
 import Chars
@@ -247,4 +248,5 @@ emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tk
 gettokenM :: TkS Token
 gettokenM = TkS gettoken
 skiptokenM = (gettokenM >> return ())
+peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
 \end{code}
