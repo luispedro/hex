@@ -108,6 +108,8 @@ primitives =
     ,"\\vbox"
     ,"\\relax"
     ,"\\bye"
+    ,"\\hspace"
+    ,"\\vspace"
     ]
 isprimitive = (`elem` primitives)
 \end{code}
