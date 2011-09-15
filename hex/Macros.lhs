@@ -215,7 +215,7 @@ expand1' macro st = streamenqueue rest expanded
 \end{code}
 
 \begin{code}
-data Delim = DelimParameter Int | DelimToken Token | DelimEmpty
+data Delim = DelimParameter Int | DelimToken Token | DelimEmpty deriving(Show)
 todelims [] = [DelimEmpty]
 todelims (t:n:ts) | (tokenCategory t) == Parameter = (DelimParameter (readNumberFromToken n)):(todelims ts)
 todelims (t:ts) = (DelimToken t):(todelims ts)
@@ -231,12 +231,13 @@ getargtil DelimEmpty = do
     first <- TkS gettokenorgroup
     return first
 getargtil d@(DelimToken end) = do
-    first <- TkS gettokenorgroup
-    if (length first) == 1 && (head first) == end then
-        return first
+    next <- peektokenM
+    if (next == end) then
+        return []
      else do
-         rest <- getargtil d
-         return (first ++ rest)
+        first <- TkS gettokenorgroup
+        rest <- getargtil d
+        return (first ++ rest)
 getargtil (DelimParameter _) = TkS gettokenorgroup
 \end{code}
 
