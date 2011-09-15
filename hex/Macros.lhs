@@ -124,7 +124,7 @@ gettokenorgroup st = gettokenorgroup' c r
         (c,r) = gettoken st
         gettokenorgroup' (CharToken tc) r'
             | (category tc) == BeginGroup = _breakAtGroupEnd r'
-        gettokenorgroup' t r' = ([t],maybespace r')
+        gettokenorgroup' t r' = ([t],r')
 \end{code}
 
 
@@ -222,12 +222,14 @@ todelims (t:ts) = (DelimToken t):(todelims ts)
 
 getargs (DelimEmpty:_) = return []
 getargs (DelimParameter n:d:ds) = do
+    maybespaceM
     val <- getargtil d
     rest <- getargs (d:ds)
     return ((n,val):rest)
 getargs (DelimToken _:ds) = skiptokenM >> getargs ds
 getargs _ = error "getargs"
 getargtil DelimEmpty = do
+    maybespaceM
     first <- TkS gettokenorgroup
     return first
 getargtil d@(DelimToken end) = do
@@ -375,7 +377,8 @@ expand' env (ControlSequence cs) st
     | cs `elem` ["error","\\message"] = (InternalCommand env rest $ cmd arg):(expand env rest)
     where
         cmd = if cs == "error" then ErrorCommand else MessageCommand
-        (argtoks, rest) = gettokenorgroup st
+        (arguments,rest) = runTkS (getargs [DelimParameter 0, DelimEmpty]) st
+        [(0,argtoks)] = arguments
         arg = map charof argtoks
         charof (CharToken (TypedChar c _)) = c
         charof _ = error "hex.Macros.expand'.charof: Unexpected token"
