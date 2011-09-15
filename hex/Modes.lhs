@@ -19,6 +19,7 @@ Some commands are v-mode commands, other h-mode commands. We begin with a
 series of definitions to distinguish the two.
 
 \begin{code}
+isVCommand :: String -> Bool
 isVCommand "\\vspace" = True
 isVCommand _ = False
 \end{code}
@@ -27,13 +28,17 @@ The two modes are intertwined. Switching to a different mode is simply a tail
 call to the other mode.
 
 \begin{code}
+vMode :: E.Environment String E.HexType -> [Command] -> [VBox]
 vMode _ [] = []
 vMode env cs@((PrimitiveCommand csname):_)
     | isVCommand csname = vMode1 env cs
 vMode env cs = hMode env cs
 \end{code}
 
+\code{vMode1} handles one vertical mode command.
+
 \begin{code}
+vMode1 :: E.Environment String E.HexType -> [Command] -> [VBox]
 vMode1 env ((PrimitiveCommand "\\vspace"):cs) = vMode env cs
 vMode1 _ _ = error "hex.Modes.vMode1: Can only handle PrimitiveCommand"
 \end{code}
