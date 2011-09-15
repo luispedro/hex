@@ -1,0 +1,2 @@
+\def\a#1\b{#1}%
+\a \par is the thing\b%
