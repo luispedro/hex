@@ -20,6 +20,7 @@ module Tokens
     , gettokenM
     , skiptokenM
     , peektokenM
+    , maybespaceM
     ) where
 
 import Chars
@@ -249,4 +250,5 @@ gettokenM :: TkS Token
 gettokenM = TkS gettoken
 skiptokenM = (gettokenM >> return ())
 peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
+maybespaceM = TkS (\tks -> ((), maybespace tks))
 \end{code}
