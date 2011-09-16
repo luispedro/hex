@@ -62,11 +62,15 @@ function hmode = \_ -> do
 
 hex "-" = hex "/dev/stdin"
 hex fname = do
+        fontinfo <- readFile "data/cmr10.pl"
         inputstr <- readFile fname
-        _ <- processinputs (expanded inputstr) startingenv
+        commands <- processinputs (expanded inputstr) startingenv
+        env <- return (loadfont fontinfo startingenv)
+        B.putStr $ buildout env commands
         return ()
     where
         startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv
+        buildout env = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (vMode env)
 
 asBox (Boxes.EBox b) = Just b
 asBox _ = Nothing

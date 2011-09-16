@@ -31,11 +31,24 @@ readOneOf (n:ns) = (readFile n) `catch` (\e -> if isDoesNotExistError e then rea
 \end{code}
 
 \code{processinputs} processes the special commands in the \code{Command}
-stream. In particular, it process \tex{\\input} and \tex{\\message}.
+stream. In particular, it process \tex{\\bye}, \tex{\\input}, and
+\tex{\\message}.
+
+We start with the basics:
 
 \begin{code}
 processinputs :: [Command] -> HexEnvironment -> IO [Command]
 processinputs [] _ = return []
+\end{code}
+
+The simplest command is the \tex{\\bye} command. Just stop everything, we are
+done.
+
+\begin{code}
+processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []
+\end{code}
+
+\begin{code}
 processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
 processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             nextfile <- readOneOf possiblefiles;

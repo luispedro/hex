@@ -64,6 +64,7 @@ data HexCommand =
         ErrorCommand String
         | InputCommand String
         | MessageCommand String
+        | ByeCommand
 
 data Command =
         CharCommand TypedChar
@@ -81,6 +82,7 @@ instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand msg) = "message:"++msg
+    show ByeCommand = "bye"
 
 instance Show Command where
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
@@ -107,7 +109,6 @@ primitives =
     ,"\\hbox"
     ,"\\vbox"
     ,"\\relax"
-    ,"\\bye"
     ,"\\hspace"
     ,"\\vspace"
     ]
@@ -371,8 +372,14 @@ expand' env (ControlSequence "\\global") st
     where (ControlSequence next, rest) = gettoken st
 \end{code}
 
-We need to special case the internal commands. Errors and messages are similar
-and handled by the same function:
+We need to special case the internal commands. The simplest is the \tex{\bye}
+command:
+
+\begin{code}
+expand' env (ControlSequence "\\bye") st = [InternalCommand env st ByeCommand]
+\end{code}
+
+Errors and messages are similar and handled by the same function:
 
 \begin{code}
 expand' env (ControlSequence cs) st
