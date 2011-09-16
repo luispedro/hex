@@ -5,6 +5,7 @@ module Measures
     , scale
     , scaledToRational
     , Dimen(..)
+    , Unit(..)
     , zeroDimen
     , dimenFromInches
     , dimenFromPoints
@@ -15,6 +16,7 @@ module Measures
     , dratio
     , dgt
     , dmax
+    , dimenFromUnit
     , inchesToPoints
     , PaperSize(..)
     ) where
@@ -84,6 +86,15 @@ dimenFromFloatingPoints :: (RealFrac f) => f -> Dimen
 dimenFromFloatingPoints = Dimen . round . (*scalefactor)
 dimenFromInches = dimenFromPoints . inchesToPoints
 zeroDimen = Dimen 0
+\end{code}
+
+\tex{\Tex} recognises several units:
+
+\begin{code}
+data Unit = UnitEm | UnitEn | UnitPt | UnitPx | UnitIn deriving (Eq, Show)
+dimenFromUnit val UnitPt = dimenFromPoints val
+dimenFromUnit val UnitIn = dimenFromInches val
+dimenFromUnit _ _ = error "dimenFromUnit: not implemented"
 \end{code}
 
 Eventually, this module will grow. For now, we define only paper size and hard

@@ -24,6 +24,32 @@ isVCommand "\\vspace" = True
 isVCommand _ = False
 \end{code}
 
+\begin{code}
+readNumber :: [Command] -> (Integer,[Command])
+readNumber cs = (val,cs')
+    where
+        (digits,cs') = break (not . isDigit) cs
+        isDigit (CharCommand (TypedChar c Other)) = (c `elem` "0123456789")
+        isDigit _ = False
+        val :: Integer
+        val = read $ map (\(CharCommand (TypedChar c Other)) -> c) digits
+
+readUnits :: [Command] -> (Unit,[Command])
+readUnits ((CharCommand (TypedChar c0 Letter)):(CharCommand (TypedChar c1 Letter)):cs) = (unit [c0,c1],cs)
+    where
+        unit "em" = UnitEm
+        unit "en" = UnitEn
+        unit "pt" = UnitPt
+        unit "px" = UnitPx
+        unit _ = error "hex.unit could not match"
+
+readDimen :: [Command] -> (Dimen,[Command])
+readDimen c0 = ((dimenFromUnit (fromInteger number) units),c2)
+    where
+        (number,c1) = readNumber c0
+        (units,c2) = readUnits c1
+\end{code}
+
 The two modes are intertwined. Switching to a different mode is simply a tail
 call to the other mode.
 
@@ -39,7 +65,10 @@ vMode env cs = hMode env cs
 
 \begin{code}
 vMode1 :: E.Environment String E.HexType -> [Command] -> [VBox]
-vMode1 env ((PrimitiveCommand "\\vspace"):cs) = vMode env cs
+vMode1 env ((PrimitiveCommand "\\vspace"):cs) = (vspace:vMode env cs')
+    where
+        vspace = Box V h zeroDimen zeroDimen (Kern h)
+        (h,cs') = readDimen cs
 vMode1 _ _ = error "hex.Modes.vMode1: Can only handle PrimitiveCommand"
 \end{code}
 
