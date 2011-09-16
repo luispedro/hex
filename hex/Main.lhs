@@ -88,8 +88,8 @@ hexcmds = HexCmd
             , input = "-" &= argPos 0 &= opt "-"
             } &=
             verbosity &=
-            summary "Hex v0.0.2-git (C) Luis Pedro Coelho 2011" &=
-            details ["Hex implement the TeX language"]
+            summary "Hex v0.0.3-git (C) Luis Pedro Coelho 2011" &=
+            details ["Hex implements the TeX language"]
 
 \end{code}
 
