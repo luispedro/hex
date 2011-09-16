@@ -42,6 +42,7 @@ readUnits ((CharCommand (TypedChar c0 Letter)):(CharCommand (TypedChar c1 Letter
         unit "pt" = UnitPt
         unit "px" = UnitPx
         unit _ = error "hex.unit could not match"
+readUnits _ = error "hex.readUnits: could not read unit"
 
 readDimen :: [Command] -> (Dimen,[Command])
 readDimen c0 = ((dimenFromUnit (fromInteger number) units),c2)
@@ -69,7 +70,8 @@ vMode1 env ((PrimitiveCommand "\\vspace"):cs) = (vspace:vMode env cs')
     where
         vspace = Box V h zeroDimen zeroDimen (Kern h)
         (h,cs') = readDimen cs
-vMode1 _ _ = error "hex.Modes.vMode1: Can only handle PrimitiveCommand"
+vMode1 _ (c:_) = error (concat ["hex.Modes.vMode1: Can only handle PrimitiveCommand (got ", show c, ")"])
+vMode1 _ [] = error "hex.Modes.vMode1: Unexpected []"
 \end{code}
 
 \code{hMode'} is \emph{restricted horizontal mode}: it produces a list of
@@ -90,7 +92,7 @@ hMode' e = concatenatewords . map toHElement
                                 , depth=(f2d d)
                                 , boxContents=typesetChar c
                                 } where (w,h,d) = F.widthHeightDepth fnt c
-        toHElement _ = error "hex.Modes.hmode'.toHElement: can only handle CharCommand"
+        toHElement c = error (concat ["hex.Modes.hmode': Can only handle CharCommand (got ", show c, ")"])
 \end{code}
 
 We begin by breaking a sequence of commands into paragraphs. \code{paragraph}
