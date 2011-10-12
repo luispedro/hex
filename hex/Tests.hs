@@ -174,6 +174,21 @@ case_value_penalty = (-10000) @=? (demerit w velems nat_exp_shr 0 (n-1))
 
 case_break_byte = (10,15) @=? (_breakByte 4 (0xaf::Int))
 
+case_fixword_1 = (f0*f1) @?= ((fromInteger 1) :: FixWord)
+    where
+        f0 = (fromInteger 1) :: FixWord
+        f1 = (fromInteger 1) :: FixWord
+
+case_fixword_1float = (fixToFloat $ f0*f1) @?= 1.0
+    where
+        f0 = (fromInteger 1) :: FixWord
+        f1 = (fromInteger 1) :: FixWord
+
+case_fixword_1_2 = (f0+f1) @?= ((fromInteger 2) :: FixWord)
+    where
+        f0 = (fromInteger 1) :: FixWord
+        f1 = (fromInteger 1) :: FixWord
+
 -- Beh is just for the benefit of the Arbitrary instance
 -- Otherwise, we would have an orphan instance declaration.
 data Beh = Beh { beh :: B.HElement } deriving (Show)

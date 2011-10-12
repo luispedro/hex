@@ -29,7 +29,7 @@ getWord16 = getWord16be
 getWord = getWord32be
 getByte = getWord8
 
-getFixWord = (fixWordFrom32 . convert) `liftM` getWord
+getFixWord = (FixWord . convert) `liftM` getWord
 \end{code}
 
 There several fix word arrays, so we define a little helper function to get
