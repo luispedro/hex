@@ -83,7 +83,7 @@ parseTFMM fname = do
     parameters <- getFixWordArray np
     e <- isEmpty
     when (not e) (fail "hex.ParseTFM: EOF expected")
-    return  ( FontDef (convert checksum) dsize dsize 0 (length fname) $ fontName fname
+    return  ( FontDef (convert checksum) dsize dsize 0 (convert $ length fname) $ fontName fname
             , FontInfo (gliphMetrics dsize ci widths heights depths italics) (spaceInfoFromParameters dsize parameters)
             )
 \end{code}
