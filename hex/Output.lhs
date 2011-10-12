@@ -8,7 +8,6 @@ import qualified Data.ByteString.Lazy as B
 import Control.Monad.State
 
 import qualified Environment as E
-import qualified Fonts as F
 import Boxes
 import DVI
 \end{code}
@@ -52,6 +51,7 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
     where
         Just (E.HexDimen margintop) = E.lookup "margintop" env
         Just (E.HexDimen marginright) = E.lookup "marginright" env
+        Just (E.HexFontInfo (fdef,_)) = E.currentfont env
         vboxes (VBoxList vb) = vb
         vboxes _ = error "hex.Output.putpages.vboxes: Not a vbox list!"
         putpage page = do
@@ -59,7 +59,7 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
             push
             move_down margintop
             move_right marginright
-            _ <- defineFont F.cmr10
+            _ <- defineFont fdef
             selectFont 0
             putlines $ vboxes $ boxContents page
             pop

@@ -89,7 +89,7 @@ case_hbox_glue =
         B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
         _ -> error "should have matched!"
 
-case_font_dq = ((fixToFloat w) > 5) @?= True
+case_font_dq = ((fixToFloat w) > 4.9) @?= True
     where
         (w,_,_) = F.widthHeightDepth cmr10font '"'
 

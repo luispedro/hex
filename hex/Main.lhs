@@ -53,7 +53,7 @@ function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 
 function "breaklines" = \inputstr -> do
-    (_fontdef, fontinfo) <- readFont "cmr10"
+    fontinfo <- readFont "cmr10"
     putStrLn $
             concat $
             (map (++"\n")) $
@@ -66,7 +66,7 @@ function hmode = \_ -> do
 
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
-        (_fontdef,fontinfo) <- readFont "cmr10"
+        fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
         env <- return $ loadfont fontinfo startingenv

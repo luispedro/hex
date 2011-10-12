@@ -82,7 +82,7 @@ HBoxes from a list of commands that are guaranteed to be h-commands.
 hMode' :: E.Environment String E.HexType -> [Command] -> [HElement]
 hMode' e = concatenatewords . map toHElement
     where
-        Just (E.HexFontInfo fnt) = E.currentfont e
+        Just (E.HexFontInfo (_,fnt)) = E.currentfont e
         (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
         f2d = dimenFromFloatingPoints . fixToFloat
         toHElement (CharCommand (TypedChar _ Space)) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0

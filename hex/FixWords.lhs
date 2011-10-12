@@ -13,17 +13,17 @@ Several internal \TeX operations are performed on fixed point words:
 \begin{code}
 newtype FixWord = FixWord Integer deriving (Eq)
 
-conversionfactor = (1 `shiftL` 20)
+bitshift = 16
 
 fixToFloat :: FixWord -> Float
-fixToFloat (FixWord v) = (fromInteger v)/(fromInteger conversionfactor)
+fixToFloat (FixWord v) = (fromInteger v)/(fromInteger (1 `shiftL` bitshift))
 
 instance Num FixWord where
-    (FixWord a) * (FixWord b) = FixWord ((a * b) `shiftR` 20)
+    (FixWord a) * (FixWord b) = FixWord ((a * b) `shiftR` bitshift)
     (FixWord a) + (FixWord b) = FixWord (a + b)
     abs (FixWord a) = FixWord (abs a)
     signum (FixWord a) = fromInteger (signum a)
-    fromInteger n = FixWord (n `shiftL` 20)
+    fromInteger n = FixWord (n `shiftL` bitshift)
 
 instance Show FixWord where show w = show (fixToFloat w)
 \end{code}

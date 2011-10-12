@@ -6,9 +6,7 @@ module Fonts
     , SpaceInfo(..)
     , FontInfo(..)
     , widthHeightDepth
-    , cmr10
     ) where
-import DVI
 import Data.Word
 import Data.Char
 import FixWords
@@ -67,10 +65,3 @@ widthHeightDepth (FontInfo fi _) c = widthHeightDepth' fi
             | c == ch = (w,h,d)
             | otherwise = widthHeightDepth' gms
 \end{code}
-
-Currently, there is a single font, which is hard coded: \textsc{cmr10}.
-
-\begin{code}
-cmr10  = FontDef 11374260171 (FixWord 0x000a0000) (FixWord 0x000a0000) 0 5 $ fontName "cmr10"
-\end{code}
-

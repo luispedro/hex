@@ -19,6 +19,7 @@ import qualified Data.Map as M
 import Prelude hiding (lookup)
 
 import Fonts
+import DVI (FontDef)
 import Measures
 \end{code}
 
@@ -30,7 +31,7 @@ The environment holds a sort of variant type, \code{HexType}:
 data HexType =
         HexDimen Dimen
         | HexString String
-        | HexFontInfo FontInfo
+        | HexFontInfo (FontDef, FontInfo)
         | HexScaledNumber Scaled
 \end{code}
 
@@ -97,7 +98,7 @@ We define a few special names by coding them in functions:
 currentfont :: Environment String HexType -> Maybe HexType
 currentfont = lookup "currentfont"
 
-loadfont :: FontInfo -> Environment String HexType -> Environment String HexType
+loadfont :: (FontDef,FontInfo) -> Environment String HexType -> Environment String HexType
 loadfont = (globalinsert "currentfont") . HexFontInfo
 \end{code}
 
