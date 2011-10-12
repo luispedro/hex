@@ -11,7 +11,7 @@ module Environment
     , pop
     , insert
     , globalinsert
-    , currentFont
+    , currentfont
     , loadfont
     ) where
 
@@ -95,8 +95,7 @@ globalinsert _ _ [] = error "Inserting on an invalid environment"
 We define a few special names by coding them in functions:
 
 \begin{code}
--- FIXME: This should be currentfont (note case)
-currentFont = lookup "currentfont"
+currentfont = lookup "currentfont"
 loadfont = (globalinsert "currentfont") . HexFontInfo . parseTFM
 \end{code}
 

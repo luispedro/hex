@@ -93,12 +93,12 @@ case_hbox_glue =
 case_font_dq = ((fixToFloat w) > 5) @?= True
     where
         (w,_,_) = F.widthHeightDepth fnt '"'
-        Just (E.HexFontInfo fnt) = E.currentFont cmr10fonte
+        Just (E.HexFontInfo fnt) = E.currentfont cmr10fonte
 
 case_font_space = ((fixToFloat w) > 3.0) @?= True
     where
         F.SpaceInfo w _ _ = F.spaceInfo fnt
-        Just (E.HexFontInfo fnt) = E.currentFont cmr10fonte
+        Just (E.HexFontInfo fnt) = E.currentfont cmr10fonte
 
 
 cmr10fonte = unsafePerformIO $ do
