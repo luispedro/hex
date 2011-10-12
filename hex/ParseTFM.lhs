@@ -43,7 +43,7 @@ The TFM file uses a palette-like scheme for the sizes of characters. They are
 not given directly. Instead, they are given as indices into several tables.
 
 The \haskell{CharInfo} type just keeps the pallette indices in width, height,
-depth, italic order (which is the same order as they will appear in the file.
+depth, italic order (which is the same order as they will appear in the file).
 
 \begin{code}
 data CharInfo = CharInfo Int Int Int Int deriving (Show, Eq)
