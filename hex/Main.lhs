@@ -41,7 +41,10 @@ dvioutput fontinfo = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (bre
 
 fontpath :: String -> IO String
 fontpath fname = liftM init $ readProcess "kpsewhich" [fname ++ ".tfm"] []
-readFont fname = B.readFile fname
+readFont :: String -> IO B.ByteString
+readFont fname = do
+    absname <- fontpath fname
+    B.readFile absname
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
