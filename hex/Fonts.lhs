@@ -71,6 +71,6 @@ widthHeightDepth (FontInfo fi _) c = widthHeightDepth' fi
 Currently, there is a single font, which is hard coded: \textsc{cmr10}.
 
 \begin{code}
-cmr10  = FontDef 11374260171 0x000a0000 0x000a0000 0 5 $ fontName "cmr10"
+cmr10  = FontDef 11374260171 (FixWord 0x000a0000) (FixWord 0x000a0000) 0 5 $ fontName "cmr10"
 \end{code}
 

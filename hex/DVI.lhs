@@ -34,12 +34,13 @@ simple to implement and are supported by \TeX. Therefore, in order to be full
 \TeX{} compliant, we would need to implement them.
 
 \begin{code}
-import Measures
-
 import qualified Data.ByteString.Lazy as B
 import Control.Monad.State (State, modify, get)
 import Data.Word
 import Data.Char
+
+import Measures
+import FixWords
 \end{code}
 
 A DVI file is a sequence of 8-bit bytes.
@@ -57,8 +58,8 @@ outputting the footer.
 
 \begin{code}
 data FontDef = FontDef  { checkSum :: Integer
-                        , scale :: Integer
-                        , designSize :: Integer
+                        , scale :: FixWord
+                        , designSize :: FixWord
                         , areaLength :: Integer
                         , localPath :: Integer
                         , path :: [DVIByte]
@@ -291,7 +292,7 @@ putstr (c:cs) = (put1 $ toInteger $ ord c) >> (putstr cs)
 move_down = down4 . pointsTointernal . nrScaledPoints
 move_right = right4 . pointsTointernal . nrScaledPoints
 
-defineFont fnt@(FontDef c s d a l t) = do
+defineFont fnt@(FontDef c (FixWord s) (FixWord d) a l t) = do
     nfonts <- getNFonts
     fnt_def1 nfonts c s d a l (map toInteger t)
     appendFont fnt
@@ -312,6 +313,6 @@ endfile = do
     where
         putfonts _ [] = return ()
         putfonts n (f:fs) = putfont n f >> (putfonts (n+1) fs)
-        putfont n (FontDef c s d a l fpath) = do
+        putfont n (FontDef c (FixWord s) (FixWord d) a l fpath) = do
             fnt_def1 n c s d a l (map toInteger fpath)
 \end{code}
