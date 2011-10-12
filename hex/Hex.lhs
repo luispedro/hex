@@ -24,6 +24,9 @@ prequeueChars :: [Char] -> TokenStream -> TokenStream
 prequeueChars q st = updateCharStream st (\s -> prequeue s q)
 \end{code}
 
+Often we will have to search for a file in several locations and read the first
+one we find. The function \haskell{readOneOf} achieves this:
+
 \begin{code}
 readOneOf [] = error "hex.hex.readOneOf: empty set"
 readOneOf [n] = readFile n
