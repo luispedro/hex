@@ -2,8 +2,6 @@
 \begin{code}
 module Fonts
     ( fontName
-    , fixToFloat
-    , fixWordFrom32
     , GliphMetric(..)
     , SpaceInfo(..)
     , FontInfo(..)

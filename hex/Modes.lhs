@@ -13,6 +13,7 @@ import Macros
 import Measures
 import Boxes
 import Linebreak
+import FixWords
 \end{code}
 
 Some commands are v-mode commands, other h-mode commands. We begin with a
@@ -83,7 +84,7 @@ hMode' e = concatenatewords . map toHElement
     where
         Just (E.HexFontInfo fnt) = E.currentFont e
         (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
-        f2d = dimenFromFloatingPoints . F.fixToFloat
+        f2d = dimenFromFloatingPoints . fixToFloat
         toHElement (CharCommand (TypedChar _ Space)) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
         toHElement (CharCommand (TypedChar c _)) = EBox $ Box
                                 { boxType=H

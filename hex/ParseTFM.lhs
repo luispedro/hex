@@ -18,6 +18,7 @@ import Data.Char
 import Control.Monad
 import Control.Exception
 
+import FixWords
 import Fonts
 \end{code}
 

@@ -23,6 +23,7 @@ import Defaults (plaintexenv, startenv)
 import Measures
 import Linebreak
 import ParseTFM
+import FixWords
 import qualified Environment as E
 import qualified Fonts as F
 import qualified Boxes as B
@@ -89,12 +90,12 @@ case_hbox_glue =
         B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
         _ -> error "should have matched!"
 
-case_font_dq = ((F.fixToFloat w) > 5) @?= True
+case_font_dq = ((fixToFloat w) > 5) @?= True
     where
         (w,_,_) = F.widthHeightDepth fnt '"'
         Just (E.HexFontInfo fnt) = E.currentFont cmr10fonte
 
-case_font_space = ((F.fixToFloat w) > 3.0) @?= True
+case_font_space = ((fixToFloat w) > 3.0) @?= True
     where
         F.SpaceInfo w _ _ = F.spaceInfo fnt
         Just (E.HexFontInfo fnt) = E.currentFont cmr10fonte
