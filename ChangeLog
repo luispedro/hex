@@ -1,4 +1,6 @@
 Version 0.0.3+
+	* parse TFM files (at least character sizes, which was what was
+	implemented before)
 	* \bye
 	* \vspace
 	* delimited macros

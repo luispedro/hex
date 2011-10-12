@@ -12,6 +12,7 @@ import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
 import qualified Data.Vector as V
+import qualified Data.ByteString.Lazy as BL
 
 import Chars
 import Tokens
@@ -21,6 +22,7 @@ import Modes (paragraph)
 import Defaults (plaintexenv, startenv)
 import Measures
 import Linebreak
+import ParseTFM
 import qualified Environment as E
 import qualified Fonts as F
 import qualified Boxes as B
@@ -87,15 +89,19 @@ case_hbox_glue =
         B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
         _ -> error "should have matched!"
 
-case_font = ((F.fixToFloat w) > 5) @?= True
+case_font_dq = ((F.fixToFloat w) > 5) @?= True
     where
         (w,_,_) = F.widthHeightDepth fnt '"'
-        e = unsafePerformIO cmr10fonte
-        Just (E.HexFontInfo fnt) = E.currentFont e
+        Just (E.HexFontInfo fnt) = E.currentFont cmr10fonte
+
+case_font_space = ((F.fixToFloat w) > 3.0) @?= True
+    where
+        F.SpaceInfo w _ _ = F.spaceInfo fnt
+        Just (E.HexFontInfo fnt) = E.currentFont cmr10fonte
 
 
-cmr10fonte = do
-    fontinfo <- readFile "data/cmr10.pl"
+cmr10fonte = unsafePerformIO $ do
+    fontinfo <- BL.readFile "/usr/share/texmf-texlive/fonts/tfm/public/cm/cmr10.tfm"
     return $ E.loadfont fontinfo startenv
 
 case_demerits = [0,0,0,0] @=?
@@ -164,6 +170,8 @@ case_value_penalty = (-10000) @=? (demerit w velems nat_exp_shr 0 (n-1))
         velems = V.fromList elems
         nat_exp_shr = _acc_sizes velems
 
+
+case_break_byte = (10,15) @=? (_breakByte 4 (0xaf::Int))
 
 -- Beh is just for the benefit of the Arbitrary instance
 -- Otherwise, we would have an orphan instance declaration.

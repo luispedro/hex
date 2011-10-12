@@ -12,12 +12,12 @@ SOURCES :=  \
             Fonts.lhs \
             Hex.lhs \
             Linebreak.lhs \
-            LoadPL.lhs \
             Macros.lhs \
             Measures.lhs \
             Modes.lhs \
-            PageBreak.lhs \
             Output.lhs \
+            PageBreak.lhs \
+			ParseTFM.lhs \
             String.lhs \
             Tokens.lhs
 

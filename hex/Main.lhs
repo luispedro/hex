@@ -9,7 +9,6 @@ import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
 import Tokens
 import Macros (expand)
-import LoadPL (loadPL)
 import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
@@ -37,14 +36,15 @@ breaklines env = (vMode env) . expanded
 dvioutput fontinfo = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (breaklines env)
     where env = loadfont fontinfo startenv
 
+cmr10 = B.readFile "/usr/share/texmf-texlive/fonts/tfm/public/cm/cmr10.tfm"
+
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
 function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
-function "loadPL" = putStrLn . show . loadPL
 
 function "breaklines" = \inputstr -> do
-    fontinfo <- readFile "data/cmr10.pl"
+    fontinfo <- cmr10
     putStrLn $
             concat $
             (map (++"\n")) $
@@ -54,7 +54,7 @@ function "breaklines" = \inputstr -> do
             breaklines (loadfont fontinfo startenv) inputstr
 
 function "dvioutput" = \inputstr -> do
-    fontinfo <- readFile "data/cmr10.pl"
+    fontinfo <- cmr10
     B.putStr $ dvioutput fontinfo inputstr
 
 function hmode = \_ -> do
@@ -62,7 +62,7 @@ function hmode = \_ -> do
 
 hex "-" = hex "/dev/stdin"
 hex fname = do
-        fontinfo <- readFile "data/cmr10.pl"
+        fontinfo <- cmr10
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
         env <- return (loadfont fontinfo startingenv)
