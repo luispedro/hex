@@ -4,6 +4,8 @@ module Main where
 
 import qualified Data.ByteString.Lazy as B
 import System.Console.CmdArgs
+import Control.Monad
+import System.Process (readProcess)
 
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
@@ -36,7 +38,10 @@ breaklines env = (vMode env) . expanded
 dvioutput fontinfo = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (breaklines env)
     where env = loadfont fontinfo startenv
 
-cmr10 = B.readFile "/usr/share/texmf-texlive/fonts/tfm/public/cm/cmr10.tfm"
+
+fontpath :: String -> IO String
+fontpath fname = liftM init $ readProcess "kpsewhich" [fname ++ ".tfm"] []
+readFont fname = B.readFile fname
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
@@ -44,7 +49,7 @@ function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 
 function "breaklines" = \inputstr -> do
-    fontinfo <- cmr10
+    fontinfo <- readFont "cmr10"
     putStrLn $
             concat $
             (map (++"\n")) $
@@ -54,7 +59,7 @@ function "breaklines" = \inputstr -> do
             breaklines (loadfont fontinfo startenv) inputstr
 
 function "dvioutput" = \inputstr -> do
-    fontinfo <- cmr10
+    fontinfo <- readFont "cmr10"
     B.putStr $ dvioutput fontinfo inputstr
 
 function hmode = \_ -> do
@@ -62,7 +67,7 @@ function hmode = \_ -> do
 
 hex "-" = hex "/dev/stdin"
 hex fname = do
-        fontinfo <- cmr10
+        fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
         env <- return (loadfont fontinfo startingenv)
