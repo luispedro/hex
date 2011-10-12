@@ -54,6 +54,11 @@ Dependencies
 - list-extras
 - vector
 - vector-algorithms
+- binary
+- convertible
+- test-framework-th
+- test-framework-quickcheck2
+- test-framework-hunit
 
 Meta-Information
 ----------------
