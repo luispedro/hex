@@ -68,13 +68,14 @@ function "dvioutput" = \inputstr -> do
 function hmode = \_ -> do
     putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
-hex "-" = hex "/dev/stdin"
-hex fname = do
+hex output "-" = hex output "/dev/stdin"
+hex output fname = do
         fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
         env <- return (loadfont fontinfo startingenv)
-        B.putStr $ buildout env commands
+        result <- return $ buildout env commands
+        when output (B.putStr result)
         return ()
     where
         startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv
@@ -109,7 +110,8 @@ main :: IO ()
 main = do
     HexCmd m f <- cmdArgs hexcmds
     case m of
-        "hex" -> hex f
+        "hex" -> hex True f
+        "hex-silent" -> hex False f
         _ -> do
             str <- (if f == "-" then getContents else readFile f)
             function m str
