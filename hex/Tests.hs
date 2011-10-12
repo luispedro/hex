@@ -19,12 +19,11 @@ import Tokens
 import String
 import Macros
 import Modes (paragraph)
-import Defaults (plaintexenv, startenv)
+import Defaults (plaintexenv)
 import Measures
 import Linebreak
 import ParseTFM
 import FixWords
-import qualified Environment as E
 import qualified Fonts as F
 import qualified Boxes as B
 
@@ -92,18 +91,16 @@ case_hbox_glue =
 
 case_font_dq = ((fixToFloat w) > 5) @?= True
     where
-        (w,_,_) = F.widthHeightDepth fnt '"'
-        Just (E.HexFontInfo fnt) = E.currentfont cmr10fonte
+        (w,_,_) = F.widthHeightDepth cmr10font '"'
 
 case_font_space = ((fixToFloat w) > 3.0) @?= True
     where
-        F.SpaceInfo w _ _ = F.spaceInfo fnt
-        Just (E.HexFontInfo fnt) = E.currentfont cmr10fonte
+        F.SpaceInfo w _ _ = F.spaceInfo cmr10font
 
 
-cmr10fonte = unsafePerformIO $ do
-    fontinfo <- BL.readFile "/usr/share/texmf-texlive/fonts/tfm/public/cm/cmr10.tfm"
-    return $ E.loadfont fontinfo startenv
+cmr10font = unsafePerformIO $ do
+    fontstr <- BL.readFile "/usr/share/texmf-texlive/fonts/tfm/public/cm/cmr10.tfm"
+    return $ snd $ parseTFM "cmr10" fontstr
 
 case_demerits = [0,0,0,0] @=?
             [ (demerit w velems nat_exp_shr 0 3)

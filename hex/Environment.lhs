@@ -18,7 +18,6 @@ module Environment
 import qualified Data.Map as M
 import Prelude hiding (lookup)
 
-import ParseTFM (parseTFM)
 import Fonts
 import Measures
 \end{code}
@@ -95,7 +94,10 @@ globalinsert _ _ [] = error "Inserting on an invalid environment"
 We define a few special names by coding them in functions:
 
 \begin{code}
+currentfont :: Environment String HexType -> Maybe HexType
 currentfont = lookup "currentfont"
-loadfont = (globalinsert "currentfont") . HexFontInfo . parseTFM
+
+loadfont :: FontInfo -> Environment String HexType -> Environment String HexType
+loadfont = (globalinsert "currentfont") . HexFontInfo
 \end{code}
 

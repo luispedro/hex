@@ -10,6 +10,7 @@ This module parses TFM files. It is based on
 \url{http://www-users.math.umd.edu/~asnowden/comp-cont/tfm.html}.
 
 \begin{code}
+import qualified Data.ByteString.Lazy as B
 import Data.Convertible
 import Data.Convertible.Base ()
 import Data.Binary.Get
@@ -20,6 +21,7 @@ import Control.Exception
 
 import FixWords
 import Fonts
+import DVI
 \end{code}
 
 The format is big-endian, but we hide these details behind a few simple
@@ -52,7 +54,7 @@ data CharInfo = CharInfo Int Int Int Int deriving (Show, Eq)
 Most of the work is done by this monadic function.
 
 \begin{code}
-parseTFMM = do
+parseTFMM fname = do
     _lf <- getWord16 --  1
     lh <- getWord16 --  2
     bc <- getWord16 --  3
@@ -65,7 +67,7 @@ parseTFMM = do
     nk <- getWord16 -- 10
     ne <- getWord16 -- 11
     np <- getWord16 -- 12
-    (_check, dsize, _coding, _family) <- parseHeader lh
+    (checksum, dsize, _coding, _family) <- parseHeader lh
     ci <- parseCharInfo bc ec
     widths <- getFixWordArray nw
     heights <- getFixWordArray nh
@@ -81,7 +83,9 @@ parseTFMM = do
     parameters <- getFixWordArray np
     e <- isEmpty
     when (not e) (fail "hex.ParseTFM: EOF expected")
-    return $ FontInfo (gliphMetrics dsize ci widths heights depths italics) (spaceInfoFromParameters dsize parameters)
+    return  ( FontDef (convert checksum) dsize dsize 0 (length fname) $ fontName fname
+            , FontInfo (gliphMetrics dsize ci widths heights depths italics) (spaceInfoFromParameters dsize parameters)
+            )
 \end{code}
 
 Once the main arrays have been extracted, the functions below build the right structures.
@@ -131,6 +135,7 @@ _breakByte n b = (b `shiftR` n, b .&. ((1 `shiftL` n)-1))
 Finally, the pure interface function just runs the monadic \haskell{parseTFMM}:
 
 \begin{code}
-parseTFM = runGet parseTFMM
+parseTFM :: String -> B.ByteString -> (FontDef, FontInfo)
+parseTFM fname = runGet (parseTFMM fname)
 \end{code}
 

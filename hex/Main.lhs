@@ -17,6 +17,9 @@ import Output (outputBoxes)
 import Environment (loadfont)
 import PageBreak (breakpages)
 import Hex (processinputs)
+import ParseTFM
+import DVI
+import Fonts
 
 import Defaults (startenv, plaintexenv)
 import qualified Environment as E
@@ -35,16 +38,14 @@ chars = map (annotate plaintexenv)
 tokens = chars2tokens
 expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
 breaklines env = (vMode env) . expanded
-dvioutput fontinfo = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (breaklines env)
-    where env = loadfont fontinfo startenv
-
 
 fontpath :: String -> IO String
 fontpath fname = liftM init $ readProcess "kpsewhich" [fname ++ ".tfm"] []
-readFont :: String -> IO B.ByteString
+readFont :: String -> IO (FontDef,FontInfo)
 readFont fname = do
     absname <- fontpath fname
-    B.readFile absname
+    fontstr <- B.readFile absname
+    return $ parseTFM fname fontstr
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
@@ -52,7 +53,7 @@ function "tokens" = putStrLn . concat . (map show) . tokens
 function "expanded" = putStrLn . concat . (map show) . expanded
 
 function "breaklines" = \inputstr -> do
-    fontinfo <- readFont "cmr10"
+    (_fontdef, fontinfo) <- readFont "cmr10"
     putStrLn $
             concat $
             (map (++"\n")) $
@@ -60,20 +61,15 @@ function "breaklines" = \inputstr -> do
             filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
             (map Boxes.boxContents) $
             breaklines (loadfont fontinfo startenv) inputstr
-
-function "dvioutput" = \inputstr -> do
-    fontinfo <- readFont "cmr10"
-    B.putStr $ dvioutput fontinfo inputstr
-
 function hmode = \_ -> do
     putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
-        fontinfo <- readFont "cmr10"
+        (_fontdef,fontinfo) <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
-        env <- return (loadfont fontinfo startingenv)
+        env <- return $ loadfont fontinfo startingenv
         result <- return $ buildout env commands
         when output (B.putStr result)
         return ()
