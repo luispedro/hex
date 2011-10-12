@@ -9,6 +9,7 @@ SOURCES :=  \
             Defaults.lhs \
             DVI.lhs \
             Environment.lhs \
+            FixWords.lhs \
             Fonts.lhs \
             Hex.lhs \
             Linebreak.lhs \

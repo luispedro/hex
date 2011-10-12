@@ -2,7 +2,6 @@
 \begin{code}
 module Fonts
     ( fontName
-    , FixWord(..)
     , fixToFloat
     , fixWordFrom32
     , GliphMetric(..)
@@ -14,6 +13,7 @@ module Fonts
 import DVI
 import Data.Word
 import Data.Char
+import FixWords
 \end{code}
 
 This module contains utilities for font management.
@@ -29,23 +29,7 @@ fontName = map (fromInteger . toInteger . ord)
 A font is information about gliphs, ligatures, kerning, and some extra bits.
 Currently, we do not implement neither ligatures nor kerning.
 
-To store the information about a gliph, we use a floating point representation.
-It isn't the best way since most of the fonts are in fixed point format, but it
-will work for now.
-
 \begin{code}
-newtype FixWord = FixWord Float deriving (Eq)
-fixToFloat (FixWord f) = f
-fixWordFrom32 n = FixWord $ ((fromInteger n) :: Float)/1048576.0 -- 1048576 == (1 << 20)
-
-instance Num FixWord where
-    (FixWord a) * (FixWord b) = FixWord (a * b)
-    (FixWord a) + (FixWord b) = FixWord (a + b)
-    abs (FixWord a) = FixWord (abs a)
-    signum (FixWord a) = FixWord (signum a)
-    fromInteger n = FixWord (fromInteger n)
-
-instance Show FixWord where show (FixWord w) = show w
 data GliphMetric = GliphMetric
                         { character :: Char
                         , width :: FixWord
