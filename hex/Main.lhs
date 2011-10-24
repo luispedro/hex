@@ -14,7 +14,6 @@ import Macros (expand)
 import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
-import Environment (loadfont)
 import PageBreak (breakpages)
 import Hex (processinputs)
 import ParseTFM
@@ -60,7 +59,7 @@ function "breaklines" = \inputstr -> do
             (map show) $
             filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
             (map Boxes.boxContents) $
-            breaklines (loadfont fontinfo startenv) inputstr
+            breaklines (E.loadfont fontinfo startenv) inputstr
 function hmode = \_ -> do
     putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
@@ -69,7 +68,7 @@ hex output fname = do
         fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
-        env <- return $ loadfont fontinfo startingenv
+        env <- return $ E.loadfont fontinfo startingenv
         result <- return $ buildout env commands
         when output (B.putStr result)
         return ()
