@@ -25,6 +25,8 @@ isVCommand "\\vspace" = True
 isVCommand _ = False
 \end{code}
 
+There is a need for a few helper commands:
+
 \begin{code}
 readNumber :: [Command] -> (Integer,[Command])
 readNumber cs = (val,cs')
@@ -35,21 +37,21 @@ readNumber cs = (val,cs')
         val :: Integer
         val = read $ map (\(CharCommand (TypedChar c Other)) -> c) digits
 
-readUnits :: [Command] -> (Unit,[Command])
-readUnits ((CharCommand (TypedChar c0 Letter)):(CharCommand (TypedChar c1 Letter)):cs) = (unit [c0,c1],cs)
+readUnits :: E.Environment String E.HexType -> [Command] -> (Unit,[Command])
+readUnits _env ((CharCommand (TypedChar c0 Letter)):(CharCommand (TypedChar c1 Letter)):cs) = (unit [c0,c1],cs)
     where
-        unit "em" = UnitEm
-        unit "en" = UnitEn
         unit "pt" = UnitPt
         unit "px" = UnitPx
+        unit "en" = error "hex.unit en not implemented"
+        unit "em" = error "hex.unit em not implemented"
         unit _ = error "hex.unit could not match"
-readUnits _ = error "hex.readUnits: could not read unit"
+readUnits _ _ = error "hex.readUnits: could not read unit"
 
-readDimen :: [Command] -> (Dimen,[Command])
-readDimen c0 = ((dimenFromUnit (fromInteger number) units),c2)
+readDimen :: E.Environment String E.HexType -> [Command] -> (Dimen,[Command])
+readDimen env c0 = ((dimenFromUnit (fromInteger number) units),c2)
     where
         (number,c1) = readNumber c0
-        (units,c2) = readUnits c1
+        (units,c2) = readUnits env c1
 \end{code}
 
 The two modes are intertwined. Switching to a different mode is simply a tail
@@ -70,7 +72,7 @@ vMode1 :: E.Environment String E.HexType -> [Command] -> [VBox]
 vMode1 env ((PrimitiveCommand "\\vspace"):cs) = (vspace:vMode env cs')
     where
         vspace = Box V h zeroDimen zeroDimen (Kern h)
-        (h,cs') = readDimen cs
+        (h,cs') = readDimen env cs
 vMode1 _ (c:_) = error (concat ["hex.Modes.vMode1: Can only handle PrimitiveCommand (got ", show c, ")"])
 vMode1 _ [] = error "hex.Modes.vMode1: Unexpected []"
 \end{code}
