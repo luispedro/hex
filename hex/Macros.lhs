@@ -68,6 +68,8 @@ data HexCommand =
 
 data Command =
         CharCommand TypedChar
+        | PushCommand -- {
+        | PopCommand -- }
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
 
@@ -85,6 +87,8 @@ instance Show HexCommand where
     show ByeCommand = "bye"
 
 instance Show Command where
+    show PushCommand = "<{>"
+    show PopCommand = "<}>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
     show (CharCommand (TypedChar _ Space)) = "< >"
@@ -412,8 +416,8 @@ expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCo
 
 \begin{code}
 expand' env t@(CharToken tc) st
-    | (category tc) == BeginGroup = (fromToken t):(expand (E.push env) (updateCharStream st pushst))
-    | (category tc) == EndGroup = (fromToken t):(expand (E.pop env) (updateCharStream st popst))
+    | (category tc) == BeginGroup = PushCommand:(expand (E.push env) (updateCharStream st pushst))
+    | (category tc) == EndGroup = PopCommand:(expand (E.pop env) (updateCharStream st popst))
     | otherwise = (fromToken t):(expand env st)
 expand' env t st = expand env $ expand1 env $ streampush st t
 \end{code}
