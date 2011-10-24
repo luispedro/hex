@@ -35,7 +35,9 @@ readNumber cs = (val,cs')
         isDigit (CharCommand (TypedChar c Other)) = (c `elem` "0123456789")
         isDigit _ = False
         val :: Integer
-        val = read $ map (\(CharCommand (TypedChar c Other)) -> c) digits
+        val = read $ map cvalue digits
+        cvalue (CharCommand (TypedChar c Other)) = c
+        cvalue _ = error "hex.Modes.readNumber.cvalue: wrong type"
 
 readUnits :: E.Environment String E.HexType -> [Command] -> (Unit,[Command])
 readUnits _env ((CharCommand (TypedChar c0 Letter)):(CharCommand (TypedChar c1 Letter)):cs) = (unit [c0,c1],cs)
