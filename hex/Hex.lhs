@@ -5,11 +5,18 @@ This is the main driver of the programme.
 \begin{code}
 module Hex
     ( processinputs
+    , readFont
     ) where
 import System.IO.Error
 import System.FilePath.Posix
+import Control.Monad
+import System.Process (readProcess)
+import qualified Data.ByteString.Lazy as B
 
 import Macros
+import ParseTFM
+import Fonts
+import DVI
 import Tokens (updateCharStream, TokenStream)
 import CharStream (prequeue)
 import qualified Environment as E
@@ -33,6 +40,19 @@ readOneOf [n] = readFile n
 readOneOf (n:ns) = (readFile n) `catch` (\e -> if isDoesNotExistError e then readOneOf ns else ioError e)
 \end{code}
 
+To read and write fonts:
+
+\begin{code}
+fontpath :: String -> IO String
+fontpath fname = liftM init $ readProcess "kpsewhich" [fname ++ ".tfm"] []
+
+readFont :: String -> IO (FontDef,FontInfo)
+readFont fname = do
+    absname <- fontpath fname
+    fontstr <- B.readFile absname
+    return $ parseTFM fname fontstr
+\end{code}
+
 \code{processinputs} processes the special commands in the \code{Command}
 stream. In particular, it process \tex{\\bye}, \tex{\\input}, and
 \tex{\\message}.
@@ -51,12 +71,18 @@ done.
 processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []
 \end{code}
 
+Another simple commmand is the \code{MessageCommand}, which outputs its message.
+
 \begin{code}
 processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
+\end{code}
+
+Finally, the \code{InputCommand} finds the input file and queues it in
+
+\begin{code}
 processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             nextfile <- readOneOf possiblefiles;
-            cs <- processinputs (expand env $ prequeueChars nextfile rest) (addfileenv nextfile e);
-            return cs;
+            processinputs (expand env $ prequeueChars nextfile rest) (addfileenv nextfile e);
         } `catch` printerror
     where
         printerror err =

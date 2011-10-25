@@ -5,7 +5,6 @@ module Main where
 import qualified Data.ByteString.Lazy as B
 import System.Console.CmdArgs
 import Control.Monad
-import System.Process (readProcess)
 
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
@@ -15,10 +14,7 @@ import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
 import PageBreak (breakpages)
-import Hex (processinputs)
-import ParseTFM
-import DVI
-import Fonts
+import Hex (processinputs, readFont)
 
 import Defaults (startenv, plaintexenv)
 import qualified Environment as E
@@ -37,14 +33,6 @@ chars = map (annotate plaintexenv)
 tokens = chars2tokens
 expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
 breaklines env = (vMode env) . expanded
-
-fontpath :: String -> IO String
-fontpath fname = liftM init $ readProcess "kpsewhich" [fname ++ ".tfm"] []
-readFont :: String -> IO (FontDef,FontInfo)
-readFont fname = do
-    absname <- fontpath fname
-    fontstr <- B.readFile absname
-    return $ parseTFM fname fontstr
 
 function :: String -> String -> IO ()
 function "chars" = putStrLn . concat . (map show) . chars
