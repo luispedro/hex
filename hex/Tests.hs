@@ -13,12 +13,13 @@ import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
 import qualified Data.Vector as V
 import qualified Data.ByteString.Lazy as BL
+import Control.Monad.State
 
 import Chars
 import Tokens
 import String
 import Macros
-import Modes (paragraph)
+import Modes (_paragraph, ModeState(..))
 import Defaults (plaintexenv)
 import Measures
 import Linebreak
@@ -55,8 +56,8 @@ case_stringfind = (find "abc" "012abc") @=? Just 3
 case_stringnotfind = (find "abc" "012abd") @=? Nothing
 
 -- Tests for line breaking
-case_paragraphs = (length p, length r) @=? (0,0)
-        where (p,r) = (paragraph undefined [PrimitiveCommand  "\\par"])
+case_paragraphs = (length p) @=? 0
+        where p = (evalState _paragraph (ModeState undefined [PrimitiveCommand  "\\par"]))
 
 -- Test for macro parsing
 case_bracebrace = (chars2tokens "{a}") @=? parsed
