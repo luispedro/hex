@@ -198,6 +198,9 @@ _paragraph = do
                         h <- setCharacter tc
                         r <- _paragraph
                         return (h:r)
+                    SetfontCommand fontinfo -> do
+                        modify (\st@ModeState{ environment=e } -> st { environment=(E.loadfont fontinfo e) })
+                        _paragraph
                     _ -> fail "hex.Modes._paragraph: Unhandled case"
 \end{code}
 

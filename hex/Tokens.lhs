@@ -14,6 +14,7 @@ module Tokens
     , tokenliststream
     , emptyTokenStream
     , updateCharStream
+    , toksToStr
     , chars2tokens
     , TkS(..)
     , emptyTkS
@@ -217,6 +218,14 @@ emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | otherwise = (((length q) == 0) && emptyStream st')
         where (q,st',_) = applyStateFunction s st
 \end{code}
+
+\begin{code}
+toksToStr toks = map charof toks
+    where
+        charof (CharToken (TypedChar c _)) = c
+        charof _ = error "hex.Tokens.toksToStr.charof: Unexpected token"
+\end{code}
+
 
 We also add a function to manipulate the underlying character stream.
 

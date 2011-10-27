@@ -12,6 +12,8 @@ module Macros
 
 import List (sortBy)
 
+import DVI
+import Fonts
 import Tokens
 import Chars
 import CharStream
@@ -64,12 +66,14 @@ data HexCommand =
         ErrorCommand String
         | InputCommand String
         | MessageCommand String
+        | LoadfontCommand String
         | ByeCommand
 
 data Command =
         CharCommand TypedChar
         | PushCommand -- {
         | PopCommand -- }
+        | SetfontCommand (FontDef,FontInfo)
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
 
@@ -84,11 +88,13 @@ instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand msg) = "message:"++msg
+    show (LoadfontCommand fname) = "loadfont:"++fname
     show ByeCommand = "bye"
 
 instance Show Command where
     show PushCommand = "<{>"
     show PopCommand = "<}>"
+    show (SetfontCommand _) = "<setfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
     show (CharCommand (TypedChar _ Space)) = "< >"
@@ -392,9 +398,21 @@ expand' env (ControlSequence cs) st
         cmd = if cs == "error" then ErrorCommand else MessageCommand
         (arguments,rest) = runTkS (getargs [DelimParameter 0, DelimEmpty]) st
         [(0,argtoks)] = arguments
-        arg = map charof argtoks
-        charof (CharToken (TypedChar c _)) = c
-        charof _ = error "hex.Macros.expand'.charof: Unexpected token"
+        arg = toksToStr argtoks
+\end{code}
+
+The \tex{\\hexinternal} is a generic command for accessing hex internals:
+
+\begin{code}
+expand' env (ControlSequence "\\hexinternal") st = (InternalCommand env rest $ cmd arg):(expand env rest)
+    where
+        (arguments,rest) = runTkS (getargs [DelimParameter 0, DelimParameter 1, DelimEmpty]) st
+        [(0,cmdtoks),(1,argtoks)] = arguments
+        cmdname = toksToStr cmdtoks
+        arg = toksToStr argtoks
+        cmd = case cmdname of
+            "loadfont" -> LoadfontCommand
+            _ -> error "hex.Macros.expand': unknown internal command"
 \end{code}
 
 The \code{\\input} command has slightly different syntax than most commands:

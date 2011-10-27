@@ -77,6 +77,15 @@ Another simple commmand is the \code{MessageCommand}, which outputs its message.
 processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
 \end{code}
 
+Loading a font involves replacing the string name in the command stream by the loaded font object
+
+\begin{code}
+processinputs ((InternalCommand _ _ (LoadfontCommand fname)):cs) e = do
+    font <- readFont fname
+    r <- processinputs cs e
+    return ((SetfontCommand font):r)
+\end{code}
+
 Finally, the \code{InputCommand} finds the input file and queues it in
 
 \begin{code}
