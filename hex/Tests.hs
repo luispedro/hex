@@ -16,6 +16,7 @@ import qualified Data.ByteString.Lazy as BL
 import Control.Monad.State
 
 import Chars
+import Hex (readFont)
 import Tokens
 import String
 import Macros
@@ -100,8 +101,8 @@ case_font_space = ((fixToFloat w) > 3.0) @?= True
 
 
 cmr10font = unsafePerformIO $ do
-    fontstr <- BL.readFile "/usr/share/texmf-texlive/fonts/tfm/public/cm/cmr10.tfm"
-    return $ snd $ parseTFM "cmr10" fontstr
+    (_,fi) <- readFont "cmr10"
+    return fi
 
 case_demerits = [0,0,0,0] @=?
             [ (demerit w velems nat_exp_shr 0 3)
