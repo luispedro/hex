@@ -38,7 +38,7 @@ There several fix word arrays, so we define a little helper function to get
 them:
 
 \begin{code}
-getFixWordArray n = sequence $ (const getFixWord) `map` [1..n]
+getFixWordArray n = (const getFixWord) `mapM` [1..n]
 \end{code}
 
 The TFM file uses a palette-like scheme for the sizes of characters. They are
@@ -82,7 +82,7 @@ parseTFMM fname = do
     _ext <- getFixWordArray ne
     parameters <- getFixWordArray np
     e <- isEmpty
-    when (not e) (fail "hex.ParseTFM: EOF expected")
+    unless e (fail "hex.ParseTFM: EOF expected")
     return  ( FontDef (convert checksum) dsize dsize 0 (convert $ length fname) $ fontName fname
             , FontInfo (gliphMetrics dsize ci widths heights depths italics) (spaceInfoFromParameters dsize parameters)
             )
@@ -108,15 +108,15 @@ parseHeader n = do
     checksum <- getWord32be
     dsize <- getFixWord
     coding <- getBytes 40
-    family <- getBytes 20
+    fam <- getBytes 20
     _seven_bit_safe_flag <- getByte
     _ <- getByte
     _ <- getByte
     _wse <- getByte
     _ <- getBytes $ (*4) $ convert (n - 18)
-    return (checksum, dsize, coding, family)
+    return (checksum, dsize, coding, fam)
 
-parseCharInfo bc ec = sequence $ (const parseCharInfo1) `map` [bc..ec]
+parseCharInfo bc ec = (const parseCharInfo1) `mapM` [bc..ec]
     where 
         parseCharInfo1 = do
             wi <- getByte

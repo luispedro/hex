@@ -27,8 +27,8 @@ Processing \tex{\\input} is achieved by prequeueing the characters in the input
 file.
 
 \begin{code}
-prequeueChars :: [Char] -> TokenStream -> TokenStream
-prequeueChars q st = updateCharStream st (\s -> prequeue s q)
+prequeueChars :: String -> TokenStream -> TokenStream
+prequeueChars q st = updateCharStream st (`prequeue` q)
 \end{code}
 
 Often we will have to search for a file in several locations and read the first
@@ -97,9 +97,8 @@ processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
         printerror err =
             if isDoesNotExistError err then do
                 putStrLn ("Could not open file: `" ++ nfname ++ "`")
-                putStrLn ("\tAttempted to open one of: " ++ (concat $ map (\n -> (n ++ " ")) possiblefiles))
-                cs <- processinputs (expand env rest) e
-                return cs
+                putStrLn ("\tAttempted to open one of: " ++ (concatMap (++" ") possiblefiles))
+                processinputs (expand env rest) e
             else
                 ioError err
         possiblefiles

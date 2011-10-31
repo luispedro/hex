@@ -56,7 +56,7 @@ data FontInfo = FontInfo
             , spaceInfo :: SpaceInfo
             }
 instance Show FontInfo where
-    show (FontInfo fi _) = concat $ map ((++"\n") . show) fi
+    show (FontInfo fi _) = concatMap ((++"\n") . show) fi
 
 widthHeightDepth (FontInfo fi _) c = widthHeightDepth' fi
     where

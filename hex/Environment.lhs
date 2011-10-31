@@ -17,6 +17,7 @@ module Environment
 
 import qualified Data.Map as M
 import Prelude hiding (lookup)
+import Data.Maybe
 
 import Fonts
 import DVI (FontDef)
@@ -60,9 +61,7 @@ lookup _ [] = Nothing
 lookup name (e:es) = case M.lookup name e of
                 Just val -> Just val
                 Nothing -> lookup name es
-lookupWithDefault def name env = case lookup name env of
-    Just val -> val
-    Nothing -> def
+lookupWithDefault def name env = fromMaybe def $ lookup name env
 \end{code}
 
 Pushing and popping environments are simple list manipulations:

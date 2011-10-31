@@ -68,7 +68,7 @@ as a datatype. Unfortunately, we also need to define the ugly
 
 \begin{code}
 newtype StateFunction = StateFunction ( TypedCharStream -> ([Token], TypedCharStream, StateFunction) )
-applyStateFunction (StateFunction s) st = s st
+applyStateFunction (StateFunction s) = s
 \end{code}
 
 Now, the implementation of the two easy states: S \& N.
@@ -201,7 +201,7 @@ Sometimes we want to have a simple stream that only spits out the tokens we
 initialise it with. This is achieved by \code{tokenliststream}:
 
 \begin{code}
-tokenliststream ts = streamenqueue (newTokenStream $ TypedCharStream [] []) ts
+tokenliststream = streamenqueue (newTokenStream $ TypedCharStream [] [])
 \end{code}
 
 \code{emptyTokenStream} is surprisingly tricky. In fact, we need to look ahead
@@ -215,7 +215,7 @@ state functions would be potentially more complex.
 emptyTokenStream TokenStream{queue=(_:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
-    | otherwise = (((length q) == 0) && emptyStream st')
+    | otherwise = (null q && emptyStream st')
         where (q,st',_) = applyStateFunction s st
 \end{code}
 

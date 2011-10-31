@@ -69,10 +69,10 @@ In order to handle divisions by zero, we introduce infinities and the safe
 ratio function (infinities are also used elsewhere):
 
 \begin{code}
-num `sdratio` denom =
-    if denom `dgt` zeroDimen
-        then num `dratio` denom
-        else if num `dgt` zeroDimen then plus_inf else neg_inf
+num `sdratio` denom
+    | denom /= zeroDimen =  num `dratio` denom
+    | num `dgt` zeroDimen = plus_inf
+    | otherwise = neg_inf
 plus_inf = (1000000000000000000 :: Ratio Integer)
 neg_inf = (-1000000000000000000 :: Ratio Integer)
 \end{code}
@@ -108,7 +108,7 @@ concatenatewords [] = []
 concatenatewords (le@(B.EGlue _):les) = (le:concatenatewords les)
 concatenatewords cs = (first:concatenatewords rest)
     where
-        (firstelems,rest) = break (not . isBox) cs
+        (firstelems,rest) = span isBox cs
         first = merge $ map getBox firstelems
         getBox (B.EBox b) = b
         getBox _ = error "hex.concatenatewords.getBox: Not a box!"
@@ -212,9 +212,10 @@ _texBreak textwidth elems = snd $ bfcache ! 0
                 demerits_s = dtable ! s
                 trybreaks :: (Ratio Integer, [Int]) -> [Int] -> (Ratio Integer, [Int])
                 trybreaks r [] = r
-                trybreaks cur@(v,_) (m:ms) = if first == plus_inf then cur else if v <= vm
-                        then trybreaks cur ms
-                        else trybreaks (vm, s:breaks) ms
+                trybreaks cur@(v,_) (m:ms)
+                    | first == plus_inf = cur
+                    | v <= vm = trybreaks cur ms
+                    | otherwise =  trybreaks (vm, s:breaks) ms
                     where
                         (valm, breaks) = bfcache ! (s+m+1)
                         vm = min v (first + valm)
@@ -228,7 +229,7 @@ _texBreak textwidth elems = snd $ bfcache ! 0
 packagebox :: Dimen -> [B.HElement] -> B.VBox
 packagebox width boxes = B.mergeBoxes B.V $ toBoxes $ B.hboxto width $ cleanEnds boxes
     where
-        toBoxes = catMaybes . (map toBox)
+        toBoxes = mapMaybe toBox
         toBox (B.EBox b) = Just b
         toBox (B.EGlue g) = Just $ fixGlue g
         toBox _ = Nothing

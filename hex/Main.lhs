@@ -35,29 +35,26 @@ expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
 breaklines env = (vMode env) . expanded
 
 function :: String -> String -> IO ()
-function "chars" = putStrLn . concat . (map show) . chars
-function "tokens" = putStrLn . concat . (map show) . tokens
-function "expanded" = putStrLn . concat . (map show) . expanded
+function "chars" = putStrLn . concatMap show . chars
+function "tokens" = putStrLn . concatMap show . tokens
+function "expanded" = putStrLn . concatMap show . expanded
 
 function "breaklines" = \inputstr -> do
     fontinfo <- readFont "cmr10"
     putStrLn $
-            concat $
-            (map (++"\n")) $
-            (map show) $
+            concatMap ((++"\n") . show) $
             filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
             (map Boxes.boxContents) $
             breaklines (E.loadfont fontinfo startenv) inputstr
-function hmode = \_ -> do
-    putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
+function hmode = \_ -> putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
         fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
-        env <- return $ E.loadfont fontinfo startingenv
-        result <- return $ buildout env commands
+        let env = E.loadfont fontinfo startingenv
+        let result = buildout env commands
         when output (B.putStr result)
         return ()
     where

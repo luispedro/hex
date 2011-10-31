@@ -66,8 +66,8 @@ data BoxContents = CharContent Char String -- Char Font
 instance Show BoxContents where
     show (CharContent c _) = [c]
     show (Kern _) = " "
-    show (HBoxList bcs) = concat $ map (show . boxContents) bcs
-    show (VBoxList bcs) = concat $ map (show . boxContents) bcs
+    show (HBoxList bcs) = concatMap (show . boxContents) bcs
+    show (VBoxList bcs) = concatMap (show . boxContents) bcs
 \end{code}
 
 Finally, we define a box
@@ -135,9 +135,9 @@ data (BoxType t) => Element t =
                         | EPenalty (Penalty t)
 
 instance (BoxType t) => Show (Element t) where
-    show (EBox b) = "E" ++ show b
-    show (EGlue g) = "E" ++ show g
-    show (EPenalty p) = "E" ++ show p
+    show (EBox b) = 'E' : show b
+    show (EGlue g) = 'E' : show g
+    show (EPenalty p) = 'E' : show p
 
 type HElement = Element H
 type VElement = Element V
@@ -167,9 +167,9 @@ instance BoxListable VBox where
 
 mergeBoxes t bs = Box
             { boxType=t
-            , width=(foldr dplus zeroDimen $ map width bs)
-            , depth=(foldr dmax zeroDimen $ map depth bs)
-            , height=(foldr dmax zeroDimen $ map height bs)
+            , width=(foldr (dplus .width) zeroDimen bs)
+            , depth=(foldr (dmax . depth) zeroDimen bs)
+            , height=(foldr (dmax . height) zeroDimen bs)
             , boxContents=(boxList bs)
             }
 \end{code}

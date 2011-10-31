@@ -10,7 +10,7 @@ module Macros
     , _breakAtGroupEnd
     ) where
 
-import List (sortBy)
+import Data.List (sortBy)
 
 import DVI
 import Fonts
@@ -243,8 +243,7 @@ getargs (DelimToken _:ds) = skiptokenM >> getargs ds
 getargs _ = error "getargs"
 getargtil DelimEmpty = do
     maybespaceM
-    first <- TkS gettokenorgroup
-    return first
+    TkS gettokenorgroup
 getargtil d@(DelimToken end) = do
     next <- peektokenM
     if (next == end) then
@@ -294,10 +293,9 @@ expand' env (ControlSequence "\\let") st = expand env' rest
         (ControlSequence name,aftername) = gettoken st
         (rep,rest) = gettoken $ optionalequals aftername
         macro = case rep of
-                (ControlSequence csname) -> case E.lookup csname env of
-                                            Just m -> m
-                                            Nothing -> Macro [] [rep]
+                (ControlSequence csname) -> E.lookupWithDefault simple csname env
                 (CharToken tc) -> Macro [] [CharToken tc]
+        simple = Macro [] [rep]
 \end{code}
 
 For dealing with \tex{\\noexpand} we add a special case to expand.

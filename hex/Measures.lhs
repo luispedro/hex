@@ -21,7 +21,7 @@ module Measures
     , PaperSize(..)
     ) where
 
-import Ratio
+import Data.Ratio
 \end{code}
 
 Many operations in \TeX{} are performed with fixed point numbers, so we define
