@@ -13,7 +13,6 @@ module Boxes
     ( H(..)
     , V(..)
     , BoxContents(..)
-    , typesetChar
     , Box(..)
     , HBox
     , VBox
@@ -60,17 +59,15 @@ string), a kern (which represents a vspace for vboxes), or a list of other
 boxes.
 
 \begin{code}
-data BoxContents = TextContent String
+data BoxContents = CharContent Char String -- Char Font
                     | Kern Dimen
                     | VBoxList [VBox]
                     | HBoxList [HBox] deriving (Eq)
 instance Show BoxContents where
-    show (TextContent str) = str
+    show (CharContent c _) = [c]
     show (Kern _) = " "
     show (HBoxList bcs) = concat $ map (show . boxContents) bcs
     show (VBoxList bcs) = concat $ map (show . boxContents) bcs
-
-typesetChar c = TextContent [c]
 \end{code}
 
 Finally, we define a box

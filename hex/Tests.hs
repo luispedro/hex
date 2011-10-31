@@ -12,7 +12,6 @@ import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
 import qualified Data.Vector as V
-import qualified Data.ByteString.Lazy as BL
 import Control.Monad.State
 
 import Chars
@@ -71,16 +70,16 @@ totalwidth = (foldr1 dplus) . (map B.esize)
 hbox3elems = B.hboxto textwidth elems
     where
         elems = [
-                B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.TextContent "S")),
+                B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.CharContent 'S' "font")),
                 B.EGlue (B.Glue B.H (di 1) (di 2) (di 2) 0),
-                B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.TextContent "E"))
+                B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.CharContent 'E' "font"))
                 ]
 hbox3elems_sh = B.hboxto textwidth elems
     where
         elems = [
-                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.TextContent "S")),
+                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'S' "font")),
                 B.EGlue (B.Glue B.H (di 2) (di 2) (di 2) 0),
-                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.TextContent "E"))
+                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'E' "font"))
                 ]
 case_hbox_width = (totalwidth hbox3elems) @?= textwidth
 case_hbox_width_sh = (totalwidth hbox3elems_sh) @?= textwidth
@@ -124,7 +123,7 @@ rep n = (x:sp:rep (n-1))
 
 sp = B.EGlue (B.Glue B.H (Dimen 10) (Dimen 5) (Dimen 4) 0)
 x = B.EBox (B.Box B.H zeroDimen zeroDimen (Dimen 20) xc)
-xc = B.TextContent "x"
+xc = B.CharContent 'x' "font"
 
 case_demerits_squeeze = assert $ allsame
             [ (demerit w velems nat_exp_shr 0 3)

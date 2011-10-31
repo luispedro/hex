@@ -27,7 +27,7 @@ putvbox b = do
     pop
     move_down (depth b)
     where
-        putvboxcontent (TextContent s) = putstr s
+        putvboxcontent (CharContent c _) = putstr [c]
         putvboxcontent (Kern d) = move_right d
         putvboxcontent (HBoxList bs) = putvboxcontentmany $ map boxContents bs
         putvboxcontent _ = error "hex.Output.putvboxcontent: Cannot handle this type"

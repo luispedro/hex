@@ -173,7 +173,7 @@ setCharacter tc = (getEnvironment >>= (return . setCharacter'))
                                         , width=(f2d w)
                                         , height=(f2d h)
                                         , depth=(f2d d)
-                                        , boxContents=typesetChar c
+                                        , boxContents=(CharContent c "font")
                                         } where (w,h,d) = F.widthHeightDepth fnt c
                 toHElement c = error (concat ["hex.Modes.setCharacter': Can only handle CharCommand (got ", show c, ")"])
 \end{code}
