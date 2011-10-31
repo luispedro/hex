@@ -63,9 +63,6 @@ hex output fname = do
     where
         startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv
         buildout env = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (vMode env)
-
-asBox (Boxes.EBox b) = Just b
-asBox _ = Nothing
 \end{code}
 
 There are currently two options, a mode and a file name:
