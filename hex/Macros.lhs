@@ -410,7 +410,7 @@ expand' env (ControlSequence "\\hexinternal") st = (InternalCommand env rest $ c
         arg = toksToStr argtoks
         cmd = case cmdname of
             "loadfont" -> LoadfontCommand
-            _ -> error "hex.Macros.expand': unknown internal command"
+            _ -> error ("hex.Macros.expand': unknown internal command ("++cmdname++")")
 \end{code}
 
 The \code{\\input} command has slightly different syntax than most commands:
