@@ -31,6 +31,7 @@ The environment holds a sort of variant type, \code{HexType}:
 \begin{code}
 data HexType =
         HexDimen Dimen
+        | HexInteger Integer
         | HexString String
         | HexFontInfo (FontDef, FontInfo)
         | HexScaledNumber Scaled
@@ -94,10 +95,16 @@ globalinsert _ _ [] = error "Inserting on an invalid environment"
 We define a few special names by coding them in functions:
 
 \begin{code}
-currentfont :: Environment String HexType -> Maybe HexType
-currentfont = lookup "currentfont"
+currentfont :: Environment String HexType -> (Integer,(FontDef,FontInfo))
+currentfont e = (i,fi)
+    where
+        Just (HexFontInfo fi) = lookup "currentfont" e
+        Just (HexInteger i) = lookup "currentfont-index" e
 
-loadfont :: (FontDef,FontInfo) -> Environment String HexType -> Environment String HexType
-loadfont = (globalinsert "currentfont") . HexFontInfo
+loadfont :: Integer -> (FontDef,FontInfo) -> Environment String HexType -> Environment String HexType
+loadfont i fi e = e''
+    where
+        e' = globalinsert "currentfont" (HexFontInfo fi) e
+        e'' = globalinsert "currentfont-index" (HexInteger i) e'
 \end{code}
 

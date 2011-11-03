@@ -32,7 +32,7 @@ data GliphMetric = GliphMetric
                         , height :: FixWord
                         , depth :: FixWord
                         , italicCorrection :: FixWord
-                        }
+                        } deriving (Eq)
 instance Show GliphMetric where
     show g = "G[" ++ [character g]
                 ++ ", wd: " ++ (show $ width g)
@@ -54,7 +54,7 @@ data SpaceInfo = SpaceInfo
 data FontInfo = FontInfo
             { gliphInfo :: [GliphMetric]
             , spaceInfo :: SpaceInfo
-            }
+            } deriving (Eq)
 instance Show FontInfo where
     show (FontInfo fi _) = concatMap ((++"\n") . show) fi
 

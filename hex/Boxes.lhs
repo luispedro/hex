@@ -32,6 +32,8 @@ module Boxes
 import Text.Printf
 
 import Measures
+import Fonts (FontInfo)
+import DVI (FontDef)
 \end{code}
 
 We define the basic box structure and operations on them. A box can contain a
@@ -59,15 +61,18 @@ string), a kern (which represents a vspace for vboxes), or a list of other
 boxes.
 
 \begin{code}
-data BoxContents = CharContent Char String -- Char Font
+data BoxContents = CharContent Char Integer -- Char Font
                     | Kern Dimen
                     | VBoxList [VBox]
-                    | HBoxList [HBox] deriving (Eq)
+                    | HBoxList [HBox]
+                    | DefineFontContent (FontDef,FontInfo)
+                    deriving (Eq)
 instance Show BoxContents where
     show (CharContent c _) = [c]
     show (Kern _) = " "
     show (HBoxList bcs) = concatMap (show . boxContents) bcs
     show (VBoxList bcs) = concatMap (show . boxContents) bcs
+    show (DefineFontContent _) = "{font}"
 \end{code}
 
 Finally, we define a box

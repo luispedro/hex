@@ -21,15 +21,16 @@ Then code that puts a whole line down, an element at a time:
 \begin{code}
 
 putvbox b = do
-    move_down (height b)
-    push
-    putvboxcontent (boxContents b)
-    pop
-    move_down (depth b)
+        move_down (height b)
+        push
+        putvboxcontent (boxContents b)
+        pop
+        move_down (depth b)
     where
-        putvboxcontent (CharContent c _) = putstr [c]
+        putvboxcontent (CharContent c f) = putc c f
         putvboxcontent (Kern d) = move_right d
         putvboxcontent (HBoxList bs) = putvboxcontentmany $ map boxContents bs
+        putvboxcontent (DefineFontContent (fontinfo,_)) = void $ defineFont fontinfo
         putvboxcontent _ = error "hex.Output.putvboxcontent: Cannot handle this type"
         putvboxcontentmany [] = return ()
         putvboxcontentmany (x:xs) = (putvboxcontent x) >> (putvboxcontentmany xs)
@@ -51,7 +52,6 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
     where
         Just (E.HexDimen margintop) = E.lookup "margintop" env
         Just (E.HexDimen marginright) = E.lookup "marginright" env
-        Just (E.HexFontInfo (fdef,_)) = E.currentfont env
         vboxes (VBoxList vb) = vb
         vboxes _ = error "hex.Output.putpages.vboxes: Not a vbox list!"
         putpage page = do
@@ -59,8 +59,6 @@ putpages env (p:ps) = (putpage p) >> (putpages env ps)
             push
             move_down margintop
             move_right marginright
-            _ <- defineFont fdef
-            selectFont 0
             putlines $ vboxes $ boxContents page
             pop
             eop

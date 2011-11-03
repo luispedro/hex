@@ -66,14 +66,16 @@ data HexCommand =
         ErrorCommand String
         | InputCommand String
         | MessageCommand String
-        | LoadfontCommand String
+        | LoadfontHCommand String
+        | SelectfontHCommand String
         | ByeCommand
 
 data Command =
         CharCommand TypedChar
         | PushCommand -- {
         | PopCommand -- }
-        | SetfontCommand (FontDef,FontInfo)
+        | OutputfontCommand (FontDef,FontInfo)
+        | SelectfontCommand Integer (FontDef,FontInfo)
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
 
@@ -88,13 +90,15 @@ instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand msg) = "message:"++msg
-    show (LoadfontCommand fname) = "loadfont:"++fname
+    show (LoadfontHCommand fname) = "loadfont:"++fname
+    show (SelectfontHCommand fname) = "loadfont:"++fname
     show ByeCommand = "bye"
 
 instance Show Command where
     show PushCommand = "<{>"
     show PopCommand = "<}>"
-    show (SetfontCommand _) = "<setfont>"
+    show (SelectfontCommand _ _) = "<selectfont>"
+    show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
     show (CharCommand (TypedChar _ Space)) = "< >"
@@ -409,7 +413,8 @@ expand' env (ControlSequence "\\hexinternal") st = (InternalCommand env rest $ c
         cmdname = toksToStr cmdtoks
         arg = toksToStr argtoks
         cmd = case cmdname of
-            "loadfont" -> LoadfontCommand
+            "loadfont" -> LoadfontHCommand
+            "selectfont" -> SelectfontHCommand
             _ -> error ("hex.Macros.expand': unknown internal command ("++cmdname++")")
 \end{code}
 

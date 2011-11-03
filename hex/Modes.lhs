@@ -137,6 +137,11 @@ vModeM = do
             if isVCommand csname
                 then vMode1
                 else hMode
+        Just (OutputfontCommand fontinfo) -> do
+                _ <- getCommand
+                let node = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
+                r <- vModeM
+                return (node:r)
         _ -> hMode
 \end{code}
 
@@ -164,7 +169,7 @@ setCharacter tc = (getEnvironment >>= (return . setCharacter'))
     where
         setCharacter' e = toHElement tc
             where
-                Just (E.HexFontInfo (_,fnt)) = E.currentfont e
+                (fidx,(_,fnt)) = E.currentfont e
                 (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
                 f2d = dimenFromFloatingPoints . fixToFloat
                 toHElement (TypedChar _ Space) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
@@ -173,7 +178,7 @@ setCharacter tc = (getEnvironment >>= (return . setCharacter'))
                                         , width=(f2d w)
                                         , height=(f2d h)
                                         , depth=(f2d d)
-                                        , boxContents=(CharContent c "font")
+                                        , boxContents=(CharContent c fidx)
                                         } where (w,h,d) = F.widthHeightDepth fnt c
                 toHElement c = error (concat ["hex.Modes.setCharacter': Can only handle CharCommand (got ", show c, ")"])
 \end{code}
@@ -198,8 +203,8 @@ _paragraph = do
                         h <- setCharacter tc
                         r <- _paragraph
                         return (h:r)
-                    SetfontCommand fontinfo -> do
-                        modify (\st@ModeState{ environment=e } -> st { environment=(E.loadfont fontinfo e) })
+                    SelectfontCommand i fontinfo -> do
+                        modify (\st@ModeState{ environment=e } -> st { environment=(E.loadfont i fontinfo e) })
                         _paragraph
                     _ -> fail "hex.Modes._paragraph: Unhandled case"
 \end{code}

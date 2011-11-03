@@ -20,7 +20,7 @@ module DVI
     , startwcomment
     , startfile
     , newpage
-    , putstr
+    , putc
     , move_down
     , move_right
     , defineFont
@@ -36,6 +36,7 @@ simple to implement and are supported by \TeX. Therefore, in order to be full
 \begin{code}
 import qualified Data.ByteString.Lazy as B
 import Control.Monad.State (State, modify, get)
+import Control.Monad
 import Data.Word
 import Data.Char
 
@@ -74,6 +75,7 @@ data DVIStream = DVIStream { rstream :: B.ByteString
                            , curPush :: Integer
                            , maxPush :: Integer
                            , fontDefs :: [FontDef]
+                           , currentFont :: Integer
                            } deriving (Eq)
 \end{code}
 
@@ -97,6 +99,7 @@ emptyStream = DVIStream
             , curPush=0
             , maxPush=0
             , fontDefs=[]
+            , currentFont=(-1)
             }
 \end{code}
 
@@ -287,8 +290,12 @@ newpage = do
     putTotalPages (page + 1)
     return (page + 1)
 
-putstr [] = return ()
-putstr (c:cs) = (put1 $ toInteger $ ord c) >> (putstr cs)
+putc :: Char -> Integer -> State DVIStream ()
+putc c f = do
+    cf <- fmap currentFont get
+    when (cf /= f) (selectFont f)
+    put1 $ toInteger $ ord c
+
 move_down = down4 . pointsTointernal . nrScaledPoints
 move_right = right4 . pointsTointernal . nrScaledPoints
 
@@ -298,7 +305,10 @@ defineFont fnt@(FontDef c (FixWord s) (FixWord d) a l t) = do
     appendFont fnt
     return nfonts
 
-selectFont = fnt_num
+selectFont f = do
+    fnt_num f
+    modify (\st@DVIStream {} -> st { currentFont = f})
+    return ()
 
 endfile = do
     prevBop <- getLastBop

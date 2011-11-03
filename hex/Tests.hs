@@ -70,16 +70,16 @@ totalwidth = (foldr1 dplus) . (map B.esize)
 hbox3elems = B.hboxto textwidth elems
     where
         elems = [
-                B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.CharContent 'S' "font")),
+                B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.CharContent 'S' 0)),
                 B.EGlue (B.Glue B.H (di 1) (di 2) (di 2) 0),
-                B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.CharContent 'E' "font"))
+                B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.CharContent 'E' 0))
                 ]
 hbox3elems_sh = B.hboxto textwidth elems
     where
         elems = [
-                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'S' "font")),
+                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'S' 0)),
                 B.EGlue (B.Glue B.H (di 2) (di 2) (di 2) 0),
-                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'E' "font"))
+                B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'E' 0))
                 ]
 case_hbox_width = (totalwidth hbox3elems) @?= textwidth
 case_hbox_width_sh = (totalwidth hbox3elems_sh) @?= textwidth
@@ -123,7 +123,7 @@ rep n = (x:sp:rep (n-1))
 
 sp = B.EGlue (B.Glue B.H (Dimen 10) (Dimen 5) (Dimen 4) 0)
 x = B.EBox (B.Box B.H zeroDimen zeroDimen (Dimen 20) xc)
-xc = B.CharContent 'x' "font"
+xc = B.CharContent 'x' 0
 
 case_demerits_squeeze = assert $ allsame
             [ (demerit w velems nat_exp_shr 0 3)

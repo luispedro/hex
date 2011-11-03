@@ -45,7 +45,7 @@ function "breaklines" = \inputstr -> do
             concatMap ((++"\n") . show) $
             filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
             (map Boxes.boxContents) $
-            breaklines (E.loadfont fontinfo startenv) inputstr
+            breaklines (E.loadfont 0 fontinfo startenv) inputstr
 function hmode = \_ -> putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
 hex output "-" = hex output "/dev/stdin"
@@ -53,7 +53,7 @@ hex output fname = do
         fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
         commands <- processinputs (expanded inputstr) startingenv
-        let env = E.loadfont fontinfo startingenv
+        let env = E.loadfont 0 fontinfo startingenv
         let result = buildout env commands
         when output (B.putStr result)
         return ()

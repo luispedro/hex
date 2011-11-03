@@ -8,10 +8,13 @@ module Hex
     , readFont
     ) where
 import System.IO.Error
+import System.IO.Unsafe
 import System.FilePath.Posix
 import Control.Monad
 import System.Process (readProcess)
 import qualified Data.ByteString.Lazy as B
+import Data.IORef
+import Data.Maybe
 
 import Macros
 import ParseTFM
@@ -53,6 +56,14 @@ readFont fname = do
     return $ parseTFM fname fontstr
 \end{code}
 
+\begin{code}
+_fontId :: IORef Integer
+_fontId = unsafePerformIO $ newIORef 0
+
+nextFontId :: IO Integer
+nextFontId = atomicModifyIORef _fontId (\n -> (n+1,n))
+\end{code}
+
 \code{processinputs} processes the special commands in the \code{Command}
 stream. In particular, it process \tex{\\bye}, \tex{\\input}, and
 \tex{\\message}.
@@ -77,13 +88,27 @@ Another simple commmand is the \code{MessageCommand}, which outputs its message.
 processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
 \end{code}
 
-Loading a font involves replacing the string name in the command stream by the loaded font object
+Loading a font involves replacing the string name in the command stream by the
+loaded font object
 
 \begin{code}
-processinputs ((InternalCommand _ _ (LoadfontCommand fname)):cs) e = do
+processinputs ((InternalCommand _ _ (LoadfontHCommand fname)):cs) e = do
     font <- readFont fname
+    next <- nextFontId
+    let e' = E.globalinsert ("font-index:" ++ fname)  (E.HexInteger next) e
+    let e'' = E.globalinsert ("font:" ++ fname)  (E.HexFontInfo font) e'
+    r <- processinputs cs e''
+    return ((OutputfontCommand font):r)
+\end{code}
+
+Selecting a font is a couple of environment lookups:
+
+\begin{code}
+processinputs ((InternalCommand _ _ (SelectfontHCommand fname)):cs) e = do
+    let E.HexInteger fontindex = fromJust $ E.lookup ("font-index:"++fname) e
+    let E.HexFontInfo fontinfo = fromJust $ E.lookup ("font:"++fname) e
     r <- processinputs cs e
-    return ((SetfontCommand font):r)
+    return ((SelectfontCommand fontindex fontinfo):r)
 \end{code}
 
 Finally, the \code{InputCommand} finds the input file and queues it in
