@@ -61,8 +61,8 @@ tryPeek = do
 Now a few functions to retrieve and manipulate the environment:
 
 \begin{code}
-getEnvironment :: Modes (E.Environment String E.HexType)
-getEnvironment = gets environment
+environmentM :: Modes (E.Environment String E.HexType)
+environmentM = gets environment
 
 pushE :: Modes ()
 pushE = modify (\st@ModeState{ environment=e } -> st { environment=(E.push e) })
@@ -105,7 +105,7 @@ readUnits :: Modes Unit
 readUnits = do
     c0 <- getCommand
     c1 <- getCommand
-    e <- getEnvironment
+    e <- environmentM
     return $ unit e c0 c1
 
 unit _env (CharCommand (TypedChar c0 Letter)) (CharCommand (TypedChar c1 Letter)) = unit' [c0,c1]
@@ -165,7 +165,7 @@ The first function puts down a single character to form an \code{HElement}:
 
 \begin{code}
 setCharacter :: TypedChar -> Modes HElement
-setCharacter tc = (getEnvironment >>= (return . setCharacter'))
+setCharacter tc = fmap setCharacter' environmentM
     where
         setCharacter' e = toHElement tc
             where
@@ -229,7 +229,7 @@ by \code{VBox}es. \code{typesetParagraph} performs this function:
 
 \begin{code}
 typesetParagraph :: [HElement] -> Modes [VBox]
-typesetParagraph p = (getEnvironment >>= return . typesetParagraph')
+typesetParagraph p = fmap typesetParagraph' environmentM
     where
         typesetParagraph' env = (spreadlines baselineskip $ breakintolines linewidth p)
             where

@@ -70,7 +70,7 @@ In order to print ASCII characters, we have convert bytes to characters in the
 obvious way:
 
 \begin{code}
-word8sToChars :: [DVIByte] -> [Char]
+word8sToChars :: [DVIByte] -> String
 word8sToChars = map (chr . fromInteger . toInteger)
 \end{code}
 
