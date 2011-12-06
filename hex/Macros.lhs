@@ -435,11 +435,18 @@ expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCo
             where (tok,rest') = gettoken st'
 \end{code}
 
+Finally, we come to the default cases.
+
 \begin{code}
 expand' env t@(CharToken tc) st
     | (category tc) == BeginGroup = PushCommand:(expand (E.push env) (updateCharStream st pushst))
     | (category tc) == EndGroup = PopCommand:(expand (E.pop env) (updateCharStream st popst))
     | otherwise = (fromToken t):(expand env st)
+\end{code}
+
+If nothing else triggered, we call \code{expand1}:
+
+\begin{code}
 expand' env t st = expand env $ expand1 env $ streampush st t
 \end{code}
 
