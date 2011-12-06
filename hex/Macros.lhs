@@ -91,7 +91,7 @@ instance Show HexCommand where
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand msg) = "message:"++msg
     show (LoadfontHCommand fname) = "loadfont:"++fname
-    show (SelectfontHCommand fname) = "loadfont:"++fname
+    show (SelectfontHCommand fname) = "selectfont:"++fname
     show ByeCommand = "bye"
 
 instance Show Command where
