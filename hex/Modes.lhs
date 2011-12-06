@@ -138,7 +138,7 @@ vModeM = do
                 then vMode1
                 else hMode
         Just (OutputfontCommand fontinfo) -> do
-                _ <- getCommand
+                void getCommand
                 let node = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
                 r <- vModeM
                 return (node:r)
@@ -197,16 +197,16 @@ _paragraph = do
             if isParagraphBreak c
                 then return []
                 else case c of
-                    PushCommand -> (pushE >> _paragraph)
-                    PopCommand -> (popE >> _paragraph)
-                    CharCommand tc -> do
-                        h <- setCharacter tc
-                        r <- _paragraph
-                        return (h:r)
-                    SelectfontCommand i fontinfo -> do
-                        modify (\st@ModeState{ environment=e } -> st { environment=(E.loadfont i fontinfo e) })
-                        _paragraph
-                    _ -> fail "hex.Modes._paragraph: Unhandled case"
+                        PushCommand -> (pushE >> _paragraph)
+                        PopCommand -> (popE >> _paragraph)
+                        CharCommand tc -> do
+                            h <- setCharacter tc
+                            r <- _paragraph
+                            return (h:r)
+                        SelectfontCommand i fontinfo -> do
+                            modify (\st@ModeState{ environment=e } -> st { environment=(E.setfont i fontinfo e) })
+                            _paragraph
+                        _ -> fail $ concat ["hex.Modes._paragraph: Unhandled case: ", show c]
 \end{code}
 
 Paragraphs can be terminated in three ways:
@@ -221,6 +221,7 @@ The \code{isParagraphBreak} function implements this logic:
 \begin{code}
 isParagraphBreak (PrimitiveCommand "\\par") = True
 isParagraphBreak (PrimitiveCommand csname) = isVCommand csname
+isParagraphBreak (OutputfontCommand _) = True
 isParagraphBreak _ = False
 \end{code}
 

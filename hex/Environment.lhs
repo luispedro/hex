@@ -12,7 +12,7 @@ module Environment
     , insert
     , globalinsert
     , currentfont
-    , loadfont
+    , setfont
     ) where
 
 import qualified Data.Map as M
@@ -101,10 +101,10 @@ currentfont e = (i,fi)
         Just (HexFontInfo fi) = lookup "currentfont" e
         Just (HexInteger i) = lookup "currentfont-index" e
 
-loadfont :: Integer -> (FontDef,FontInfo) -> Environment String HexType -> Environment String HexType
-loadfont i fi e = e''
+setfont :: Integer -> (FontDef,FontInfo) -> Environment String HexType -> Environment String HexType
+setfont i fi e = e''
     where
-        e' = globalinsert "currentfont" (HexFontInfo fi) e
-        e'' = globalinsert "currentfont-index" (HexInteger i) e'
+        e' = insert "currentfont" (HexFontInfo fi) e
+        e'' = insert "currentfont-index" (HexInteger i) e'
 \end{code}
 

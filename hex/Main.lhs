@@ -29,6 +29,8 @@ input file (as a string) and produces an output string. The \var{function}
 table maps strings to these functions.
 
 \begin{code}
+prefix = "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
+
 chars = map (annotate plaintexenv)
 tokens = chars2tokens
 expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
@@ -45,16 +47,14 @@ function "breaklines" = \inputstr -> do
             concatMap ((++"\n") . show) $
             filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
             (map Boxes.boxContents) $
-            breaklines (E.loadfont 0 fontinfo startenv) inputstr
+            breaklines (E.setfont 0 fontinfo startenv) inputstr
 function hmode = \_ -> putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
-        fontinfo <- readFont "cmr10"
         inputstr <- readFile fname
-        commands <- processinputs (expanded inputstr) startingenv
-        let env = E.loadfont 0 fontinfo startingenv
-        let result = buildout env commands
+        commands <- processinputs (expanded $ concat [prefix,inputstr]) startingenv
+        let result = buildout startingenv commands
         when output (B.putStr result)
         return ()
     where
