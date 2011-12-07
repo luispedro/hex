@@ -20,9 +20,11 @@ import Defaults (startenv, plaintexenv)
 import qualified Environment as E
 \end{code}
 
-For the moment, hex uses the \textit{hex subcommand} convention for its command
-line interface. In the future, I expect this will change to \textit{hex
---subcommand}.
+The version is kept right at the top so it is easy to spot and change.
+
+\begin{code}
+version = "0.0.3+git"
+\end{code}
 
 The implementation is simple: each subcommand is a function which takes the
 input file (as a string) and produces an output string. The \var{function}
@@ -74,8 +76,9 @@ hexcmds = HexCmd
             , input = "-" &= argPos 0 &= opt "-"
             } &=
             verbosity &=
-            summary "Hex v0.0.3-git (C) Luis Pedro Coelho 2011" &=
+            summary sumtext &=
             details ["Hex implements the TeX language"]
+    where sumtext = concat ["Hex v", version, " (C) Luis Pedro Coelho 2011"]
 
 \end{code}
 
