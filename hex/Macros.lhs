@@ -166,37 +166,43 @@ _breakAtGroupEnd st = runTkS (breakAtGroupEndM 0) st
                 n' _ = n
 \end{code}
 
+Sometimes, the category of a character is important.
+
 \begin{code}
 tokenCategory (CharToken tc) = category tc
 tokenCategory _ = Invalid -- It doesn't matter what
 \end{code}
 
-To help with processing \tex{\\if} statements, we need to (1) evaluate them and
-(2) skip over the non-important characters:
+To handle \tex{\\if} statements, we need to (1) evaluate them and (2) skip over
+the non-important characters. The first step is performed by \code{evaluateif}.
 
 \begin{code}
-evaluateif env "\\ifx" st = (cond,0,st1)
+evaluateif :: MacroEnvironment -> String -> TkS (Bool,Int)
+evaluateif env "\\ifx"  = do
+        tok0 <- gettokenM
+        tok1 <- gettokenM
+        let cond = ifx tok0 tok1
+        return (cond,(if cond then 2 else 0))
     where
-        (tok0, st0) = gettoken st
-        (tok1, st1) = gettoken st0
-        cond = case (tok0, tok1) of
-            ((ControlSequence cs0), (ControlSequence cs1)) -> samemacro cs0 cs1
-            _ -> False
+        ifx (ControlSequence cs0) (ControlSequence cs1) = samemacro cs0 cs1
+        ifx _ _ = False
         samemacro cs0 cs1 = case ((E.lookup cs0 env),(E.lookup cs1 env)) of
             (Nothing, Nothing) -> True
             (Just m0, Just m1) -> (m0 == m1)
             _ -> False
-evaluateif env "\\if" st = (cond,(if cond then 2 else 0),st)
+evaluateif env "\\if" = do
+        (cmd0:cmd1:_) <- expandM
+        let res = evalif cmd0 cmd1
+        let skip = (if res then 2 else 0)
+        return (res,skip)
     where
-        (cmd0:cmd1:_) = expand env st
-        cond = case (cmd0,cmd1) of
-            (CharCommand c0, CharCommand c1) ->  (value c0) == (value c1)
-            _ -> False
-evaluateif _e _ _st = error "hex.Macros.evaluateif: Cannot handle this type"
+        evalif (CharCommand c0) (CharCommand c1) = (value c0) == (value c1)
+        evalif _ _ = False
+        expandM = TkS $ \st -> (expand env st, undefined)
+evaluateif _e _  = fail "hex.Macros.evaluateif: Cannot handle this type"
 \end{code}
 
-Skipping depends on the value of the condition. If the condition is true, we do
-nothing. If the condition is false, we skip until the matching \tex{\\else} or
+Skipping depends on the value of the condition. If the condition is true, we do noting. If the condition is false, we skip until the matching \tex{\\else} or
 \tex{\\fi}.
 
 \begin{code}
@@ -215,28 +221,41 @@ The first function just attempts to extract the macro
 
 \begin{code}
 expand1 :: MacroEnvironment -> TokenStream -> TokenStream
-expand1 env st = let (ControlSequence csname, rest) = gettoken st
-                    in case E.lookup csname env of
-                        Just macro -> expand1' macro rest
-                        Nothing -> streamenqueue rest $ macronotfounderror csname
+expand1 env st = case E.lookup csname env of
+                    Just macro -> expand1' macro
+                    Nothing -> streamenqueue r0 $ macronotfounderror csname
+    where
+        (ControlSequence csname, r0) = gettoken st
 \end{code}
-
 If found, the macro is expanded by \code{expand1'}
 \begin{code}
-expand1' :: Macro -> TokenStream -> TokenStream
-expand1' macro st = streamenqueue rest expanded
-    where
-        expanded = expandmacro macro arguments
-        arguments :: [(Int,[Token])]
-        (arguments,rest) = runTkS (getargs (todelims $ arglist macro)) st
+        expand1' :: Macro -> TokenStream
+        expand1' macro = streamenqueue r1 expanded
+            where
+                expanded = expandmacro macro arguments
+                arguments :: [(Int,[Token])]
+                (arguments,r1) = runTkS (getargs (todelims $ arglist macro)) r0
 \end{code}
 
+Matching macro parameters is done by attempting to match delimiters. A special
+delimiter \code{DelimEmpty} matches the empty string.
+
 \begin{code}
-data Delim = DelimParameter Int | DelimToken Token | DelimEmpty deriving(Show)
+data Delim =
+    DelimParameter Int -- #n
+    | DelimToken Token -- something like \a or a
+    | DelimEmpty -- \epsilon at end of string
+    deriving(Show)
 todelims [] = [DelimEmpty]
 todelims (t:n:ts) | (tokenCategory t) == Parameter = (DelimParameter (readNumberFromToken n)):(todelims ts)
 todelims (t:ts) = (DelimToken t):(todelims ts)
+\end{code}
 
+\code{getargs} matches a sequence of delimiters to produce the list of
+arguments.
+
+\begin{code}
+getargs :: [Delim] -> TkS [(Int,[Token])]
 getargs (DelimEmpty:_) = return []
 getargs (DelimParameter n:d:ds) = do
     maybespaceM
@@ -260,7 +279,7 @@ getargtil (DelimParameter _) = TkS gettokenorgroup
 \end{code}
 
 
-If there is an error, we insert a special token sequence:
+If we fail to find a macro, we insert a special token sequence:
 
 \begin{code}
 macronotfounderror csname = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
@@ -277,8 +296,8 @@ optionalequals s = case gettoken s of
     _ -> s
 \end{code}
 
-The main function, \code{expand} is actually very simple and just forwards to
-\code{expand'}:
+The main function, \code{expand} is actually very simple and just forwards the
+first token (after checking that the stream is not empty) to \code{expand'}:
 
 \begin{code}
 expand :: MacroEnvironment -> TokenStream -> [Command]
@@ -288,7 +307,7 @@ expand env st = expand' env t rest
 \end{code}
 
 \code{expand'} is structured as a huge case statement (implemented with Haskell
-pattern matching)
+pattern matching):
 
 \begin{code}
 expand' env (ControlSequence "\\let") st = expand env' rest
@@ -302,7 +321,7 @@ expand' env (ControlSequence "\\let") st = expand env' rest
         simple = Macro [] [rep]
 \end{code}
 
-For dealing with \tex{\\noexpand} we add a special case to expand.
+Dealing with \tex{\\noexpand} is easy, just pass the next token unmodified:
 
 \begin{code}
 expand' env (ControlSequence "\\noexpand") st = (fromToken t:expand env r)
@@ -324,7 +343,10 @@ expand' env (ControlSequence "\\expandafter") st = expand env $ streampush rest 
             rest = expand1 env afterguard
 \end{code}
 
-Manipulation of catcodes is performed here:
+Manipulation of catcodes is performed here. It needs to change the token
+stream. In hex, the ``environment'' is actually a few separate namespaces,
+\tex{\\catcode} only manipulates the category table embedded in the tokens
+stream:
 
 \begin{code}
 expand' env (ControlSequence "\\catcode") st = expand env altered
@@ -342,13 +364,25 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
         tvalue _ = '\0'
 \end{code}
 
+To handle conditionals, \code{evaluateif} is called.
 \begin{code}
 expand' env (ControlSequence csname) st
     | csname `elem` ifstarts = drop toskip $ expand env rest
         where
-            (cond, toskip, st') = evaluateif env csname st
-            rest = skipif cond st'
+            ((cond, toskip), _) = runTkS (evaluateif env csname) st
+            rest = skipif cond st
+\end{code}
+
+If we run into an \tex{\\else}, then, we were on the true clause of an if and
+and need to start skipping (if the file is mal-formed and just contains an
+unmatched \tex{\\else}, this becomes \tex{\\iffalse}).
+
+\begin{code}
 expand' env (ControlSequence "\\else") st = expand env $ skipif False st
+\end{code}
+
+If we encounter a \tex{\\fi}, just ignore it.
+\begin{code}
 expand' env (ControlSequence "\\fi") st = expand env st
 \end{code}
 
@@ -375,8 +409,7 @@ expand' env (ControlSequence csname) st
 \end{code}
 
 We handle \code{\\global} by simply transforming it into \code{\\gdef} or
-\code{\\xdef}.
-
+\code{\\xdef}. This will immediately ``goto'' the code above:
 \begin{code}
 expand' env (ControlSequence "\\global") st
     | next == "\\def" = expand' env (ControlSequence "\\gdef") rest
@@ -385,14 +418,12 @@ expand' env (ControlSequence "\\global") st
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
-command:
-
+command, which speaks for itself:
 \begin{code}
 expand' env (ControlSequence "\\bye") st = [InternalCommand env st ByeCommand]
 \end{code}
 
-Errors and messages are similar and handled by the same function:
-
+Errors and messages are similar and handled by the same case:
 \begin{code}
 expand' env (ControlSequence cs) st
     | cs `elem` ["error","\\message"] = (InternalCommand env rest $ cmd arg):(expand env rest)
@@ -418,7 +449,8 @@ expand' env (ControlSequence "\\hexinternal") st = (InternalCommand env rest $ c
             _ -> error ("hex.Macros.expand': unknown internal command ("++cmdname++")")
 \end{code}
 
-The \code{\\input} command has slightly different syntax than most commands:
+The \code{\\input} command has slightly different syntax than most commands,
+but again, it is just transformed into an \code{InternalCommand}
 
 \begin{code}
 expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCommand fname]
@@ -444,7 +476,7 @@ expand' env t@(CharToken tc) st
     | otherwise = (fromToken t):(expand env st)
 \end{code}
 
-If nothing else triggered, we call \code{expand1}:
+If nothing else triggered, we must have a macro, so we call \code{expand1}:
 
 \begin{code}
 expand' env t st = expand env $ expand1 env $ streampush st t
