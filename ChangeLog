@@ -1,4 +1,5 @@
 Version 0.0.3+
+	* implement \font and its associated machinery
 	* parse TFM files (at least character sizes, which was what was
 	implemented before)
 	* \bye
