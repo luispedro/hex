@@ -192,11 +192,13 @@ _paragraph = do
     mc <- tryPeek
     case mc of
         Nothing -> return []
+        Just (PrimitiveCommand "\\par") -> (void getCommand >> return [])
         Just c -> do
-            void getCommand
             if isParagraphBreak c
                 then return []
-                else case c of
+                else do
+                    void getCommand
+                    case c of
                         PushCommand -> (pushE >> _paragraph)
                         PopCommand -> (popE >> _paragraph)
                         CharCommand tc -> do
