@@ -287,15 +287,6 @@ macronotfounderror csname = [(ControlSequence "error"),(CharToken (TypedChar '{'
         errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ "Macro `" ++ csname ++ "` not defined."
 \end{code}
 
-Both \tex{\let} and \tex{\catcode} allow for an optional equals sign after
-them:
-
-\begin{code}
-optionalequals s = case gettoken s of
-    ((CharToken (TypedChar '=' _)),s') -> s'
-    _ -> s
-\end{code}
-
 The main function, \code{expand} is actually very simple and just forwards the
 first token (after checking that the stream is not empty) to \code{expand'}:
 
@@ -314,7 +305,7 @@ expand' env (ControlSequence "\\let") st = expand env' rest
     where
         env' = E.insert name macro env
         (ControlSequence name,aftername) = gettoken st
-        (rep,rest) = gettoken $ optionalequals aftername
+        (rep,rest) = gettoken $ maybeeq aftername
         macro = case rep of
                 (ControlSequence csname) -> E.lookupWithDefault simple csname env
                 (CharToken tc) -> Macro [] [CharToken tc]
@@ -353,7 +344,7 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
     where
         (t, r0) = readChar $ st
         char = tvalue t
-        r1 = optionalequals r0
+        r1 = maybeeq r0
         (nvalue, r2) = readNumber r1
         altered = updateCharStream r2 $ catcode char nvalue
         catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}

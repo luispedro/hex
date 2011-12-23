@@ -8,6 +8,7 @@ module Tokens
     , gettoken
     , gettokentil
     , maybespace
+    , maybeeq
     , droptoken
     , streampush
     , streamenqueue
@@ -22,6 +23,7 @@ module Tokens
     , skiptokenM
     , peektokenM
     , maybespaceM
+    , maybeeqM
     ) where
 
 import Chars
@@ -172,15 +174,27 @@ gettokentil st cond
 
 \end{code}
 
-An often needed operation is to skip an optional space:
-
+An often needed operation is to skip an optional space or additional equal
+signs. We first implement a generic \code{maybetok} function, which takes a
+condition and skips a token if it matches that condition.
 \begin{code}
-maybespace st
+maybetok :: (Token -> Bool) -> TokenStream -> TokenStream
+maybetok cond st
     | emptyTokenStream st = st
-    | otherwise = case t of
-        (CharToken c) -> if category c == Space then rest else st
-        _ -> st
-    where (t, rest) = gettoken st
+    | otherwise = if cond t then rest else st
+    where
+        (t,rest) = gettoken st
+\end{code}
+
+Now, \code{maybespace} and \code{maybeeq} are simply defined as calls to
+\code{maybetok}:
+\begin{code}
+maybespace = maybetok (\t ->
+                case t of
+                    (CharToken c) -> category c == Space
+                    _ -> False
+                    )
+maybeeq = maybetok (== (CharToken (TypedChar '=' Other)))
 \end{code}
 
 We define a few helper functions to manipulate the stream.
@@ -260,4 +274,5 @@ gettokenM = TkS gettoken
 skiptokenM = (gettokenM >> return ())
 peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
 maybespaceM = TkS (\tks -> ((), maybespace tks))
+maybeeqM = TkS (\tks -> ((),maybeeq tks))
 \end{code}
