@@ -268,9 +268,14 @@ instance Monad TkS where
     return a = TkS (\tks -> (a,tks))
     x >>= f = TkS (\tks -> let (a,t') = (runTkS x tks); (b,t'') = (runTkS (f a) t') in (b,t''))
 
+instance Functor TkS where
+    fmap f x = TkS (\tks -> let (a,t') = (runTkS x tks) in (f a, t'))
+
 emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tks))
+
 gettokenM :: TkS Token
 gettokenM = TkS gettoken
+
 skiptokenM = (gettokenM >> return ())
 peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
 maybespaceM = TkS (\tks -> ((), maybespace tks))

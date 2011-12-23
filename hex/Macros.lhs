@@ -11,6 +11,7 @@ module Macros
     ) where
 
 import Data.List (sortBy)
+import Control.Monad (void)
 
 import DVI
 import Fonts
@@ -412,6 +413,31 @@ We need to special case the internal commands. The simplest is the \tex{\bye}
 command, which speaks for itself:
 \begin{code}
 expand' env (ControlSequence "\\bye") st = [InternalCommand env st ByeCommand]
+\end{code}
+
+\begin{code}
+expand' env (ControlSequence "\\font") st = (InternalCommand env' rest $ LoadfontHCommand fname):(expand env' rest)
+    where
+        ((csname,fname),rest) = runTkS parseFont st
+        parseFont = do
+            ControlSequence cs <- gettokenM
+            maybeeqM
+            fn <- readStrM
+            return (cs,fn)
+        readStrM = do
+            t <- peektokenM
+            if tokenCategory t == Space then do
+                return []
+            else do
+                let (CharToken (TypedChar c _)) = t
+                void gettokenM
+                cs <- readStrM
+                return (c:cs)
+        env' = E.insert csname macro env
+        macro = Macro [] ((ControlSequence "\\hexinternal"):map toTok ("{selectfont}{" ++ fname ++ "}"))
+        toTok '{' = (CharToken (TypedChar '{' BeginGroup))
+        toTok '}' = (CharToken (TypedChar '}' EndGroup))
+        toTok c = (CharToken (TypedChar c Letter))
 \end{code}
 
 Errors and messages are similar and handled by the same case:
