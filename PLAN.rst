@@ -41,6 +41,7 @@ v0.0.4
 - more fonts
 
 Expected: Oct 31 2011
+Released: Dec 24 2011
 
 v0.0.5
 ------
