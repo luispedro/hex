@@ -145,6 +145,10 @@ data TokenStream = TokenStream
                 , state :: StateFunction
                 , queue :: [Token]
                 }
+
+instance Eq TokenStream where
+    _ == _ = False
+
 newTokenStream :: TypedCharStream -> TokenStream
 newTokenStream cs = TokenStream cs sN []
 \end{code}

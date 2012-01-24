@@ -70,6 +70,7 @@ data HexCommand =
         | LoadfontHCommand String
         | SelectfontHCommand String
         | ByeCommand
+        deriving (Eq)
 
 data Command =
         CharCommand TypedChar
@@ -79,6 +80,7 @@ data Command =
         | SelectfontCommand Integer (FontDef,FontInfo)
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
+        deriving (Eq)
 
 fromToken (ControlSequence csname) = PrimitiveCommand csname
 fromToken (CharToken tc) = CharCommand tc
