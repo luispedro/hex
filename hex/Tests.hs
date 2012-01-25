@@ -12,7 +12,6 @@ import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
 import qualified Data.Vector as V
-import Control.Monad.State
 import Text.Parsec hiding (many, optional, (<|>))
 
 
