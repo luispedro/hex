@@ -2,7 +2,8 @@
 
 \begin{code}
 module Math
-    (
+    ( parseMath
+    , MList(..)
     ) where
 
 import Control.Applicative
@@ -15,9 +16,10 @@ import Macros
 
 \end{code}
 \begin{code}
-data MList = MAtom { sup :: Maybe MList, sub :: Maybe MList, center :: MList }
+data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
         | MChar Char
         | MRel MList
+        | MListList [MList]
         deriving (Eq, Show)
 
 \end{code}
@@ -59,17 +61,20 @@ node = singlechar <|> inbraces
 mnode :: TokenParser MList
 mnode = do
     c <- node
-    sub <- optionMaybe (matchcat SubScript >> mlist)
-    sup <- optionMaybe (matchcat Superscript >> mlist)
-    return $ MAtom sub sup c
+    down <- optionMaybe (matchcat SubScript >> node)
+    up <- optionMaybe (matchcat Superscript >> node)
+    return $ MAtom c down up
 
+mlist = (many1 mnode >>= return . MListList)
+\end{code}
 
+End of math mode:
+
+\begin{code}
 eomath :: TokenParser [Command]
 eomath = do
     void $ matchcat MathShift
     getInput
-
-mlist = mnode
 
 delimited :: TokenParser (MList, [Command])
 delimited = do
