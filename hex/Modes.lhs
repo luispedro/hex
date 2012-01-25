@@ -5,6 +5,11 @@ module Modes
     , _vModeM
     , _paragraph
     , ModeState(..)
+    , Modes
+    , charcommand
+    , matchf
+    , matchcat
+    , match
     ) where
 
 import qualified Environment as E
