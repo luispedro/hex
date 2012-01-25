@@ -76,6 +76,7 @@ data Command =
         CharCommand TypedChar
         | PushCommand -- {
         | PopCommand -- }
+        | MathShiftCommand
         | OutputfontCommand (FontDef,FontInfo)
         | SelectfontCommand Integer (FontDef,FontInfo)
         | PrimitiveCommand String
@@ -100,6 +101,7 @@ instance Show HexCommand where
 instance Show Command where
     show PushCommand = "<{>"
     show PopCommand = "<}>"
+    show MathShiftCommand = "<$>"
     show (SelectfontCommand _ _) = "<selectfont>"
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
@@ -492,6 +494,7 @@ Finally, we come to the default cases.
 expand' env t@(CharToken tc) st
     | (category tc) == BeginGroup = PushCommand:(expand (E.push env) (updateCharStream st pushst))
     | (category tc) == EndGroup = PopCommand:(expand (E.pop env) (updateCharStream st popst))
+    | (category tc) == MathShift = MathShiftCommand:(expand env st)
     | otherwise = (fromToken t):(expand env st)
 \end{code}
 
