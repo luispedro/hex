@@ -2,14 +2,9 @@
 \begin{code}
 module Modes
     ( vMode
+    , ModeState(..)
     , _vModeM
     , _paragraph
-    , ModeState(..)
-    , Modes
-    , charcommand
-    , matchf
-    , matchcat
-    , match
     ) where
 
 import qualified Environment as E
@@ -53,8 +48,7 @@ equality) and to match character categories:
 \begin{code}
 incCol pos _ _  = incSourceColumn pos $ sourceColumn pos
 matchf f = Prim.tokenPrim show incCol testChar
-    where
-        testChar t = if f t then Just t else Nothing
+    where testChar t = if f t then Just t else Nothing
 
 match c = matchf (==c)
 
@@ -128,8 +122,8 @@ vMode1 = vspace <|> outputfont <|> hMode
 
 outputfont = do
     OutputfontCommand fontinfo <- matchf (\c -> case c of { OutputfontCommand _ -> True; _ -> False })
-    let node = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
-    return [node]
+    let onode = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
+    return [onode]
 
 vspace = do
     void $ match (PrimitiveCommand "\\vspace")
@@ -183,6 +177,7 @@ _paragraph =
     (match (PrimitiveCommand "\\par") >> return []) <|>
     (match  PushCommand >> pushE >> _paragraph) <|>
     (match  PopCommand >> popE >> _paragraph) <|>
+    (match  MathShiftCommand >> mMode >>= typesetMListM) <|>
     (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
     (selectfont >> _paragraph) <|>
     return []
@@ -217,6 +212,70 @@ hMode = do
     p <- _paragraph
     e <- environmentM
     return $ typesetParagraph e p
+\end{code}
+
+Now comes math mode:
+
+\begin{code}
+data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
+        | MChar Char
+        | MRel MList
+        | MListList [MList]
+        deriving (Eq, Show)
+
+\end{code}
+
+Now get match a single character as a \code{MChar}:
+\begin{code}
+singlechar :: Modes MList
+singlechar = do
+    CharCommand (TypedChar c _) <- charcommand
+    return $ MChar c
+\end{code}
+
+Now we build up on this:
+\begin{code}
+inbraces = (match PushCommand *> mlist <* match PopCommand)
+node :: Modes MList
+node = singlechar <|> inbraces
+
+matom :: Modes MList
+matom = do
+    c <- node
+    down <- optionMaybe (matchcat SubScript >> node)
+    up <- optionMaybe (matchcat Superscript >> node)
+    return $ MAtom c down up
+
+mlist = (many matom >>= return . MListList)
+\end{code}
+
+End of math mode:
+
+\begin{code}
+eomath :: Modes ()
+eomath = do
+    void $ match MathShiftCommand
+
+mMode :: Modes MList
+mMode = mlist <* eomath
+\end{code}
+
+Typesetting math:
+\begin{code}
+typesetMListM :: MList -> Modes [HElement]
+typesetMListM ml = do
+    e <- environmentM
+    return $ typesetMList e ml
+
+typesetMList e = set
+    where
+        set :: MList -> [HElement]
+        set (MChar c) = [toHElement e (TypedChar c Letter)]
+        set (MListList ml)= concat $ set `map` ml
+        set (MRel ml)= set ml
+        set MAtom { center=c, sup=up, sub=down} = set c ++ setmaybe up ++ setmaybe down
+        setmaybe Nothing = []
+        setmaybe (Just ml) = set ml
 \end{code}
 
 Finally, we hide it all behind a pure interface:
