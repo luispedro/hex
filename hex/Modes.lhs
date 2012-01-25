@@ -192,13 +192,10 @@ Given the list of \code{HElement}s, we need to set them in lines, represented
 by \code{VBox}es. \code{typesetParagraph} performs this function:
 
 \begin{code}
-typesetParagraph :: [HElement] -> Modes [VBox]
-typesetParagraph p = fmap typesetParagraph' environmentM
+typesetParagraph env p = (spreadlines baselineskip $ breakintolines linewidth p)
     where
-        typesetParagraph' env = (spreadlines baselineskip $ breakintolines linewidth p)
-            where
-                Just (E.HexDimen linewidth) = E.lookup "textwidth" env
-                Just (E.HexScaledNumber baselineskip) = E.lookup "baselineskip" env
+        Just (E.HexDimen linewidth) = E.lookup "textwidth" env
+        Just (E.HexScaledNumber baselineskip) = E.lookup "baselineskip" env
 
 \end{code}
 \begin{code}
@@ -218,8 +215,8 @@ boxes. The implementation is based on what we have above and is pretty trivial.
 hMode :: Modes [VBox]
 hMode = do
     p <- _paragraph
-    tp <- typesetParagraph p
-    return tp
+    e <- environmentM
+    return $ typesetParagraph e p
 \end{code}
 
 Finally, we hide it all behind a pure interface:
