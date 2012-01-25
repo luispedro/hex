@@ -2,6 +2,7 @@
 \begin{code}
 module Modes
     ( vMode
+    , _vModeM
     , _paragraph
     , ModeState(..)
     ) where
@@ -15,59 +16,53 @@ import Boxes
 import Linebreak
 import FixWords
 
-import Control.Monad.State
+import Text.Parsec hiding (many, optional, (<|>))
+import qualified Text.Parsec.Prim as Prim
+import Control.Monad
+import Control.Applicative
 \end{code}
 
-Some commands are v-mode commands, other h-mode commands. We begin with a
-series of definitions to distinguish the two.
+The implementation of the modes is as a Parsec based on \code{[Command]}. The
+state is the environment:
 
 \begin{code}
-isVCommand :: String -> Bool
-isVCommand "\\vspace" = True
-isVCommand _ = False
-\end{code}
-
-The implementation of the modes is in the state monad. It includes both the
-environment and the input stream.
-
-\begin{code}
-data ModeState = ModeState
-            { environment :: E.Environment String E.HexType
-            , commands :: [Command]
-            }
-type Modes a = State ModeState a
-\end{code}
-
-Now, we define several helpler functions to manipulate the stream.
-\code{getCommand} unconditionally gets the next command, whilst \code{tryPeek}
-just returns a \code{Maybe Command} and does not touch the stream.
-
-\begin{code}
-getCommand :: Modes Command
-getCommand = do
-        st <- get
-        modify dropC
-        return $ head $ commands st
-    where
-        dropC (ModeState e (_:cs)) = ModeState e cs
-        dropC (ModeState _ []) = error "hex.Modes.dropC: empty stream"
-tryPeek = do
-    st <- get
-    case commands st of
-        [] -> return Nothing
-        (c:_) -> return (Just c)
+data ModeState = ModeState { environment :: E.Environment String E.HexType }
+type Modes a = Parsec [Command] ModeState a
 \end{code}
 
 Now a few functions to retrieve and manipulate the environment:
-
 \begin{code}
 environmentM :: Modes (E.Environment String E.HexType)
-environmentM = gets environment
+environmentM = do
+    s <- getState
+    return $ environment s
 
 pushE :: Modes ()
-pushE = modify (\st@ModeState{ environment=e } -> st { environment=(E.push e) })
+pushE = modifyState (\st@ModeState{ environment=e } -> st { environment=(E.push e) })
 popE :: Modes ()
-popE = modify (\st@ModeState{ environment=e } -> st { environment=(E.pop e) })
+popE = modifyState (\st@ModeState{ environment=e } -> st { environment=(E.pop e) })
+\end{code}
+
+Small helpers, to match commands that fulfil a certain condition (like
+equality) and to match character categories:
+\begin{code}
+incCol pos _ _  = incSourceColumn pos $ sourceColumn pos
+matchf f = Prim.tokenPrim show incCol testChar
+    where
+        testChar t = if f t then Just t else Nothing
+
+match c = matchf (==c)
+
+matchcat :: CharCategory -> Modes Command
+matchcat cat = matchf testCat
+    where
+      testCat (CharCommand (TypedChar _ cat')) = cat == cat'
+      testCat _ = False
+\end{code}
+
+A simple case is \code{charcommand}:
+\begin{code}
+charcommand = matchf (\c -> case c of { CharCommand _ -> True; _ -> False })
 \end{code}
 
 These are necessary to read numbers and units from the stream. Error handling
@@ -76,7 +71,7 @@ is poor.
 \begin{code}
 readNumber :: Modes Integer
 readNumber = do
-        cs <- readWhile isDigit
+        cs <- many (matchf isDigit)
         return $ toNumber cs
     where
         isDigit (CharCommand (TypedChar c Other)) = (c `elem` "0123456789")
@@ -87,24 +82,10 @@ readNumber = do
                 val = read $ map cvalue digits
                 cvalue (CharCommand (TypedChar c Other)) = c
                 cvalue _ = error "hex.Modes.readNumber.cvalue: wrong type"
-
-readWhile cond = do
-    mc <- tryPeek
-    case mc of
-        Nothing -> return []
-        Just c ->
-            if cond c
-                then do
-                    void getCommand
-                    r <- readWhile cond
-                    return (c:r)
-                else
-                    return []
-
 readUnits :: Modes Unit
 readUnits = do
-    c0 <- getCommand
-    c1 <- getCommand
+    c0 <- matchf (const True)
+    c1 <- matchf (const True)
     e <- environmentM
     return $ unit e c0 c1
 
@@ -123,108 +104,83 @@ readDimen = do
     return $ dimenFromUnit (fromInteger n) u
 \end{code}
 
-Now, we come to the actual code. \code{vModeM} implements v-mode (in the
-monad). It just checks whether the next command is a v-command. If so, it calls
-\code{vMode1}, otherwise it call \code{hMode}:
+Now, we come to the actual code. \code{_vModeM} implements v-mode (in the
+monad).
 
 \begin{code}
-vModeM :: Modes [VBox]
-vModeM = do
-    c <- tryPeek
-    case c of
-        Nothing -> return []
-        Just (PrimitiveCommand csname) ->
-            if isVCommand csname
-                then vMode1
-                else hMode
-        Just (OutputfontCommand fontinfo) -> do
-                void getCommand
-                let node = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
-                r <- vModeM
-                return (node:r)
-        _ -> hMode
+_vModeM :: Modes [VBox]
+_vModeM = (eof >> return []) <|> do
+    v <- vMode1
+    r <- _vModeM
+    return (v++r)
 \end{code}
 
-\code{vMode1} handles one vertical mode command. Because of the way it is
-called, we know that it must be a v-mode command:
+\code{vMode1} handles one vertical mode command.
 
 \begin{code}
 vMode1 :: Modes [VBox]
-vMode1 = do
-    c <- getCommand
-    case c of
-        PrimitiveCommand "\\vspace" -> do
-            d <- readDimen
-            r <- vModeM
-            return ((Box V d zeroDimen zeroDimen (Kern d)):r)
-        _ -> fail (concat ["hex.Modes.vMode1: Can only handle PrimitiveCommands that are v-mode commands. Got ", show c, "."])
+vMode1 = vspace <|> outputfont <|> hMode
+
+outputfont = do
+    OutputfontCommand fontinfo <- matchf (\c -> case c of { OutputfontCommand _ -> True; _ -> False })
+    let node = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
+    return [node]
+
+vspace = do
+    void $ match (PrimitiveCommand "\\vspace")
+    d <- readDimen
+    return [Box V d zeroDimen zeroDimen (Kern d)]
 \end{code}
 
 Now that we have dealt with vertical mode, we must deal with the horizontal.
 The first function puts down a single character to form an \code{HElement}:
 
 \begin{code}
-setCharacter :: TypedChar -> Modes HElement
-setCharacter tc = fmap setCharacter' environmentM
+setCharacter :: Modes HElement
+setCharacter = do
+    CharCommand tc <- charcommand
+    e <- environmentM
+    return $ toHElement e tc
+
+toHElement e = toHElement'
     where
-        setCharacter' e = toHElement tc
-            where
-                (fidx,(_,fnt)) = E.currentfont e
-                (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
-                f2d = dimenFromFloatingPoints . fixToFloat
-                toHElement (TypedChar _ Space) = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
-                toHElement (TypedChar c _) = EBox $ Box
-                                        { boxType=H
-                                        , width=(f2d w)
-                                        , height=(f2d h)
-                                        , depth=(f2d d)
-                                        , boxContents=(CharContent c fidx)
-                                        } where (w,h,d) = F.widthHeightDepth fnt c
-                toHElement c = error (concat ["hex.Modes.setCharacter': Can only handle CharCommand (got ", show c, ")"])
+        (fidx,(_,fnt)) = E.currentfont e
+        (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
+        f2d = dimenFromFloatingPoints . fixToFloat
+        toHElement' (TypedChar c cat)
+            | cat == Space = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
+            | otherwise = EBox $ Box
+                            { boxType=H
+                            , width=(f2d w)
+                            , height=(f2d h)
+                            , depth=(f2d d)
+                            , boxContents=(CharContent c fidx)
+                            } where (w,h,d) = F.widthHeightDepth fnt c
+        toHElement' c = error (concat ["hex.Modes.setCharacter': Can only handle CharCommand (got ", show c, ")"])
 \end{code}
+
+Selecting a font is easy, just set the font in the environment:
+\begin{code}
+selectfont = do
+    SelectfontCommand i fontinfo <- matchf (\t -> case t of { SelectfontCommand _ _ -> True ; _ -> False })
+    modifyState (\st@ModeState{ environment=e } -> st { environment=(E.setfont i fontinfo e) })
+    return ()
+\end{code}
+
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
 \code{HElement}s (but they are still just a list).
 
 \begin{code}
 _paragraph :: Modes [HElement]
-_paragraph = do
-    mc <- tryPeek
-    case mc of
-        Nothing -> return []
-        Just (PrimitiveCommand "\\par") -> (void getCommand >> return [])
-        Just c -> do
-            if isParagraphBreak c
-                then return []
-                else do
-                    void getCommand
-                    case c of
-                        PushCommand -> (pushE >> _paragraph)
-                        PopCommand -> (popE >> _paragraph)
-                        CharCommand tc -> do
-                            h <- setCharacter tc
-                            r <- _paragraph
-                            return (h:r)
-                        SelectfontCommand i fontinfo -> do
-                            modify (\st@ModeState{ environment=e } -> st { environment=(E.setfont i fontinfo e) })
-                            _paragraph
-                        _ -> fail $ concat ["hex.Modes._paragraph: Unhandled case: ", show c]
-\end{code}
-
-Paragraphs can be terminated in three ways:
-\begin{enumerate}
-\item end of file,
-\item \tex{\\par},
-\item any vertical mode command.
-\end{enumerate}
-
-The \code{isParagraphBreak} function implements this logic:
-
-\begin{code}
-isParagraphBreak (PrimitiveCommand "\\par") = True
-isParagraphBreak (PrimitiveCommand csname) = isVCommand csname
-isParagraphBreak (OutputfontCommand _) = True
-isParagraphBreak _ = False
+_paragraph =
+    (eof >> return []) <|>
+    (match (PrimitiveCommand "\\par") >> return []) <|>
+    (match  PushCommand >> pushE >> _paragraph) <|>
+    (match  PopCommand >> popE >> _paragraph) <|>
+    (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
+    (selectfont >> _paragraph) <|>
+    return []
 \end{code}
 
 Given the list of \code{HElement}s, we need to set them in lines, represented
@@ -258,13 +214,14 @@ hMode :: Modes [VBox]
 hMode = do
     p <- _paragraph
     tp <- typesetParagraph p
-    r <- vModeM
-    return (tp ++ r)
+    return tp
 \end{code}
 
 Finally, we hide it all behind a pure interface:
 
 \begin{code}
 vMode :: E.Environment String E.HexType -> [Command] -> [VBox]
-vMode e cs = evalState vModeM (ModeState e cs)
+vMode e cs = case runP _vModeM (ModeState e) "input" cs of
+    Right res -> res
+    Left err -> error $ show err
 \end{code}
