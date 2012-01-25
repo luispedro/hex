@@ -177,7 +177,7 @@ _paragraph =
     (match (PrimitiveCommand "\\par") >> return []) <|>
     (match  PushCommand >> pushE >> _paragraph) <|>
     (match  PopCommand >> popE >> _paragraph) <|>
-    (match  MathShiftCommand >> mMode >>= typesetMListM) <|>
+    (match  MathShiftCommand >> mMode >>= typesetMListM >>= (\ml -> _paragraph >>= return . (ml++))) <|>
     (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
     (selectfont >> _paragraph) <|>
     return []
