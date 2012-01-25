@@ -30,8 +30,13 @@ one-liners. We will use the \haskell{Data.Binary.Get} monad.
 getWord16 = getWord16be
 getWord = getWord32be
 getByte = getWord8
+getSigned32 = from32bit `fmap` getWord
 
-getFixWord = (FixWord . (`shiftR` 4) . convert) `liftM` getWord
+from32bit v
+    | v > 0x7fffffff = (convert v) - 0x100000000
+    | otherwise = convert v
+
+getFixWord = (FixWord . (`shiftR` 4)) `fmap` getSigned32
 \end{code}
 
 There several fix word arrays, so we define a little helper function to get
