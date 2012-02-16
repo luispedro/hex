@@ -50,15 +50,16 @@ hex.
 Dependencies
 ------------
 
-- cmdargs
-- list-extras
-- vector
-- vector-algorithms
-- binary
-- convertible
-- test-framework-th
-- test-framework-quickcheck2
-- test-framework-hunit
+cabal install \
+            cmdargs \
+            list-extras \
+            vector \
+            vector-algorithms \
+            binary \
+            convertible \
+            test-framework-th \
+            test-framework-quickcheck2 \
+            test-framework-hunit
 
 Meta-Information
 ----------------
