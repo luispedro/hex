@@ -145,17 +145,19 @@ toHElement e = toHElement'
     where
         (fidx,(_,fnt)) = E.currentfont e
         (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
-        f2d = dimenFromFloatingPoints . fixToFloat
         toHElement' (TypedChar c cat)
             | cat == Space = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
-            | otherwise = EBox $ Box
-                            { boxType=H
-                            , width=(f2d w)
-                            , height=(f2d h)
-                            , depth=(f2d d)
-                            , boxContents=(CharContent c fidx)
-                            } where (w,h,d) = F.widthHeightDepth fnt c
+            | otherwise = charInFont c fidx fnt
         toHElement' c = error (concat ["hex.Modes.setCharacter': Can only handle CharCommand (got ", show c, ")"])
+
+f2d = dimenFromFloatingPoints . fixToFloat
+charInFont c fidx fnt = EBox $ Box
+                    { boxType=H
+                    , width=(f2d w)
+                    , height=(f2d h)
+                    , depth=(f2d d)
+                    , boxContents=(CharContent c fidx)
+                    } where (w,h,d) = F.widthHeightDepth fnt c
 \end{code}
 
 Selecting a font is easy, just set the font in the environment:
@@ -257,7 +259,7 @@ eomath = do
     void $ match MathShiftCommand
 
 mMode :: Modes MList
-mMode = mlist <* eomath
+mMode = pushE *> mlist <* eomath <* popE
 \end{code}
 
 Typesetting math:
@@ -270,12 +272,15 @@ typesetMListM ml = do
 typesetMList e = set
     where
         set :: MList -> [HElement]
-        set (MChar c) = [toHElement e (TypedChar c Letter)]
+        set (MChar c) = setmchar e c
         set (MListList ml)= concat $ set `map` ml
         set (MRel ml)= set ml
         set MAtom { center=c, sup=up, sub=down} = set c ++ setmaybe up ++ setmaybe down
         setmaybe Nothing = []
         setmaybe (Just ml) = set ml
+setmchar e c = [charInFont c fidx fnt]
+    where
+        (fidx,(_,fnt)) = E.currentfont e
 \end{code}
 
 Finally, we hide it all behind a pure interface:
