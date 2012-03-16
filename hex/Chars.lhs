@@ -98,7 +98,8 @@ Now we define the typed char as consisting of both a character and its
 category.
 
 \begin{code}
-data TypedChar = TypedChar { value :: Char
+data TypedChar = TypedChar
+                 { value :: Char
                  , category :: CharCategory
                  } deriving (Eq)
 \end{code}
