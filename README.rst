@@ -57,6 +57,7 @@ cabal install \
             vector-algorithms \
             binary \
             convertible \
+            parsec \
             test-framework-th \
             test-framework-quickcheck2 \
             test-framework-hunit
