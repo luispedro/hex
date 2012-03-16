@@ -168,6 +168,14 @@ selectfont = do
     return ()
 \end{code}
 
+Setting math fonts is similar
+\begin{code}
+setmathfont = do
+    SetMathFontCommand i fontinfo fam fs <- matchf (\t -> case t of { SetMathFontCommand _ _ _ _ -> True; _ -> False})
+    modifyState (\st@ModeState{ environment=e } -> st { environment=(E.setmathfont i fontinfo e fam fs) })
+    return ()
+\end{code}
+
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
 \code{HElement}s (but they are still just a list).
@@ -181,6 +189,7 @@ _paragraph =
     (match  PopCommand >> popE >> _paragraph) <|>
     (match  MathShiftCommand >> mMode >>= typesetMListM >>= (\ml -> _paragraph >>= return . (ml++))) <|>
     (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
+    (setmathfont >> _paragraph) <|>
     (selectfont >> _paragraph) <|>
     return []
 \end{code}
@@ -280,7 +289,8 @@ typesetMList e = set
         setmaybe (Just ml) = set ml
 setmchar e c = [charInFont c fidx fnt]
     where
-        (fidx,(_,fnt)) = E.currentfont e
+        (fidx,(_,fnt)) = E.mathfont e fam E.Textfont
+        fam = 0
 \end{code}
 
 Finally, we hide it all behind a pure interface:

@@ -8,48 +8,63 @@ push
 fnt_def 0 1274110073 655360 655360 0 cmr10
 pop
 down4 0
-down4 455110
+down4 0
 push
-fnt_num 0
-char 84(T)
-char 104(h)
-char 105(i)
-char 115(s)
-right4 218765
-char 105(i)
-char 115(s)
-right4 218765
-char 97(a)
-right4 218765
-char 102(f)
-char 105(i)
-char 108(l)
-char 101(e)
-right4 218765
-char 119(w)
-char 105(i)
-char 116(t)
-char 104(h)
-right4 218765
-char 109(m)
-char 97(a)
-char 116(t)
-char 104(h)
-char 58(:)
-right4 218765
-char 120(x)
-char 46(.)
-right4 218765
-right4 20401418
+right4 28311552
 pop
 down4 0
-down4 568888
+down4 0
 push
-right4 568888
+right4 0
+pop
+down4 0
+down4 0
+push
+fnt_def 1 1274110073 655360 655360 0 cmr10
+pop
+down4 0
+down4 0
+push
+right4 28311552
+pop
+down4 0
+down4 0
+push
+right4 0
+pop
+down4 0
+down4 0
+push
+fnt_def 2 195060286 655360 655360 0 cmmi10
+pop
+down4 0
+down4 282160
+push
+fnt_num 0
+char 114(r)
+char 111(o)
+char 109(m)
+char 97(a)
+char 110(n)
+char 58(:)
+right4 218841
+fnt_num 2
+char 120(x)
+fnt_num 0
+char 46(.)
+right4 218841
+right4 25312981
+pop
+down4 0
+down4 352700
+push
+right4 352700
 pop
 down4 0
 pop
 eop
 post 29 25400000 473628672 1000 43725786 30785863 2 1
 fnt_def 0 1274110073 655360 655360 0 cmr10
-post_post 212 48226271
+fnt_def 1 1274110073 655360 655360 0 cmr10
+fnt_def 2 195060286 655360 655360 0 cmmi10
+post_post 310 48226271

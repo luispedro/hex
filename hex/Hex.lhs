@@ -111,6 +111,14 @@ processinputs ((InternalCommand _ _ (SelectfontHCommand fname)):cs) e = do
     return ((SelectfontCommand fontindex fontinfo):r)
 \end{code}
 
+\begin{code}
+processinputs ((InternalCommand _ _ (SetMathFontHCommand fname fam fs)):cs) e = do
+    let E.HexInteger fontindex = fromJust $ E.lookup ("font-index:"++fname) e
+    let E.HexFontInfo fontinfo = fromJust $ E.lookup ("font:"++fname) e
+    r <- processinputs cs e
+    return ((SetMathFontCommand fontindex fontinfo fam fs):r)
+\end{code}
+
 Finally, the \code{InputCommand} finds the input file and queues it in
 
 \begin{code}

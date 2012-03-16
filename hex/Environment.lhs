@@ -13,6 +13,9 @@ module Environment
     , globalinsert
     , currentfont
     , setfont
+    , MathFontStyle(..)
+    , mathfont
+    , setmathfont
     ) where
 
 import qualified Data.Map as M
@@ -108,3 +111,24 @@ setfont i fi e = e''
         e'' = insert "currentfont-index" (HexInteger i) e'
 \end{code}
 
+\begin{code}
+data MathFontStyle = Textfont | Scriptfont | Scriptscriptfont
+                    deriving (Eq, Show)
+
+mathfont :: Environment String HexType -> Integer -> MathFontStyle -> (Integer,(FontDef,FontInfo))
+mathfont e fam fs = (i,fi)
+    where
+        Just (HexFontInfo fi) = lookup (concat ["math", code fs, show fam]) e
+        Just (HexInteger i) = lookup (concat ["math", code fs, show fam, "-index"]) e
+
+setmathfont :: Integer -> (FontDef,FontInfo) -> Environment String HexType -> Integer -> MathFontStyle -> Environment String HexType
+setmathfont i fi e fam fs = e''
+    where
+        e' = insert (concat ["math", code fs, show fam]) (HexFontInfo fi) e
+        e'' = insert (concat ["math", code fs, show fam, "-index"]) (HexInteger i) e'
+
+code Textfont = "textfont"
+code Scriptfont = "scriptfont"
+code Scriptscriptfont = "scriptscriptfont"
+
+\end{code}

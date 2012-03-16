@@ -17,6 +17,7 @@ import Text.Parsec hiding (many, optional, (<|>))
 
 
 import Chars
+import CharStream
 import Hex (readFont)
 import Tokens
 import String
@@ -52,6 +53,24 @@ case_token5 = (length $ chars2tokens "macro") @=? 5
 --case_sS = (length $ applyStateFunction sS $ map (annotate plaintextable) "     ") @=? 0
 --case_sM1 = (length $ applyStateFunction sM $ map (annotate plaintextable) "     ") @=? 1
 --case_sM2 = (length $ applyStateFunction sM $ map (annotate plaintextable) "a    ") @=? 2
+
+case_readNumberM5 = n @=? 5
+    where
+        (n,_) = runTkS readNumberM (asTokenStream "5\\relax")
+
+case_readNumberM15 = n @=? 15
+    where
+        (n,_) = runTkS readNumberM (asTokenStream "15\\relax")
+
+case_readNumberMfollow = cs @=? "\\relax"
+    where
+        (ControlSequence cs,_) = runTkS (readNumberM >> gettokenM) (asTokenStream "15\\relax")
+
+case_readNumberMfollowEmpty = (emptyTokenStream rest) @=? True
+    where
+        (ControlSequence _,rest) = runTkS (readNumberM >> gettokenM) (asTokenStream "15\\relax")
+
+asTokenStream s = (newTokenStream $ TypedCharStream plaintexenv s)
 
 -- Simple string tests for find.
 

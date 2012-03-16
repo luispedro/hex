@@ -11,7 +11,6 @@ module Macros
     ) where
 
 import Data.List (sortBy)
-import Control.Monad (void)
 
 import DVI
 import Fonts
@@ -24,10 +23,9 @@ import qualified Environment as E
 Macros are simple pairs of argument and replacement token strings
 
 \begin{code}
-data Macro = Macro
-                { arglist :: [Token]
-                , replacement :: [Token]
-                } deriving (Eq, Show)
+data Macro = Macro { arglist :: [Token], replacement :: [Token] }
+            | FontMacro String
+            deriving (Eq, Show)
 \end{code}
 
 A small helper function, which reads a number from a token, useful for
@@ -69,6 +67,7 @@ data HexCommand =
         | MessageCommand String
         | LoadfontHCommand String
         | SelectfontHCommand String
+        | SetMathFontHCommand String Integer E.MathFontStyle
         | ByeCommand
         deriving (Eq)
 
@@ -79,6 +78,7 @@ data Command =
         | MathShiftCommand
         | OutputfontCommand (FontDef,FontInfo)
         | SelectfontCommand Integer (FontDef,FontInfo)
+        | SetMathFontCommand Integer (FontDef,FontInfo) Integer E.MathFontStyle
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -96,6 +96,7 @@ instance Show HexCommand where
     show (MessageCommand msg) = "message:"++msg
     show (LoadfontHCommand fname) = "loadfont:"++fname
     show (SelectfontHCommand fname) = "selectfont:"++fname
+    show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
     show ByeCommand = "bye"
 
 instance Show Command where
@@ -103,6 +104,7 @@ instance Show Command where
     show PopCommand = "<}>"
     show MathShiftCommand = "<$>"
     show (SelectfontCommand _ _) = "<selectfont>"
+    show (SetMathFontCommand _ _ _ _) = "<setmathfontcommand>"
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -207,7 +209,8 @@ evaluateif env "\\if" = do
 evaluateif _e _  = fail "hex.Macros.evaluateif: Cannot handle this type"
 \end{code}
 
-Skipping depends on the value of the condition. If the condition is true, we do noting. If the condition is false, we skip until the matching \tex{\\else} or
+Skipping depends on the value of the condition. If the condition is true, we do
+noting. If the condition is false, we skip until the matching \tex{\\else} or
 \tex{\\fi}.
 
 \begin{code}
@@ -235,7 +238,13 @@ expand1 env st = case E.lookup csname env of
 If found, the macro is expanded by \code{expand1'}
 \begin{code}
         expand1' :: Macro -> TokenStream
-        expand1' macro = streamenqueue r1 expanded
+        expand1' (FontMacro fname) = streamenqueue r0 $ selectfont
+            where
+                selectfont = ((ControlSequence "\\hexinternal"):map toTok ("{selectfont}{" ++ fname ++ "}"))
+                toTok '{' = (CharToken (TypedChar '{' BeginGroup))
+                toTok '}' = (CharToken (TypedChar '}' EndGroup))
+                toTok c = (CharToken (TypedChar c Letter))
+        expand1' macro@(Macro _ _) = streamenqueue r1 expanded
             where
                 expanded = expandmacro macro arguments
                 arguments :: [(Int,[Token])]
@@ -350,10 +359,9 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
         (t, r0) = readChar $ st
         char = tvalue t
         r1 = maybeeq r0
-        (nvalue, r2) = readNumber r1
+        (nvalue, r2) = runTkS readNumberM r1
         altered = updateCharStream r2 $ catcode char nvalue
         catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
-        readNumber st' = let (ts, r) = gettokentil st' (not . (`elem` "0123456789") . tvalue) in (read $ map tvalue ts, r)
         readChar = gettoken . droptoken
         tvalue (CharToken tc) = value tc
         tvalue (ControlSequence ['\\',c]) = c
@@ -419,6 +427,11 @@ command, which speaks for itself:
 expand' env (ControlSequence "\\bye") st = [InternalCommand env st ByeCommand]
 \end{code}
 
+The \tex{\\font} command puts a \code{FontMacro} macro in the environment and
+issues a \code{LoadfontHCommand} to load the font. Eagerly loading the font
+maps what \TeX{} does, even if a lazy load model could be better (in reality,
+the font file is parsed lazily because of Haskell's evaluation model).
+
 \begin{code}
 expand' env (ControlSequence "\\font") st = (InternalCommand env' rest $ LoadfontHCommand fname):(expand env' rest)
     where
@@ -429,19 +442,31 @@ expand' env (ControlSequence "\\font") st = (InternalCommand env' rest $ Loadfon
             fn <- readStrM
             return (cs,fn)
         readStrM = do
-            t <- peektokenM
-            if tokenCategory t == Space then do
-                return []
-            else do
-                let (CharToken (TypedChar c _)) = t
-                void gettokenM
-                cs <- readStrM
-                return (c:cs)
+            t <- maybepeektokenM
+            case t of
+                Just (CharToken (TypedChar c cat))
+                    | cat == Space -> return []
+                    | otherwise -> do
+                        skiptokenM
+                        cs <- readStrM
+                        return (c:cs)
+                _ -> return []
         env' = E.insert csname macro env
-        macro = Macro [] ((ControlSequence "\\hexinternal"):map toTok ("{selectfont}{" ++ fname ++ "}"))
-        toTok '{' = (CharToken (TypedChar '{' BeginGroup))
-        toTok '}' = (CharToken (TypedChar '}' EndGroup))
-        toTok c = (CharToken (TypedChar c Letter))
+        macro = FontMacro fname
+\end{code}
+
+\begin{code}
+expand' env (ControlSequence "\\textfont") st = (InternalCommand env rest fmcmd):(expand env rest)
+    where
+        (fmcmd,rest) = runTkS parsetextfont st
+        parsetextfont = do
+            fam <- readNumberM
+            maybeeqM
+            ControlSequence fc <- gettokenM
+            return $ case E.lookup fc env of
+                Just (FontMacro fname) ->
+                    SetMathFontHCommand fname fam E.Textfont
+                _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
 \end{code}
 
 Errors and messages are similar and handled by the same case:

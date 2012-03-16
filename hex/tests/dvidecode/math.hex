@@ -1,1 +1,4 @@
-This is a file with math: $x$.
+\font\cmr=cmr10
+\font\cmmi=cmmi10
+\textfont0=\cmmi
+roman: $x$.

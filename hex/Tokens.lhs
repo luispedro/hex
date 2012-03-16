@@ -22,13 +22,17 @@ module Tokens
     , gettokenM
     , skiptokenM
     , peektokenM
+    , maybepeektokenM
     , maybespaceM
     , maybeeqM
+    , readNumberM
     ) where
 
 import Chars
 import CharStream
 import Defaults (plaintexenv)
+
+import Control.Monad
 
 \end{code}
 
@@ -257,6 +261,7 @@ manipulation of the character stream (for example, by changing the character
 code table).
 
 \begin{code}
+chars2tokens :: [Char] -> [Token]
 chars2tokens str = ts
     where
        (ts,_) = gettokentil st $ const False
@@ -280,8 +285,27 @@ emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tk
 gettokenM :: TkS Token
 gettokenM = TkS gettoken
 
-skiptokenM = (gettokenM >> return ())
+skiptokenM = void gettokenM
 peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
+maybepeektokenM = TkS (\tks ->
+                if emptyTokenStream tks then
+                    (Nothing, tks)
+                 else let (t,_) = gettoken tks in (Just t,tks))
+
 maybespaceM = TkS (\tks -> ((), maybespace tks))
 maybeeqM = TkS (\tks -> ((),maybeeq tks))
+
+readNumberM :: TkS Integer
+readNumberM = read `liftM` digits
+    where
+        digits :: TkS [Char]
+        digits = do
+            tok <- maybepeektokenM
+            case tok of
+                Just (CharToken tc) | isdigit $ value tc -> do
+                    skiptokenM
+                    rest <- digits
+                    return (value tc:rest)
+                _ -> return []
+        isdigit = (`elem` "0123456789")
 \end{code}
