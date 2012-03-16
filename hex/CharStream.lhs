@@ -14,6 +14,8 @@ module CharStream
     , popst
     , prequeue
     ) where
+
+import Data.Char
 \end{code}
 
 Character codes are defined by a table that the user can manipulate. This table
@@ -54,6 +56,10 @@ stream. This is a similar interface to the state monad.
 
 \begin{code}
 getchar :: TypedCharStream -> (TypedChar, TypedCharStream)
+getchar st@TypedCharStream{remaining=('^':'^':v:cs)} = getchar st{remaining=(c:cs)}
+    where
+        c = chr $ ov + (if ov >= 64 then (-64) else 64)
+        ov = (ord v)
 getchar st@TypedCharStream{table=tab, remaining=(c:cs)} = (annotate tab c, st{remaining=cs})
 getchar _ = error "getchar on an empty stream"
 \end{code}

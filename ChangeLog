@@ -6,6 +6,7 @@ Version 0.0.3+
 	* \vspace
 	* delimited macros
 	* \if & \ifx processing
+	* Implement ^^@ notation
 
 Version 0.0.3 2011-08-22 by luispedro
 	* \input
