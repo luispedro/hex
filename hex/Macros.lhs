@@ -456,7 +456,9 @@ expand' env (ControlSequence "\\font") st = (InternalCommand env' rest $ Loadfon
 \end{code}
 
 \begin{code}
-expand' env (ControlSequence "\\textfont") st = (InternalCommand env rest fmcmd):(expand env rest)
+expand' env (ControlSequence cs) st
+        | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"]
+            = (InternalCommand env rest fmcmd):(expand env rest)
     where
         (fmcmd,rest) = runTkS parsetextfont st
         parsetextfont = do
@@ -465,8 +467,12 @@ expand' env (ControlSequence "\\textfont") st = (InternalCommand env rest fmcmd)
             ControlSequence fc <- gettokenM
             return $ case E.lookup fc env of
                 Just (FontMacro fname) ->
-                    SetMathFontHCommand fname fam E.Textfont
+                    SetMathFontHCommand fname fam (fontstyle cs)
                 _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
+        fontstyle "\\textfont" = E.Textfont
+        fontstyle "\\scriptfont" = E.Scriptfont
+        fontstyle "\\scriptscriptfont" = E.Scriptscriptfont
+        fontstyle _ = error "hex.Macros.expand'.fontstyle: This should never happen"
 \end{code}
 
 Errors and messages are similar and handled by the same case:
