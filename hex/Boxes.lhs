@@ -28,12 +28,15 @@ module Boxes
     , esize
     , mergeBoxes
     , hboxto
+    , spaceInFont
+    , charInFont
     ) where
 import Text.Printf
 
 import Measures
-import Fonts (FontInfo)
+import qualified Fonts as F
 import DVI (FontDef)
+import FixWords (fixToFloat)
 \end{code}
 
 We define the basic box structure and operations on them. A box can contain a
@@ -65,7 +68,7 @@ data BoxContents = CharContent Char Integer -- Char Font
                     | Kern Dimen
                     | VBoxList [VBox]
                     | HBoxList [HBox]
-                    | DefineFontContent (FontDef,FontInfo)
+                    | DefineFontContent (FontDef, F.FontInfo)
                     deriving (Eq)
 instance Show BoxContents where
     show (CharContent c _) = [c]
@@ -197,4 +200,19 @@ hboxto target es = converted
         converted = map transform es
         transform (EGlue g) = EGlue $ update g factor
         transform e = e
+\end{code}
+
+We add a few helpers to build basic glues \&{} boxes:
+\begin{code}
+spaceInFont fnt = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
+    where (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
+
+charInFont c fidx fnt = EBox $ Box
+                    { boxType=H
+                    , width=(f2d w)
+                    , height=(f2d h)
+                    , depth=(f2d d)
+                    , boxContents=(CharContent c fidx)
+                    } where (w,h,d) = F.widthHeightDepth fnt c
+f2d = dimenFromFloatingPoints . fixToFloat
 \end{code}

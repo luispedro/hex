@@ -14,6 +14,7 @@ SOURCES :=  \
             Hex.lhs \
             Linebreak.lhs \
             Macros.lhs \
+            Maths.lhs \
             Measures.lhs \
             Modes.lhs \
             Output.lhs \

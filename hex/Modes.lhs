@@ -8,13 +8,12 @@ module Modes
     ) where
 
 import qualified Environment as E
-import qualified Fonts as F
 import Chars
 import Macros
 import Measures
 import Boxes
 import Linebreak
-import FixWords
+import Maths
 
 import Text.Parsec hiding (many, optional, (<|>))
 import qualified Text.Parsec.Prim as Prim
@@ -144,19 +143,9 @@ setCharacter = do
 toHElement e = toHElement'
     where
         (fidx,(_,fnt)) = E.currentfont e
-        (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
         toHElement' (TypedChar c cat)
-            | cat == Space = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
+            | cat == Space = spaceInFont fnt
             | otherwise = charInFont c fidx fnt
-
-f2d = dimenFromFloatingPoints . fixToFloat
-charInFont c fidx fnt = EBox $ Box
-                    { boxType=H
-                    , width=(f2d w)
-                    , height=(f2d h)
-                    , depth=(f2d d)
-                    , boxContents=(CharContent c fidx)
-                    } where (w,h,d) = F.widthHeightDepth fnt c
 \end{code}
 
 Selecting a font is easy, just set the font in the environment:
@@ -224,17 +213,6 @@ hMode = do
     return $ typesetParagraph e p
 \end{code}
 
-Now comes math mode:
-
-\begin{code}
-data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
-        | MChar Char
-        | MRel MList
-        | MListList [MList]
-        deriving (Eq, Show)
-
-\end{code}
-
 Now get match a single character as a \code{MChar}:
 \begin{code}
 singlechar :: Modes MList
@@ -270,26 +248,12 @@ mMode :: Modes MList
 mMode = pushE *> mlist <* eomath <* popE
 \end{code}
 
-Typesetting math:
+We wrap the pure \code{typesetMList} inside a monad interface:
 \begin{code}
 typesetMListM :: MList -> Modes [HElement]
 typesetMListM ml = do
     e <- environmentM
     return $ typesetMList e ml
-
-typesetMList e = set
-    where
-        set :: MList -> [HElement]
-        set (MChar c) = setmchar e c
-        set (MListList ml)= concat $ set `map` ml
-        set (MRel ml)= set ml
-        set MAtom { center=c, sup=up, sub=down} = set c ++ setmaybe up ++ setmaybe down
-        setmaybe Nothing = []
-        setmaybe (Just ml) = set ml
-setmchar e c = [charInFont c fidx fnt]
-    where
-        (fidx,(_,fnt)) = E.mathfont e fam E.Textfont
-        fam = 0
 \end{code}
 
 Finally, we hide it all behind a pure interface:
