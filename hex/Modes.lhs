@@ -148,7 +148,6 @@ toHElement e = toHElement'
         toHElement' (TypedChar c cat)
             | cat == Space = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
             | otherwise = charInFont c fidx fnt
-        toHElement' c = error (concat ["hex.Modes.setCharacter': Can only handle CharCommand (got ", show c, ")"])
 
 f2d = dimenFromFloatingPoints . fixToFloat
 charInFont c fidx fnt = EBox $ Box
