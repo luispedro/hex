@@ -36,6 +36,14 @@ import qualified Boxes as B
 
 main = $(defaultMainGenerator)
 
+prop_dmul_dflipped p = mulled == flipped
+    where
+        _types = p :: Integer
+        mulled = d `dmul` (-1)
+        flipped = dflip d
+        d = Dimen p
+
+
 -- Test whether the categoryCode and codeCategory functions are consistent:
 
 case_categoryCode_codeCategory = [0..15] @=? (map (codeCategory .categoryCode) [0..15])

@@ -15,6 +15,7 @@ module Measures
     , dmul
     , dratio
     , dgt
+    , dflip
     , dmax
     , dimenFromUnit
     , inchesToPoints
@@ -68,6 +69,8 @@ dmul :: Dimen -> Rational -> Dimen
 (Dimen np0) `dmul` f = Dimen $ round $ (toRational np0) * f
 dratio :: Dimen -> Dimen -> Rational
 (Dimen np0) `dratio` (Dimen np1) = np0 % np1
+dflip :: Dimen -> Dimen
+dflip (Dimen np) = Dimen (-np)
 \end{code}
 
 We write conversions from other metrics that are used. For now, we will only
