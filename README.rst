@@ -58,6 +58,7 @@ cabal install \
             binary \
             convertible \
             parsec \
+            dlist \
             test-framework-th \
             test-framework-quickcheck2 \
             test-framework-hunit

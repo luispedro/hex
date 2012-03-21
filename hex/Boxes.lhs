@@ -13,6 +13,7 @@ module Boxes
     ( H(..)
     , V(..)
     , BoxContents(..)
+    , BoxTransform(..)
     , Box(..)
     , HBox
     , VBox
@@ -28,6 +29,8 @@ module Boxes
     , esize
     , mergeBoxes
     , hboxto
+    , raise
+    , lower
     , spaceInFont
     , charInFont
     ) where
@@ -68,6 +71,7 @@ data BoxContents = CharContent Char Integer -- Char Font
                     | Kern Dimen
                     | VBoxList [VBox]
                     | HBoxList [HBox]
+                    | TransformedContent BoxTransform BoxContents
                     | DefineFontContent (FontDef, F.FontInfo)
                     deriving (Eq)
 instance Show BoxContents where
@@ -75,7 +79,14 @@ instance Show BoxContents where
     show (Kern _) = " "
     show (HBoxList bcs) = concatMap (show . boxContents) bcs
     show (VBoxList bcs) = concatMap (show . boxContents) bcs
+    show (TransformedContent tr c) = concat ["transform(", show tr, " <- [", show c, "])"]
     show (DefineFontContent _) = "{font}"
+
+data BoxTransform = RaiseBox Dimen
+    deriving (Eq)
+
+instance Show BoxTransform where
+    show (RaiseBox d) = "raise " ++ show d
 \end{code}
 
 Finally, we define a box
@@ -200,6 +211,25 @@ hboxto target es = converted
         converted = map transform es
         transform (EGlue g) = EGlue $ update g factor
         transform e = e
+\end{code}
+
+Now, we get to \code{raise} and \code{lower} which implement the corresponding
+\TeX{} operation:
+
+\begin{code}
+raise :: (BoxType t) => Dimen -> Box t -> Box t
+raise r box = Box
+            { boxType = boxType box
+            , height = height box
+            , depth = depth box
+            , width = width box
+            , boxContents = TransformedContent (RaiseBox r) (boxContents box)
+            }
+\end{code}
+
+\code{lower} is really just \code{raise} with a flipped sign:
+\begin{code}
+lower r = raise (dmul r (-1))
 \end{code}
 
 We add a few helpers to build basic glues \&{} boxes:

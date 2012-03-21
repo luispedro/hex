@@ -30,10 +30,12 @@ putvbox b = do
         putvboxcontent (CharContent c f) = putc c f
         putvboxcontent (Kern d) = move_right d
         putvboxcontent (HBoxList bs) = putvboxcontentmany $ map boxContents bs
+        putvboxcontent (TransformedContent tr bc) = push >> transform tr >> (putvboxcontent bc) >> pop
         putvboxcontent (DefineFontContent (fontinfo,_)) = void $ defineFont fontinfo
         putvboxcontent _ = error "hex.Output.putvboxcontent: Cannot handle this type"
         putvboxcontentmany [] = return ()
         putvboxcontentmany (x:xs) = (putvboxcontent x) >> (putvboxcontentmany xs)
+        transform (RaiseBox d) = move_up d
 \end{code}
 
 Now we can put down a sequence of lines easily. This function could have been

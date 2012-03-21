@@ -21,6 +21,7 @@ module DVI
     , startfile
     , newpage
     , putc
+    , move_up
     , move_down
     , move_right
     , defineFont
@@ -296,6 +297,8 @@ putc c f = do
     when (cf /= f) (selectFont f)
     put1 $ toInteger $ ord c
 
+move_up :: Dimen -> State DVIStream ()
+move_up = move_down . dflip
 move_down = down4 . pointsTointernal . nrScaledPoints
 move_right = right4 . pointsTointernal . nrScaledPoints
 
