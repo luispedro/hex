@@ -6,7 +6,7 @@ module ParseTFM
 \end{code}
 \section{Parse TFM Files}
 
-This module parses TFM files. It is based on 
+This module parses TFM files. It is based on
 \url{http://www-users.math.umd.edu/~asnowden/comp-cont/tfm.html}.
 
 \begin{code}
@@ -89,15 +89,29 @@ parseTFMM fname = do
     e <- isEmpty
     unless e (fail "hex.ParseTFM: EOF expected")
     return  ( FontDef (convert checksum) dsize dsize 0 (convert $ length fname) $ fontName fname
-            , FontInfo (gliphMetrics dsize ci widths heights depths italics) (spaceInfoFromParameters dsize parameters)
+            , fromParameters dsize ci widths heights depths italics parameters
             )
+
+fromParameters dsize ci widths heights depths italics parameters = FontInfo gmetrics spinfo xh q esp s1 s2 s3 sb1 sb2
+    where
+        gmetrics = gliphMetrics dsize ci widths heights depths italics
+        spinfo = spaceInfoFromParameters parameters
+        xh = parameters !! 4
+        q = parameters !! 5
+        esp = parameters !! 6
+        s1 = try_get 12
+        s2 = try_get 13
+        s3 = try_get 14
+        sb1 = try_get 15
+        sb2 = try_get 16
+        try_get pos = if length parameters >=  pos then Just (parameters !! pos) else Nothing
+        spaceInfoFromParameters (_slant:space:sp_stretch:sp_shrink:_) = SpaceInfo (dsize * space) (dsize * sp_stretch) (dsize * sp_shrink)
+        spaceInfoFromParameters _ = error "hex.ParseTFM.spaceInfoFromParameters: Not enough parameters"
 \end{code}
 
 Once the main arrays have been extracted, the functions below build the right structures.
 
 \begin{code}
-spaceInfoFromParameters dsize (_slant:space:sp_stretch:sp_shrink:_) = SpaceInfo (dsize * space) (dsize * sp_stretch) (dsize * sp_shrink)
-spaceInfoFromParameters _ _ = error "hex.ParseTFM.spaceInfoFromParameters: Not enough parameters"
 
 gliphMetrics dsize cis widths heights depths italics = gliph1 `map` (zip cis [0..])
     where

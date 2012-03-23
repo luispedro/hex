@@ -54,11 +54,19 @@ data SpaceInfo = SpaceInfo
 data FontInfo = FontInfo
             { gliphInfo :: [GliphMetric]
             , spaceInfo :: SpaceInfo
+            , xheight :: FixWord
+            , quad :: FixWord
+            , extraspace :: FixWord
+            , sup1 :: Maybe FixWord
+            , sup2 :: Maybe FixWord
+            , sup3 :: Maybe FixWord
+            , sub1 :: Maybe FixWord
+            , sub2 :: Maybe FixWord
             } deriving (Eq)
 instance Show FontInfo where
-    show (FontInfo fi _) = concatMap ((++"\n") . show) fi
+    show FontInfo {gliphInfo=fi} = concatMap ((++"\n") . show) fi
 
-widthHeightDepth (FontInfo fi _) c = widthHeightDepth' fi
+widthHeightDepth FontInfo {gliphInfo=fi} c = widthHeightDepth' fi
     where
         widthHeightDepth' [] = error ("Not found character:" ++ [c] ++ "(" ++ (show $ ord c) ++ ")")
         widthHeightDepth' ((GliphMetric ch w h d _):gms)
