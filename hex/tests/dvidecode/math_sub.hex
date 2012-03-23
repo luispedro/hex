@@ -1,0 +1,12 @@
+%\font\cmr=cmr10
+%\font\cmmi=cmmi8
+\font\cmmi=cmmi10
+\font\cmsy=cmsy10
+
+\textfont0=\cmmi
+\textfont2=\cmsy
+\font\cmmi=cmmi8
+\scriptfont0=\cmmi
+\font\cmmi=cmmi7
+\scriptscriptfont0=\cmmi
+roman: $x^2$, $x_2$.
