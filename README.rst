@@ -6,6 +6,9 @@ HeX is a reimplementation of TeX in Haskell.
 
 It is currently pre-pre-alpha: it doesn't do much.
 
+Currently (as of version 0.0.4), it can typeset some simple text, using TeX
+linebreaking, and some simple math ($x^2$ and the like).
+
 The plan is to first write a faithful reimplementation of TeX and then, *make
 it better*.
 

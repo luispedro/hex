@@ -1,4 +1,8 @@
-Version 0.0.3+
+Version 0.0.4 2012-03-23+
+	* Implement ^^@ notation
+	* Add subscript and superscript typesetting in simplified math mode
+
+Version 0.0.4 2011-12-24 by luispedro
 	* implement \font and its associated machinery
 	* parse TFM files (at least character sizes, which was what was
 	implemented before)
@@ -6,7 +10,6 @@ Version 0.0.3+
 	* \vspace
 	* delimited macros
 	* \if & \ifx processing
-	* Implement ^^@ notation
 
 Version 0.0.3 2011-08-22 by luispedro
 	* \input
