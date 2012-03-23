@@ -7,6 +7,8 @@ import qualified Data.ByteString.Lazy as B
 import qualified IO
 import System.IO
 import Data.Char
+import Data.Binary (Word32)
+import Data.Bits (testBit)
 
 import DVI
 \end{code}
@@ -27,7 +29,10 @@ Using these, we can parse the DVI format for 1- to 4-byte integers. Currently,
 we do not handle negative numbers.
 
 \begin{code}
-build1 v0 = " " ++ (show $ toInteger v0)
+build1 v0 = " " ++ (show v)
+    where
+        v = toInteger v0
+
 build2 v0 v1 = " " ++ (show v)
     where
         v = (v0' << 8) + v1'
@@ -43,11 +48,22 @@ build3 v0 v1 v2 = " " ++ (show v)
 
 build4 v0 v1 v2 v3 = " " ++ (show v)
     where
-        v = (v0' << 24) + (v1' << 16) + (v2' << 8) + v3'
+        v = if v0' `testBit` 7 then complement2 uv else uv
+        uv = (v0' << 24) + (v1' << 16) + (v2' << 8) + v3'
         v0' = toInteger v0
         v1' = toInteger v1
         v2' = toInteger v2
         v3' = toInteger v3
+\end{code}
+
+This is a bit of a dark corner of Haskell: integer type handling. We convert
+from \code{Integer} to \code{Word32}, then perform \code{negate} on that type,
+which does the right thing at the bit level, except that the value is always
+interpreted as an unsigned quantity. So, we convert back to \code{Integer} and
+flip the sign, using \code{negate :: Integer -> Integer}:
+\begin{code}
+complement2 :: Integer -> Integer
+complement2 = negate . toInteger . (negate :: Word32 -> Word32) . fromInteger
 \end{code}
 
 We define a couple of wrappers for reading numbers from a stream of bytes. This
