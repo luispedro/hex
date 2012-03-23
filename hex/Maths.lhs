@@ -6,6 +6,8 @@ module Maths
     ) where
 
 import qualified Environment as E
+import qualified Fonts as F
+import FixWords (FixWord, fixToFloat)
 import Boxes
 import Measures
 
@@ -55,17 +57,22 @@ setM (MAtom c up down) = do
     when (isJust up) (setup $ fromJust up)
     when (isJust down) (setdown $ fromJust down)
 
-setup = setapp (raise (dimenFromInches 0.5))
-setdown = setapp (lower (dimenFromInches 0.5))
+setup   = setapp raise F.sup1
+setdown = setapp lower F.sub1
 
 
-setapp :: (HBox -> HBox) -> MList -> MathSet ()
-setapp trans ml = do
+setapp :: (Dimen -> HBox -> HBox) -> (F.FontInfo -> Maybe FixWord) -> MList -> MathSet ()
+setapp trans prop ml = do
         (e,st) <- ask
+        (_,fnt) <- fontE 2
         let elements = runMathSet (setM ml) (e,sc st)
         let boxes = (unel `map` elements :: [Box H])
         let box = mergeBoxes H boxes
-        tell1 (EBox $ trans box)
+        case prop fnt of
+            Just fx -> do
+                let v = dimenFromFloatingPoints $ fixToFloat fx
+                tell1 (EBox $ (trans v) box)
+            Nothing -> error "hex.Maths.setapp: font does not have the math extensions"
     where
         sc E.Textfont = E.Scriptfont
         sc E.Scriptfont = E.Scriptscriptfont
@@ -73,9 +80,13 @@ setapp trans ml = do
         unel (EBox b) = b
         unel _ = error "hex.Maths.setapp.unel: Not a box"
 
-setmchar fam c = do
+fontE fam = do
     (e,st) <- ask
     let (fidx,(_,fnt)) = E.mathfont e fam st
+    return (fidx, fnt)
+
+setmchar fam c = do
+    (fidx,fnt) <- fontE fam
     tell1 (charInFont c fidx fnt)
 \end{code}
 
