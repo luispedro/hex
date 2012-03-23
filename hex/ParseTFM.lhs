@@ -104,7 +104,7 @@ fromParameters dsize ci widths heights depths italics parameters = FontInfo gmet
         s3 = try_get 14
         sb1 = try_get 15
         sb2 = try_get 16
-        try_get pos = if length parameters >=  pos then Just (parameters !! pos) else Nothing
+        try_get pos = if length parameters >=  pos then Just (dsize * (parameters !! pos)) else Nothing
         spaceInfoFromParameters (_slant:space:sp_stretch:sp_shrink:_) = SpaceInfo (dsize * space) (dsize * sp_stretch) (dsize * sp_shrink)
         spaceInfoFromParameters _ = error "hex.ParseTFM.spaceInfoFromParameters: Not enough parameters"
 \end{code}
