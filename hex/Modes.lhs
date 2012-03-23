@@ -232,7 +232,7 @@ matom = do
     c <- node
     down <- optionMaybe (matchcat SubScript >> node)
     up <- optionMaybe (matchcat Superscript >> node)
-    return $ MAtom c down up
+    return $ MAtom c up down
 
 mlist = (many matom >>= return . MListList)
 \end{code}
