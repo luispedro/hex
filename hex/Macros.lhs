@@ -23,7 +23,12 @@ import qualified Environment as E
 Macros are simple pairs of argument and replacement token strings
 
 \begin{code}
-data Macro = Macro { arglist :: [Token], replacement :: [Token] }
+data Macro = Macro
+            { arglist :: [Token]
+            , replacement :: [Token]
+            , isOuter :: Bool
+            , isLong :: Bool
+            }
             | FontMacro String
             deriving (Eq, Show)
 \end{code}
@@ -244,7 +249,7 @@ If found, the macro is expanded by \code{expand1'}
                 toTok '{' = (CharToken (TypedChar '{' BeginGroup))
                 toTok '}' = (CharToken (TypedChar '}' EndGroup))
                 toTok c = (CharToken (TypedChar c Letter))
-        expand1' macro@(Macro _ _) = streamenqueue r1 expanded
+        expand1' macro = streamenqueue r1 expanded
             where
                 expanded = expandmacro macro arguments
                 arguments :: [(Int,[Token])]
@@ -292,6 +297,25 @@ getargtil d@(DelimToken end) = do
 getargtil (DelimParameter _) = TkS gettokenorgroup
 \end{code}
 
+The \code{definemacro} functions defines macros
+\begin{code}
+definemacro env long outer csname st
+    | csname == "\\long" = definemacro env True outer next st'
+    | csname == "\\outer" = definemacro env long True next st'
+    | otherwise = expand env' rest
+    where
+        (ControlSequence next,st') = gettoken st
+        edef = csname `elem` ["\\edef", "\\xdef"]
+        insertfunction = if csname `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
+        env' = insertfunction next macro env
+        macro = Macro args substitution long outer
+        (args,afterargs) = gettokentil st' isBeginGroup
+        (substitutiontext,rest) = _breakAtGroupEnd $ droptoken afterargs
+        substitution = if edef then expandedsubtext else substitutiontext
+        expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
+        isBeginGroup (CharToken tc) = (category tc) == BeginGroup
+        isBeginGroup _ = False
+\end{code}
 
 If we fail to find a macro, we insert a special token sequence:
 
@@ -322,8 +346,8 @@ expand' env (ControlSequence "\\let") st = expand env' rest
         (rep,rest) = gettoken $ maybeeq aftername
         macro = case rep of
                 (ControlSequence csname) -> E.lookupWithDefault simple csname env
-                (CharToken tc) -> Macro [] [CharToken tc]
-        simple = Macro [] [rep]
+                (CharToken tc) -> Macro [] [CharToken tc] False False
+        simple = Macro [] [rep] False False
 \end{code}
 
 Dealing with \tex{\\noexpand} is easy, just pass the next token unmodified:
@@ -397,19 +421,7 @@ directly or its expansion.
 \begin{code}
 expand' env (ControlSequence csname) st
     | isprimitive csname = (PrimitiveCommand csname) : (expand env st)
-    | csname `elem` ["\\def", "\\gdef", "\\edef", "\\xdef"] = expand env' rest
-        where
-            edef = csname `elem` ["\\edef", "\\xdef"]
-            insertfunction = if csname `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
-            env' = insertfunction name macro env
-            macro = Macro args substitution
-            (ControlSequence name,aftername) = gettoken st
-            (args,afterargs) = gettokentil aftername isBeginGroup
-            (substitutiontext,rest) = _breakAtGroupEnd $ droptoken afterargs
-            substitution = if edef then expandedsubtext else substitutiontext
-            expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
-            isBeginGroup (CharToken tc) = (category tc) == BeginGroup
-            isBeginGroup _ = False
+    | csname `elem` ["\\def", "\\gdef", "\\edef", "\\xdef", "\\long", "\\outer"] = definemacro env False False csname st
 \end{code}
 
 We handle \code{\\global} by simply transforming it into \code{\\gdef} or
