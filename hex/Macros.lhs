@@ -178,12 +178,6 @@ breakAtGroupEndM n = do
         n' _ = n
 \end{code}
 
-Sometimes, the category of a character is important.
-
-\begin{code}
-tokenCategory (CharToken tc) = category tc
-tokenCategory _ = Invalid -- It doesn't matter what
-\end{code}
 
 To handle \tex{\\if} statements, we need to (1) evaluate them and (2) skip over
 the non-important characters. The first step is performed by \code{evaluateif}.
@@ -341,13 +335,16 @@ pattern matching):
 \begin{code}
 expand' env (ControlSequence "\\let") st = expand env' rest
     where
-        env' = E.insert name macro env
-        (ControlSequence name,aftername) = gettoken st
-        (rep,rest) = gettoken $ maybeeq aftername
+        ((name,rep) ,rest) = (flip runTkS) st $ do
+            ControlSequence n <- gettokenM
+            maybeeqM
+            r <- gettokenM
+            return (n,r)
         macro = case rep of
                 (ControlSequence csname) -> E.lookupWithDefault simple csname env
                 (CharToken tc) -> Macro [] [CharToken tc] False False
         simple = Macro [] [rep] False False
+        env' = E.insert name macro env
 \end{code}
 
 Dealing with \tex{\\noexpand} is easy, just pass the next token unmodified:
@@ -382,7 +379,7 @@ expand' env (ControlSequence "\\catcode") st = expand env altered
     where
         (t, r0) = readChar $ st
         char = tvalue t
-        r1 = maybeeq r0
+        (_,r1) = runTkS maybeeqM r0
         (nvalue, r2) = runTkS readNumberM r1
         altered = updateCharStream r2 $ catcode char nvalue
         catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}

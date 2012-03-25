@@ -2,13 +2,12 @@
 \begin{code}
 module Tokens
     ( Token(..)
+    , tokenCategory
     , skiptoeol
     , TokenStream(..)
     , newTokenStream
     , gettoken
     , gettokentil
-    , maybespace
-    , maybeeq
     , droptoken
     , streampush
     , streamenqueue
@@ -49,6 +48,12 @@ data Token =
 instance Show Token where
     show (ControlSequence name) = "[" ++ name ++ "]"
     show (CharToken tc) = show tc
+\end{code}
+
+Sometimes, just the category of a character is important.
+\begin{code}
+tokenCategory (CharToken tc) = category tc
+tokenCategory _ = Invalid -- It doesn't matter what
 \end{code}
 
 We implement the state system described in pp. 46--47 of the Texbook. The 3
@@ -183,29 +188,6 @@ gettokentil st cond
 
 \end{code}
 
-An often needed operation is to skip an optional space or additional equal
-signs. We first implement a generic \code{maybetok} function, which takes a
-condition and skips a token if it matches that condition.
-\begin{code}
-maybetok :: (Token -> Bool) -> TokenStream -> TokenStream
-maybetok cond st
-    | emptyTokenStream st = st
-    | otherwise = if cond t then rest else st
-    where
-        (t,rest) = gettoken st
-\end{code}
-
-Now, \code{maybespace} and \code{maybeeq} are simply defined as calls to
-\code{maybetok}:
-\begin{code}
-maybespace = maybetok (\t ->
-                case t of
-                    (CharToken c) -> category c == Space
-                    _ -> False
-                    )
-maybeeq = maybetok (== (CharToken (TypedChar '=' Other)))
-\end{code}
-
 We define a few helper functions to manipulate the stream.
 
 \begin{code}
@@ -304,9 +286,28 @@ maybepeektokenM = TkS (\tks ->
                     (Nothing, tks)
                  else let (t,_) = gettoken tks in (Just t,tks))
 
-maybespaceM = TkS (\tks -> ((), maybespace tks))
-maybeeqM = TkS (\tks -> ((),maybeeq tks))
+\end{code}
+An often needed operation is to skip an optional space or additional equal
+signs. We first implement a generic \code{maybetokM} function, which takes a
+condition and skips a token if it matches that condition.
+\begin{code}
+maybetokM :: (Token -> Bool) -> TkS ()
+maybetokM cond = do
+    mt <- maybepeektokenM
+    case mt of
+        Just t | cond t -> void gettokenM
+        _ -> return ()
+\end{code}
 
+Now, \code{maybespaceM} and \code{maybeeqM} are simply defined as calls to
+\code{maybetokM}:
+\begin{code}
+maybespaceM = maybetokM ((== Space) . tokenCategory)
+maybeeqM = maybetokM (== (CharToken (TypedChar '=' Other)))
+\end{code}
+
+Finally, a simple function to read an integer from tokens:
+\begin{code}
 readNumberM :: TkS Integer
 readNumberM = read `liftM` digits
     where
