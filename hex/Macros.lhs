@@ -145,37 +145,37 @@ We need a few helper functions. \code{gettokenorgroup} retrieves the next
 \emph{token} or, if it is an enclosed group, it retrieves it as a list.
 
 \begin{code}
-gettokenorgroup :: TokenStream -> ([Token], TokenStream)
-gettokenorgroup st
-    | emptyTokenStream st = error "hex.gettokenorgroup end of file"
-gettokenorgroup st = gettokenorgroup' c r
-    where
-        (c,r) = gettoken st
-        gettokenorgroup' (CharToken tc) r'
-            | (category tc) == BeginGroup = _breakAtGroupEnd r'
-        gettokenorgroup' t r' = ([t],r')
+gettokenorgroup :: TkS [Token]
+gettokenorgroup = do
+    mt <- maybetokenM
+    case mt of
+        Nothing -> fail "hex.gettokenorgroup end of file"
+        Just t -> if tokenCategory t == BeginGroup
+            then breakAtGroupEndM 0
+            else return [t]
 \end{code}
 
 
-\code{_breakAtGroupEnd} gets a grouped set of tokens.
-
+\code{_breakAtGroupEnd} gets a grouped set of tokens. This function is exported
+for testing, but the implementation is based on the monadic
+\code{breakAtGroupEndM}:
 \begin{code}
 
 _breakAtGroupEnd :: TokenStream -> ([Token], TokenStream)
 _breakAtGroupEnd st = runTkS (breakAtGroupEndM 0) st
+
+breakAtGroupEndM :: Integer -> TkS [Token]
+breakAtGroupEndM n = do
+    tk <- gettokenM
+    if (n == 0) && (tokenCategory tk) == EndGroup then
+        return []
+     else do
+        rest <- breakAtGroupEndM (n' $ tokenCategory tk)
+        return (tk:rest)
     where
-        breakAtGroupEndM :: Integer -> TkS [Token]
-        breakAtGroupEndM n = do
-            tk <- gettokenM
-            if (n == 0) && (tokenCategory tk) == EndGroup then
-                return []
-             else do
-                rest <- breakAtGroupEndM (n' $ tokenCategory tk)
-                return (tk:rest)
-            where
-                n' BeginGroup = n + 1
-                n' EndGroup = n - 1
-                n' _ = n
+        n' BeginGroup = n + 1
+        n' EndGroup = n - 1
+        n' _ = n
 \end{code}
 
 Sometimes, the category of a character is important.
@@ -285,16 +285,16 @@ getargs (DelimToken _:ds) = skiptokenM >> getargs ds
 getargs _ = error "getargs"
 getargtil DelimEmpty = do
     maybespaceM
-    TkS gettokenorgroup
+    gettokenorgroup
 getargtil d@(DelimToken end) = do
     next <- peektokenM
     if (next == end) then
         return []
      else do
-        first <- TkS gettokenorgroup
+        first <- gettokenorgroup
         rest <- getargtil d
         return (first ++ rest)
-getargtil (DelimParameter _) = TkS gettokenorgroup
+getargtil (DelimParameter _) = gettokenorgroup
 \end{code}
 
 The \code{definemacro} functions defines macros

@@ -20,6 +20,7 @@ module Tokens
     , TkS(..)
     , emptyTkS
     , gettokenM
+    , maybetokenM
     , skiptokenM
     , peektokenM
     , maybepeektokenM
@@ -280,10 +281,21 @@ instance Monad TkS where
 instance Functor TkS where
     fmap f x = TkS (\tks -> let (a,t') = (runTkS x tks) in (f a, t'))
 
+\end{code}
+
+We add several helper function to check the status of the stream and get tokens
+(while watching out for eof conditions)
+
+\begin{code}
 emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tks))
 
 gettokenM :: TkS Token
 gettokenM = TkS gettoken
+maybetokenM = do
+    t <- maybepeektokenM
+    case t of
+        Nothing -> return Nothing
+        Just _ -> gettokenM >> return t
 
 skiptokenM = void gettokenM
 peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
