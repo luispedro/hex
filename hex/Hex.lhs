@@ -83,9 +83,13 @@ processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []
 \end{code}
 
 Another simple commmand is the \code{MessageCommand}, which outputs its message.
-
 \begin{code}
 processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
+\end{code}
+
+\code{ErrorCommand} is similar, except we stop after errors:
+\begin{code}
+processinputs ((InternalCommand _ _ (ErrorCommand msg)):_) _e = (putStrLn msg) >> return []
 \end{code}
 
 Loading a font involves replacing the string name in the command stream by the
