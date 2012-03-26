@@ -303,7 +303,7 @@ definemacro env long outer csname st
         edef = csname `elem` ["\\edef", "\\xdef"]
         insertfunction = if csname `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
         env' = insertfunction next macro env
-        macro = Macro args substitution long outer
+        macro = Macro args substitution outer long
         (args,afterargs) = gettokentil st' isBeginGroup
         (substitutiontext,rest) = _breakAtGroupEnd $ droptoken afterargs
         substitution = if edef then expandedsubtext else substitutiontext
