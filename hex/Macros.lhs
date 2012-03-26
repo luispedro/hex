@@ -243,11 +243,14 @@ If found, the macro is expanded by \code{expand1'}
                 toTok '{' = (CharToken (TypedChar '{' BeginGroup))
                 toTok '}' = (CharToken (TypedChar '}' EndGroup))
                 toTok c = (CharToken (TypedChar c Letter))
-        expand1' macro = streamenqueue r1 expanded
+        expand1' macro = streamenqueue r1 (if valid then expanded else longerror)
             where
+                longerror = errorseq "par in non-long macro"
                 expanded = expandmacro macro arguments
                 arguments :: [(Int,[Token])]
                 (arguments,r1) = runTkS (getargs (todelims $ arglist macro)) r0
+                valid = (isLong macro) || (noPar `all` arguments)
+                noPar (_,tks) = (ControlSequence "\\par") `notElem` tks
 \end{code}
 
 Matching macro parameters is done by attempting to match delimiters. A special
@@ -277,9 +280,7 @@ getargs (DelimParameter n:d:ds) = do
     return ((n,val):rest)
 getargs (DelimToken _:ds) = skiptokenM >> getargs ds
 getargs _ = error "getargs"
-getargtil DelimEmpty = do
-    maybespaceM
-    gettokenorgroup
+getargtil DelimEmpty = maybespaceM >> gettokenorgroup
 getargtil d@(DelimToken end) = do
     next <- peektokenM
     if (next == end) then
@@ -314,9 +315,9 @@ definemacro env long outer csname st
 If we fail to find a macro, we insert a special token sequence:
 
 \begin{code}
-macronotfounderror csname = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
-    where
-        errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ "Macro `" ++ csname ++ "` not defined."
+macronotfounderror csname = errorseq ("Macro `" ++ csname ++ "` not defined.")
+errorseq msg = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
+    where errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ msg
 \end{code}
 
 The main function, \code{expand} is actually very simple and just forwards the
