@@ -31,6 +31,7 @@ data Macro = Macro
             , isLong :: Bool
             }
             | FontMacro String
+            | CharDef Integer
             deriving (Eq, Show)
 \end{code}
 
@@ -244,6 +245,9 @@ If found, the macro is expanded by \code{expand1'}
                 toTok '{' = (CharToken (TypedChar '{' BeginGroup))
                 toTok '}' = (CharToken (TypedChar '}' EndGroup))
                 toTok c = (CharToken (TypedChar c Letter))
+        expand1' (CharDef cv) = streamenqueue r0 $ ((ControlSequence "\\char"):backtotoks)
+            where
+                backtotoks = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
         expand1' macro = streamenqueue r1 (if valid then expanded else longerror)
             where
                 longerror = errorseq "par in non-long macro"
@@ -434,21 +438,13 @@ expand' env (ControlSequence "\\global") st
 
 \tex{\\chardef} is implemented by transformation into \tex{\\def}:
 \begin{code}
-expand' env (ControlSequence "\\chardef") st = expand env rest
+expand' env (ControlSequence "\\chardef") st = expand (t env) rest
     where
-        backtotoks :: Integer -> [Token]
-        backtotoks int = (\s -> (CharToken (TypedChar s Other))) `map` (show int)
-        (_,rest) = (flip runTkS) st $ do
-            name <- gettokenM
+        (t,rest) = (flip runTkS) st $ do
+            ControlSequence name <- gettokenM
             maybeeqM
             charcode <- readNumberM
-            streamenqueueM ([ (ControlSequence "\\def")
-                    , name
-                    , (CharToken (TypedChar '{' BeginGroup))
-                        , (ControlSequence "\\char")
-                        ] ++ backtotoks charcode ++ [
-                    (CharToken (TypedChar '}' EndGroup))
-                    ])
+            return (E.insert name (CharDef charcode))
 \end{code}
 
 \begin{code}
