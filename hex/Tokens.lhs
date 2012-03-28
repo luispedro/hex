@@ -25,6 +25,7 @@ module Tokens
     , maybepeektokenM
     , maybespaceM
     , maybeeqM
+    , streamenqueueM
     , readNumberM
     ) where
 
@@ -304,6 +305,11 @@ Now, \code{maybespaceM} and \code{maybeeqM} are simply defined as calls to
 \begin{code}
 maybespaceM = maybetokM ((== Space) . tokenCategory)
 maybeeqM = maybetokM (== (CharToken (TypedChar '=' Other)))
+\end{code}
+
+A monadic version of \code{streamenqueue}:
+\begin{code}
+streamenqueueM tks = TkS (\st -> ((),streamenqueue st tks))
 \end{code}
 
 Finally, a simple function to read an integer from tokens:

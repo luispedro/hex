@@ -11,6 +11,7 @@ module Macros
     ) where
 
 import Data.List (sortBy)
+import Data.Char (chr)
 
 import DVI
 import Fonts
@@ -429,6 +430,30 @@ expand' env (ControlSequence "\\global") st
     | next == "\\def" = expand' env (ControlSequence "\\gdef") rest
     | next == "\\edef" = expand' env (ControlSequence "\\xdef") rest
     where (ControlSequence next, rest) = gettoken st
+\end{code}
+
+\tex{\\chardef} is implemented by transformation into \tex{\\def}:
+\begin{code}
+expand' env (ControlSequence "\\chardef") st = expand env rest
+    where
+        backtotoks :: Integer -> [Token]
+        backtotoks int = (\s -> (CharToken (TypedChar s Other))) `map` (show int)
+        (_,rest) = (flip runTkS) st $ do
+            name <- gettokenM
+            maybeeqM
+            charcode <- readNumberM
+            streamenqueueM ([ (ControlSequence "\\def")
+                    , name
+                    , (CharToken (TypedChar '{' BeginGroup))
+                        , (ControlSequence "\\char")
+                        ] ++ backtotoks charcode ++ [
+                    (CharToken (TypedChar '}' EndGroup))
+                    ])
+\end{code}
+
+\begin{code}
+expand' env (ControlSequence "\\char") st = (CharCommand (TypedChar (chr $ fromInteger v) Other)):(expand env rest)
+    where (v,rest) = runTkS readNumberM st
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}

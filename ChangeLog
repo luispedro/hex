@@ -1,6 +1,7 @@
 Version 0.0.4 2012-03-23+
 	* Implement ^^@ notation
 	* Add subscript and superscript typesetting in simplified math mode
+	* Implement \char (partially) and \chardef
 
 Version 0.0.4 2011-12-24 by luispedro
 	* implement \font and its associated machinery
