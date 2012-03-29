@@ -34,7 +34,6 @@ import CharStream
 import Defaults (plaintexenv)
 
 import Control.Monad
-
 \end{code}
 
 Tokens are the next level after annotated characters. A Token is either a
@@ -315,16 +314,25 @@ streamenqueueM tks = TkS (\st -> ((),streamenqueue st tks))
 Finally, a simple function to read an integer from tokens:
 \begin{code}
 readNumberM :: TkS Integer
-readNumberM = read `liftM` digits
+readNumberM = do
+        tk <- peektokenM
+        case tk of
+            CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
+            CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
+            CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
+            _ -> error "hex.Tokens.readNumberM: expected number"
     where
-        digits :: TkS [Char]
-        digits = do
+        readNumber prefix cond = (read . prefix) `liftM` (digits cond)
+        digits :: [Char] -> TkS [Char]
+        digits accepted = do
             tok <- maybepeektokenM
             case tok of
-                Just (CharToken tc) | isdigit $ value tc -> do
+                Just (CharToken tc) | ((`elem` accepted) . value) tc -> do
                     skiptokenM
-                    rest <- digits
+                    rest <- digits accepted
                     return (value tc:rest)
                 _ -> return []
-        isdigit = (`elem` "0123456789")
+        octdigits = "01234567"
+        decdigits = octdigits ++ "89"
+        hexdigits = decdigits ++ "ABCDEF"
 \end{code}
