@@ -13,9 +13,9 @@ import Measures
 
 import qualified Data.DList as DL
 import Data.Maybe
-import Control.Monad
-import Control.Monad.Reader
-import Control.Monad.Writer
+import Control.Monad (when)
+import Control.Monad.Reader (ReaderT, runReaderT, ask)
+import Control.Monad.Writer (Writer, runWriter, tell)
 \end{code}
 
 We start by defining the basic \code{MList} structure:
