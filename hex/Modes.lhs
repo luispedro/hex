@@ -218,7 +218,7 @@ Now get match a single character as a \code{MChar}:
 singlechar :: Modes MList
 singlechar = do
     CharCommand (TypedChar c _) <- charcommand
-    return $ MChar c
+    return $ MChar 0 c
 \end{code}
 
 Now we build up on this:

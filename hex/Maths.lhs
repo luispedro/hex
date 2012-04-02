@@ -22,7 +22,7 @@ We start by defining the basic \code{MList} structure:
 
 \begin{code}
 data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
-        | MChar Char
+        | MChar Integer Char
         | MRel MList
         | MListList [MList]
         deriving (Eq, Show)
@@ -49,7 +49,7 @@ tell1 = tell . DL.singleton
 The main function is \code{setM}, which sets an mlist.
 \begin{code}
 setM :: MList -> MathSet ()
-setM (MChar c) = setmchar 0 c
+setM (MChar f c) = setmchar f c
 setM (MListList ml) = mapM_ setM ml
 setM (MRel mr) = setM mr
 setM (MAtom c up down) = do
