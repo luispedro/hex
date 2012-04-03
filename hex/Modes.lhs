@@ -25,21 +25,25 @@ The implementation of the modes is as a Parsec based on \code{[Command]}. The
 state is the environment:
 
 \begin{code}
-data ModeState = ModeState { environment :: E.Environment String E.HexType }
+data ModeState = ModeState
+    { environment :: E.Environment String E.HexType
+    , mathEnvironment :: E.Environment String (Int,Char)
+    }
 type Modes a = Parsec [Command] ModeState a
 \end{code}
 
 Now a few functions to retrieve and manipulate the environment:
 \begin{code}
 environmentM :: Modes (E.Environment String E.HexType)
-environmentM = do
-    s <- getState
-    return $ environment s
+environmentM = environment `liftM` getState
+
+mathEnvironmentM :: Modes (E.Environment String (Int,Char))
+mathEnvironmentM = mathEnvironment `liftM` getState
 
 pushE :: Modes ()
-pushE = modifyState (\st@ModeState{ environment=e } -> st { environment=(E.push e) })
+pushE = modifyState (\(ModeState e me) -> ModeState (E.push e) (E.push me))
 popE :: Modes ()
-popE = modifyState (\st@ModeState{ environment=e } -> st { environment=(E.pop e) })
+popE = modifyState (\(ModeState e me) -> ModeState (E.pop e) (E.pop me))
 \end{code}
 
 Small helpers, to match commands that fulfil a certain condition (like
@@ -68,9 +72,7 @@ is poor.
 
 \begin{code}
 readNumber :: Modes Integer
-readNumber = do
-        cs <- many (matchf isDigit)
-        return $ toNumber cs
+readNumber = toNumber `liftM` many (matchf isDigit)
     where
         isDigit (CharCommand (TypedChar c Other)) = (c `elem` "0123456789")
         isDigit _ = False
@@ -260,7 +262,7 @@ Finally, we hide it all behind a pure interface:
 
 \begin{code}
 vMode :: E.Environment String E.HexType -> [Command] -> [VBox]
-vMode e cs = case runP _vModeM (ModeState e) "input" cs of
+vMode e cs = case runP _vModeM (ModeState e (E.empty)) "input" cs of
     Right res -> res
     Left err -> error $ show err
 \end{code}

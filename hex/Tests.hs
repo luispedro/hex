@@ -95,25 +95,25 @@ case_stringnotfind = (find "abc" "012abd") @=? Nothing
 
 -- Tests for line breaking
 case_paragraphs = (length p) @?= 0
-    where Right p = runP _paragraph (ModeState undefined) "<test>" [PrimitiveCommand  "\\par"]
+    where Right p = runP _paragraph (ModeState undefined undefined) "<test>" [PrimitiveCommand  "\\par"]
 
 -- Tests for Modes
 case_modes_empty = (length m) @?= 0
-    where Right m = runP _vModeM (ModeState undefined) "<test>" []
+    where Right m = runP _vModeM (ModeState undefined undefined) "<test>" []
 
 case_modes_2 = (length m) @?= 2
     where
-        Right m = runP _vModeM (ModeState undefined) "<test>" [ofc,ofc]
+        Right m = runP _vModeM (ModeState undefined undefined) "<test>" [ofc,ofc]
         ofc = OutputfontCommand undefined
 
 case_modes_32 = (length m) @?= 32
     where
-        Right m = runP _vModeM (ModeState undefined) "<test>" $ take 32 $ repeat ofc
+        Right m = runP _vModeM (ModeState undefined undefined) "<test>" $ take 32 $ repeat ofc
         ofc = OutputfontCommand undefined
 
 case_mode_complex = (length m) @?= 5
     where
-        Right m = runP _vModeM (ModeState e) "<test>" [ofc,sfc,PrimitiveCommand "\\par",sfc,PrimitiveCommand "\\par"]
+        Right m = runP _vModeM (ModeState e undefined) "<test>" [ofc,sfc,PrimitiveCommand "\\par",sfc,PrimitiveCommand "\\par"]
         ofc = OutputfontCommand (undefined, undefined)
         sfc = SelectfontCommand 0 (undefined, undefined)
         e = (E.setfont 0 undefined startenv)
