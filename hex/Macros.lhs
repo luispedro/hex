@@ -401,9 +401,9 @@ expand' env (ControlSequence "\\mathcode") st = mc:(expand env rest)
             c <- readCharM
             maybeeqM
             n <- readNumberM
-            let mtype = (n `shiftR` 24) .&. 0xff
-                fam = (n `shiftR` 16) .&. 0xff
-                val = chr $ fromInteger (n .&. 0xffff)
+            let mtype = (n `shiftR` 16) .&. 0x0f
+                fam = (n `shiftR` 8) .&. 0x0f
+                val = chr $ fromInteger (n .&. 0xff)
             return (MathCodeCommand c mtype fam val)
 \end{code}
 
