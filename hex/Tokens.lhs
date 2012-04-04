@@ -320,7 +320,7 @@ readNumberM = do
             CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
             CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
             CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
-            _ -> error "hex.Tokens.readNumberM: expected number"
+            t -> error $ concat ["hex.Tokens.readNumberM: expected number (got ", show t, ")"]
     where
         readNumber prefix cond = (read . prefix) `liftM` (digits cond)
         digits :: [Char] -> TkS [Char]
