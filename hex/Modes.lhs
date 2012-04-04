@@ -27,7 +27,7 @@ state is the environment:
 \begin{code}
 data ModeState = ModeState
     { environment :: E.Environment String E.HexType
-    , mathEnvironment :: E.Environment String (Integer,Char)
+    , mathEnvironment :: E.Environment String (Integer,Integer,Char)
     }
 type Modes a = Parsec [Command] ModeState a
 \end{code}
@@ -37,7 +37,7 @@ Now a few functions to retrieve and manipulate the environment:
 environmentM :: Modes (E.Environment String E.HexType)
 environmentM = environment `liftM` getState
 
-mathEnvironmentM :: Modes (E.Environment String (Integer,Char))
+mathEnvironmentM :: Modes (E.Environment String (Integer,Integer,Char))
 mathEnvironmentM = mathEnvironment `liftM` getState
 
 pushE :: Modes ()
@@ -168,8 +168,8 @@ setmathfont = do
 
 \begin{code}
 mathcode = do
-    MathCodeCommand c _mtype fam val <- matchf (\t -> case t of { MathCodeCommand _ _ _ _ -> True; _ -> False})
-    modifyState (\st@ModeState{ mathEnvironment = me } -> st {mathEnvironment=(E.insert ('c':[c]) (fam,val) me)})
+    MathCodeCommand c mtype fam val <- matchf (\t -> case t of { MathCodeCommand _ _ _ _ -> True; _ -> False})
+    modifyState (\st@ModeState{ mathEnvironment = me } -> st {mathEnvironment=(E.insert ('c':[c]) (mtype,fam,val) me)})
     return ()
 \end{code}
 
@@ -229,8 +229,20 @@ singlechar :: Modes MList
 singlechar = do
     CharCommand (TypedChar c _) <- charcommand
     me <- mathEnvironmentM
-    let (fam,val) = E.lookupWithDefault (0,c) ('c':[c]) me
-    return $ MChar fam val
+    let (mtype,fam,val) = E.lookupWithDefault (0,0,c) ('c':[c]) me
+    return (case mtype of
+        -- 0 ordinary
+        0 -> MChar fam val
+        -- 1 large
+        -- 2 binary
+        -- 3 relation
+        3 -> MRel (MListList [MChar fam val])
+        -- 4 opening
+        -- 5 closing
+        -- 6 punctuation
+        -- 7 variable
+        _ -> MChar fam val
+        )
 \end{code}
 
 Now we build up on this:

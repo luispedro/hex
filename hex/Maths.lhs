@@ -19,7 +19,6 @@ import Control.Monad.Writer (Writer, runWriter, tell)
 \end{code}
 
 We start by defining the basic \code{MList} structure:
-
 \begin{code}
 data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
         | MChar Integer Char
@@ -27,8 +26,10 @@ data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
         | MListList [MList]
         deriving (Eq, Show)
 \end{code}
-
-Typesetting math.
+The \code{MRel} and \code{MBin} are about the spacing. There are no semantics
+here. You can have a 2 inside and \code{MRel} and \TeX\ will happily typeset it
+as relationship, and you can have two relationships next to each other and that
+will be just fine too.
 
 We use a \code{Writer} monad inside a \code{Reader} monad to encapsulate the
 environment and the current font style.
