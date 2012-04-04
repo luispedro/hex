@@ -478,22 +478,11 @@ the font file is parsed lazily because of Haskell's evaluation model).
 \begin{code}
 expand' env (ControlSequence "\\font") st = (InternalCommand env' rest $ LoadfontHCommand fname):(expand env' rest)
     where
-        ((csname,fname),rest) = runTkS parseFont st
-        parseFont = do
+        ((csname,fname),rest) = (flip runTkS) st $ do
             ControlSequence cs <- gettokenM
             maybeeqM
             fn <- readStrM
             return (cs,fn)
-        readStrM = do
-            t <- maybepeektokenM
-            case t of
-                Just (CharToken (TypedChar c cat))
-                    | cat == Space -> return []
-                    | otherwise -> do
-                        skiptokenM
-                        cs <- readStrM
-                        return (c:cs)
-                _ -> return []
         env' = E.insert csname macro env
         macro = FontMacro fname
 \end{code}
@@ -503,8 +492,7 @@ expand' env (ControlSequence cs) st
         | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"]
             = (InternalCommand env rest fmcmd):(expand env rest)
     where
-        (fmcmd,rest) = runTkS parsetextfont st
-        parsetextfont = do
+        (fmcmd,rest) = (flip runTkS) st $ do
             fam <- readNumberM
             maybeeqM
             ControlSequence fc <- gettokenM
@@ -550,16 +538,7 @@ but again, it is just transformed into an \code{InternalCommand}
 \begin{code}
 expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCommand fname]
     where
-        (fname, rest) = getletterseq st
-        getletterseq st'
-            | emptyTokenStream st' = ([], st')
-            | otherwise = case tok of
-                (ControlSequence _) -> ([], st')
-                (CharToken tc) ->
-                    if (category tc) == Letter then
-                        let (e,r) = getletterseq rest' in (((value tc):e),r)
-                        else ([], st')
-            where (tok,rest') = gettoken st'
+        (fname, rest) = runTkS readStrM st
 \end{code}
 
 Finally, we come to the default cases.

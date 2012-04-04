@@ -29,6 +29,7 @@ module Tokens
     , streamenqueueM
     , readNumberM
     , readCharM
+    , readStrM
     ) where
 
 import Chars
@@ -355,4 +356,18 @@ readCharM = do
         CharToken (TypedChar c _) -> c
         ControlSequence ['\\',c] -> c
         _ -> '\0')
+\end{code}
+
+Others need to read a string:
+\begin{code}
+readStrM = do
+    t <- maybepeektokenM
+    case t of
+        Just (CharToken (TypedChar c cat))
+            | cat == Space -> return []
+            | otherwise -> do
+                skiptokenM
+                cs <- readStrM
+                return (c:cs)
+        _ -> return []
 \end{code}
