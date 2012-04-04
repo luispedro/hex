@@ -23,10 +23,12 @@ module Tokens
     , skiptokenM
     , peektokenM
     , maybepeektokenM
+    , updateCharStreamM
     , maybespaceM
     , maybeeqM
     , streamenqueueM
     , readNumberM
+    , readCharM
     ) where
 
 import Chars
@@ -287,6 +289,12 @@ maybepeektokenM = TkS (\tks ->
                  else let (t,_) = gettoken tks in (Just t,tks))
 
 \end{code}
+
+Updating the char stream can also be done in the monad:
+\begin{code}
+updateCharStreamM f = TkS (\st -> ((),updateCharStream st f))
+\end{code}
+
 An often needed operation is to skip an optional space or additional equal
 signs. We first implement a generic \code{maybetokM} function, which takes a
 condition and skips a token if it matches that condition.
@@ -335,4 +343,16 @@ readNumberM = do
         octdigits = "01234567"
         decdigits = octdigits ++ "89"
         hexdigits = decdigits ++ "ABCDEF"
+\end{code}
+
+A few primitives (e.g., \tex{\\catcode}) need to read characters:
+\begin{code}
+readCharM :: TkS Char
+readCharM = do
+    skiptokenM
+    tk <- gettokenM
+    return (case tk of
+        CharToken (TypedChar c _) -> c
+        ControlSequence ['\\',c] -> c
+        _ -> '\0')
 \end{code}

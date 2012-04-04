@@ -27,7 +27,7 @@ state is the environment:
 \begin{code}
 data ModeState = ModeState
     { environment :: E.Environment String E.HexType
-    , mathEnvironment :: E.Environment String (Int,Char)
+    , mathEnvironment :: E.Environment String (Integer,Char)
     }
 type Modes a = Parsec [Command] ModeState a
 \end{code}
@@ -37,7 +37,7 @@ Now a few functions to retrieve and manipulate the environment:
 environmentM :: Modes (E.Environment String E.HexType)
 environmentM = environment `liftM` getState
 
-mathEnvironmentM :: Modes (E.Environment String (Int,Char))
+mathEnvironmentM :: Modes (E.Environment String (Integer,Char))
 mathEnvironmentM = mathEnvironment `liftM` getState
 
 pushE :: Modes ()
@@ -166,6 +166,13 @@ setmathfont = do
     return ()
 \end{code}
 
+\begin{code}
+mathcode = do
+    MathCodeCommand c _mtype fam val <- matchf (\t -> case t of { MathCodeCommand _ _ _ _ -> True; _ -> False})
+    modifyState (\st@ModeState{ mathEnvironment = me } -> st {mathEnvironment=(E.insert ('c':[c]) (fam,val) me)})
+    return ()
+\end{code}
+
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
 \code{HElement}s (but they are still just a list).
@@ -179,6 +186,7 @@ _paragraph =
     (match  PopCommand >> popE >> _paragraph) <|>
     (match  MathShiftCommand >> mMode >>= typesetMListM >>= (\ml -> _paragraph >>= return . (ml++))) <|>
     (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
+    (mathcode >> _paragraph) <|>
     (setmathfont >> _paragraph) <|>
     (selectfont >> _paragraph) <|>
     return []
@@ -220,7 +228,9 @@ Now get match a single character as a \code{MChar}:
 singlechar :: Modes MList
 singlechar = do
     CharCommand (TypedChar c _) <- charcommand
-    return $ MChar 0 c
+    me <- mathEnvironmentM
+    let (fam,val) = E.lookupWithDefault (0,c) ('c':[c]) me
+    return $ MChar fam val
 \end{code}
 
 Now we build up on this:

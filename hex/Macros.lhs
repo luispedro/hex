@@ -12,6 +12,7 @@ module Macros
 
 import Data.List (sortBy)
 import Data.Char (chr)
+import Data.Bits
 
 import DVI
 import Fonts
@@ -86,6 +87,7 @@ data Command =
         | OutputfontCommand (FontDef,FontInfo)
         | SelectfontCommand Integer (FontDef,FontInfo)
         | SetMathFontCommand Integer (FontDef,FontInfo) Integer E.MathFontStyle
+        | MathCodeCommand Char Integer Integer Char
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -112,6 +114,7 @@ instance Show Command where
     show MathShiftCommand = "<$>"
     show (SelectfontCommand _ _) = "<selectfont>"
     show (SetMathFontCommand _ _ _ _) = "<setmathfontcommand>"
+    show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show fam, ", ", [val], ")>"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -383,16 +386,25 @@ stream:
 \begin{code}
 expand' env (ControlSequence "\\catcode") st = expand env altered
     where
-        (t, r0) = readChar $ st
-        char = tvalue t
-        (_,r1) = runTkS maybeeqM r0
-        (nvalue, r2) = runTkS readNumberM r1
-        altered = updateCharStream r2 $ catcode char nvalue
+        (_,altered) = (flip runTkS) st $ do
+            char <- readCharM
+            maybeeqM
+            nvalue <- readNumberM
+            updateCharStreamM (catcode char nvalue)
         catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
-        readChar = gettoken . droptoken
-        tvalue (CharToken tc) = value tc
-        tvalue (ControlSequence ['\\',c]) = c
-        tvalue _ = '\0'
+\end{code}
+
+\begin{code}
+expand' env (ControlSequence "\\mathcode") st = mc:(expand env rest)
+    where
+        (mc,rest) = (flip runTkS) st $ do
+            c <- readCharM
+            maybeeqM
+            n <- readNumberM
+            let mtype = (n `shiftR` 24) .&. 0xff
+                fam = (n `shiftR` 16) .&. 0xff
+                val = chr $ fromInteger (n .&. 0xffff)
+            return (MathCodeCommand c mtype fam val)
 \end{code}
 
 To handle conditionals, \code{evaluateif} is called.
