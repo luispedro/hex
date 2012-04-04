@@ -116,10 +116,10 @@ data MathFontStyle = Textfont | Scriptfont | Scriptscriptfont
                     deriving (Eq, Show)
 
 mathfont :: Environment String HexType -> Integer -> MathFontStyle -> (Integer,(FontDef,FontInfo))
-mathfont e fam fs = (i,fi)
-    where
-        Just (HexFontInfo fi) = lookup (concat ["math", code fs, show fam]) e
-        Just (HexInteger i) = lookup (concat ["math", code fs, show fam, "-index"]) e
+mathfont e fam fs = case lookup (concat ["math", code fs, show fam]) e of
+        Just (HexFontInfo fi) -> (i,fi)
+            where Just (HexInteger i) = lookup (concat ["math", code fs, show fam, "-index"]) e
+        _ -> error $ concat ["hex.mathfont: font family ", show fam, " in style ", show fs, " not found"]
 
 setmathfont :: Integer -> (FontDef,FontInfo) -> Environment String HexType -> Integer -> MathFontStyle -> Environment String HexType
 setmathfont i fi e fam fs = e''
