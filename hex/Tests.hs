@@ -70,6 +70,10 @@ case_readNumberMhex15 = 15 @=? n
     where
         (n,_) = runTkS readNumberM (asTokenStream "\"F\\relax")
 
+case_readNumberMhexf3a = 0xf3a @=? n
+    where
+        (n,_) = runTkS readNumberM (asTokenStream "\"F3A\\relax")
+
 case_readNumberMoct8 = 8 @=? n
     where
         (n,_) = runTkS readNumberM (asTokenStream "\'10\\relax")
