@@ -236,7 +236,7 @@ singlechar = do
         -- 1 large
         -- 2 binary
         -- 3 relation
-        3 -> MRel (MListList [MChar fam val])
+        3 -> MRel (MChar fam val)
         -- 4 opening
         -- 5 closing
         -- 6 punctuation
