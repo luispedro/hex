@@ -1,0 +1,8 @@
+\font\tenrm=cmr10 % roman text
+\font\teni=cmmi10%
+\textfont0=\tenrm%
+\textfont1=\teni%
+\mathcode`\a="010B % \alpha
+\mathcode`\b="010C % \beta
+\mathcode`\c="310D %
+alpha-beta: $acb$.
