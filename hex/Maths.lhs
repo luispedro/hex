@@ -23,6 +23,7 @@ We start by defining the basic \code{MList} structure:
 data MList = MAtom { center :: MList, sup :: Maybe MList, sub :: Maybe MList }
         | MChar Integer Char
         | MRel MList
+        | MBin MList
         | MListList [MList]
         deriving (Eq, Show)
 \end{code}
@@ -52,6 +53,7 @@ The main function is \code{setM}, which sets an mlist.
 setM :: MList -> MathSet ()
 setM (MChar f c) = setmchar f c
 setM (MListList ml) = setmlist ml
+setM (MBin mb) = setM mb
 setM (MRel mr) = setM mr
 setM (MAtom c up down) = do
     setM c
@@ -117,15 +119,15 @@ Spacing is done by a simple look up system
 \begin{code}
 spacingM a b = do
         (_,sc) <- ask
-        let v = spacing a b (sc /= E.Textfont)
+        let v = spacing (sc /= E.Textfont)
         putSpace v
     where
-        spacing a b in_script = if spvalue < 4 then spvalue
+        spacing in_script = if spvalue < 4 then spvalue
                         else if not in_script then spvalue - 4
                         else 0
 --        mtypei MOrd _       = 0
 --        mtypei MOp _        = 1
---        mtypei MBin _       = 2
+        mtypei (MBin _)       = 2
         mtypei (MChar _ _)    = 0
         mtypei (MAtom c _ _)  = mtypei c
         mtypei (MRel _)       = 3

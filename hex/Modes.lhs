@@ -235,6 +235,7 @@ singlechar = do
         0 -> MChar fam val
         -- 1 large
         -- 2 binary
+        2 -> MBin (MChar fam val)
         -- 3 relation
         3 -> MRel (MChar fam val)
         -- 4 opening
