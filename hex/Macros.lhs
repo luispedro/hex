@@ -114,7 +114,7 @@ instance Show Command where
     show MathShiftCommand = "<$>"
     show (SelectfontCommand _ _) = "<selectfont>"
     show (SetMathFontCommand _ _ _ _) = "<setmathfontcommand>"
-    show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show fam, ", ", [val], ")>"]
+    show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
