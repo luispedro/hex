@@ -1,0 +1,11 @@
+\font\tenrm=cmr10 % roman text
+\font\teni=cmmi10%
+\textfont0=\tenrm%
+\textfont1=\teni%
+$bab$
+{%
+    \mathcode`\a="010C % \alpha
+    $bab$
+}%
+$bab$
+
