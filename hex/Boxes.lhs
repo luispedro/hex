@@ -3,7 +3,7 @@
 We need to declare a special GHC extension here for use below
 
 \begin{code}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 \end{code}
 
 Now, we can start:
@@ -92,7 +92,7 @@ instance Show BoxTransform where
 Finally, we define a box
 
 \begin{code}
-data (BoxType t) => Box t = Box
+data Box t = Box
             { boxType :: t
             , height :: Dimen
             , depth :: Dimen
@@ -115,7 +115,7 @@ have been called ``springs'', but the word glue stuck). As above, we can have
 h- and v-glue.
 
 \begin{code}
-data (BoxType t) => Glue t = Glue
+data Glue t = Glue
             { glueType :: t
             , size :: Dimen
             , shrinkage :: Dimen
@@ -132,7 +132,7 @@ type VGlue = Glue V
 The final type of element we can have are \emph{penalties}, h- or v-penalties:
 
 \begin{code}
-data (BoxType t) => Penalty t = Penalty
+data Penalty t = Penalty
             { penaltyType :: t
             , value :: Integer
             , flag :: Bool
@@ -148,10 +148,9 @@ Finally, we can define \code{H} and \code{V} elements as either a box, a glue,
 or a penalty:
 
 \begin{code}
-data (BoxType t) => Element t =
-                        EBox (Box t)
-                        | EGlue (Glue t)
-                        | EPenalty (Penalty t)
+data Element t =  EBox (Box t)
+                | EGlue (Glue t)
+                | EPenalty (Penalty t)
 
 instance (BoxType t) => Show (Element t) where
     show (EBox b) = 'E' : show b
