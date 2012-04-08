@@ -7,10 +7,12 @@ module Hex
     ( processinputs
     , readFont
     ) where
-import System.IO.Error
+import System.IO.Error hiding (catch)
+import Prelude hiding (catch)
 import System.IO.Unsafe
 import System.FilePath.Posix
 import Control.Monad
+import Control.Exception
 import System.Process (readProcess)
 import qualified Data.ByteString.Lazy as B
 import Data.IORef

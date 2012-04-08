@@ -1,3 +1,7 @@
+Version 0.0.5+
+	* Refactor Macros/Tokens to emphacise Monadic interfact
+	* Update to newer Haskell
+
 Version 0.0.5 2012-04-08  by luispedro
 	* Implement ^^@ notation
 	* Add subscript and superscript typesetting in simplified math mode

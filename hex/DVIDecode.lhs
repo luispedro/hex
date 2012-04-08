@@ -4,8 +4,7 @@ module Main where
 
 import System.Environment
 import qualified Data.ByteString.Lazy as B
-import qualified IO
-import System.IO
+import qualified System.IO as SysIO
 import Data.Char
 import Data.Binary (Word32)
 import Data.Bits (testBit)
@@ -212,12 +211,12 @@ A little helper function for unix like file specification, where either
 \code{-} or \emph{no file name} can both stand for \code{stdin}:
 
 \begin{code}
-inputfile :: [String] -> IO Handle
+inputfile :: [String] -> IO SysIO.Handle
 inputfile [] = do
-    hSetBinaryMode IO.stdin True
-    return IO.stdin
+    SysIO.hSetBinaryMode SysIO.stdin True
+    return SysIO.stdin
 inputfile ["-"] = inputfile []
-inputfile [fname] = openBinaryFile fname IO.ReadMode
+inputfile [fname] = SysIO.openBinaryFile fname SysIO.ReadMode
 inputfile _ = error "hex.DVIDecode.inputfile: Too many files."
 \end{code}
 
