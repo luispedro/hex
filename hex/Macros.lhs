@@ -420,7 +420,7 @@ stream:
 process1 (ControlSequence "\\catcode") = do
     char <- readCharM
     maybeeqM
-    nvalue <- readNumberM
+    nvalue <- readENumberM
     let catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
     (updateCharStreamM (catcode char nvalue))
     return Nothing
@@ -588,4 +588,18 @@ Throughout \code{process1}, we make it easy to output internal commands:
 internalCommandM c = do
     (e,rest) <- get
     return $ Just (InternalCommand e rest c)
+\end{code}
+
+This reads expanded tokens:
+\begin{code}
+readENumberM = do
+    t <- peektokenM
+    case t of
+        CharToken _ -> readNumberM
+        ControlSequence csname -> do
+            e <- envM
+            case E.lookup csname e of
+                Just (CharDef v) -> return v
+                Just (Macro _ _ _ _) -> skiptokenM >> expand1 t >> readENumberM
+                _ -> error "hex.readENumberM: unexpected"
 \end{code}
