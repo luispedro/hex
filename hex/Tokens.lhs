@@ -9,24 +9,24 @@ module Tokens
     , gettoken
     , gettokentil
     , droptoken
-    , streampush
-    , streamenqueue
     , tokenliststream
     , emptyTokenStream
     , updateCharStream
     , toksToStr
     , chars2tokens
     , TkS(..)
+    , bTkS
     , emptyTkS
     , gettokenM
     , maybetokenM
     , skiptokenM
     , peektokenM
     , maybepeektokenM
+    , streampushM
+    , streamenqueueM
     , updateCharStreamM
     , maybespaceM
     , maybeeqM
-    , streamenqueueM
     , readNumberM
     , readCharM
     , readStrM
@@ -37,6 +37,7 @@ import CharStream
 import Defaults (plaintexenv)
 
 import Control.Monad
+import Control.Monad.State (State,get,put)
 \end{code}
 
 Tokens are the next level after annotated characters. A Token is either a
@@ -197,19 +198,11 @@ We define a few helper functions to manipulate the stream.
 droptoken = snd . gettoken
 \end{code}
 
-We can add tokens to the start of the queue, either one (\code{streampush}) or
-several (\code{streamenqueue}).
-
-\begin{code}
-streampush st@TokenStream{queue=ts} t = st{queue=(t:ts)}
-streamenqueue st@TokenStream{queue=ts} nts = st{queue=(nts ++ ts)}
-\end{code}
-
 Sometimes we want to have a simple stream that only spits out the tokens we
 initialise it with. This is achieved by \code{tokenliststream}:
 
 \begin{code}
-tokenliststream = streamenqueue (newTokenStream $ TypedCharStream [] [])
+tokenliststream toks = TokenStream (TypedCharStream [] []) sN toks
 \end{code}
 
 \code{emptyTokenStream} is surprisingly tricky. In fact, we need to look ahead
@@ -257,25 +250,26 @@ chars2tokens str = ts
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
 
 \begin{code}
-data TkS a = TkS { runTkS :: TokenStream -> (a,TokenStream) }
-
-instance Monad TkS where
-    return a = TkS (\tks -> (a,tks))
-    x >>= f = TkS (\tks -> let (a,t') = (runTkS x tks); (b,t'') = (runTkS (f a) t') in (b,t''))
-
-instance Functor TkS where
-    fmap f x = TkS (\tks -> let (a,t') = (runTkS x tks) in (f a, t'))
-
+type TkS e a = State (e,TokenStream) a
+bTkS :: (TokenStream -> (a,TokenStream)) -> TkS e a
+bTkS f = do
+    (e,st) <- get
+    let (r,st') = f st
+    put (e,st')
+    return r
 \end{code}
 
 We add several helper function to check the status of the stream and get tokens
 (while watching out for eof conditions)
 
 \begin{code}
-emptyTkS = TkS (\tks -> if (emptyTokenStream tks) then (True,tks) else (False,tks))
+emptyTkS :: TkS e Bool
+emptyTkS = do
+    tks <- snd `liftM` get
+    return (emptyTokenStream tks) 
 
-gettokenM :: TkS Token
-gettokenM = TkS gettoken
+gettokenM :: TkS e Token
+gettokenM = bTkS gettoken
 maybetokenM = do
     t <- maybepeektokenM
     case t of
@@ -283,24 +277,30 @@ maybetokenM = do
         Just _ -> gettokenM >> return t
 
 skiptokenM = void gettokenM
-peektokenM = TkS (\tks -> let (t,_) = gettoken tks in (t,tks))
-maybepeektokenM = TkS (\tks ->
-                if emptyTokenStream tks then
-                    (Nothing, tks)
-                 else let (t,_) = gettoken tks in (Just t,tks))
-
+peektokenM = bTkS (\tks -> let (t,_) = gettoken tks in (t,tks))
+maybepeektokenM = do
+    e <- emptyTkS
+    if e then return Nothing
+    else Just `liftM` peektokenM
 \end{code}
 
 Updating the char stream can also be done in the monad:
 \begin{code}
-updateCharStreamM f = TkS (\st -> ((),updateCharStream st f))
+updateCharStreamM f = bTkS (\st -> ((),updateCharStream st f))
+\end{code}
+
+We can add tokens to the start of the queue, either one (\code{streampushM}) or
+several (\code{streamenqueueM}).
+\begin{code}
+streampushM t = bTkS (\st@TokenStream{queue=ts} -> ((),st{queue=(t:ts)}))
+streamenqueueM nts = bTkS (\st@TokenStream{queue=ts} -> ((),st{queue=(nts ++ ts)}))
 \end{code}
 
 An often needed operation is to skip an optional space or additional equal
 signs. We first implement a generic \code{maybetokM} function, which takes a
 condition and skips a token if it matches that condition.
 \begin{code}
-maybetokM :: (Token -> Bool) -> TkS ()
+maybetokM :: (Token -> Bool) -> TkS e ()
 maybetokM cond = do
     mt <- maybepeektokenM
     case mt of
@@ -315,14 +315,9 @@ maybespaceM = maybetokM ((== Space) . tokenCategory)
 maybeeqM = maybetokM (== (CharToken (TypedChar '=' Other)))
 \end{code}
 
-A monadic version of \code{streamenqueue}:
-\begin{code}
-streamenqueueM tks = TkS (\st -> ((),streamenqueue st tks))
-\end{code}
-
 Finally, a simple function to read an integer from tokens:
 \begin{code}
-readNumberM :: TkS Integer
+readNumberM :: TkS e Integer
 readNumberM = do
         tk <- peektokenM
         case tk of
@@ -332,7 +327,7 @@ readNumberM = do
             t -> error $ concat ["hex.Tokens.readNumberM: expected number (got ", show t, ")"]
     where
         readNumber prefix cond = (read . prefix) `liftM` (digits cond)
-        digits :: [Char] -> TkS [Char]
+        digits :: [Char] -> TkS e [Char]
         digits accepted = do
             tok <- maybepeektokenM
             case tok of
@@ -348,7 +343,7 @@ readNumberM = do
 
 A few primitives (e.g., \tex{\\catcode}) need to read characters:
 \begin{code}
-readCharM :: TkS Char
+readCharM :: TkS e Char
 readCharM = do
     skiptokenM
     tk <- gettokenM

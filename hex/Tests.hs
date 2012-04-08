@@ -13,6 +13,7 @@ import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
 import qualified Data.Vector as V
 import Text.Parsec hiding (many, optional, (<|>))
+import Control.Monad.State (runState)
 
 
 
@@ -61,6 +62,11 @@ case_token5 = (length $ chars2tokens "macro") @=? 5
 --case_sS = (length $ applyStateFunction sS $ map (annotate plaintextable) "     ") @=? 0
 --case_sM1 = (length $ applyStateFunction sM $ map (annotate plaintextable) "     ") @=? 1
 --case_sM2 = (length $ applyStateFunction sM $ map (annotate plaintextable) "a    ") @=? 2
+
+
+runTkS computation st = (r,st')
+    where
+        (r,(_,st')) = runState computation (undefined,st)
 
 case_readNumberM5 = n @=? 5
     where

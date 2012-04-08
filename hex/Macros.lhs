@@ -13,6 +13,7 @@ module Macros
 import Data.List (sortBy)
 import Data.Char (chr)
 import Data.Bits
+import Control.Monad.State
 
 import DVI
 import Fonts
@@ -150,7 +151,7 @@ We need a few helper functions. \code{gettokenorgroup} retrieves the next
 \emph{token} or, if it is an enclosed group, it retrieves it as a list.
 
 \begin{code}
-gettokenorgroup :: TkS [Token]
+gettokenorgroup :: TkSS [Token]
 gettokenorgroup = do
     mt <- maybetokenM
     case mt of
@@ -167,9 +168,9 @@ for testing, but the implementation is based on the monadic
 \begin{code}
 
 _breakAtGroupEnd :: TokenStream -> ([Token], TokenStream)
-_breakAtGroupEnd st = runTkS (breakAtGroupEndM 0) st
+_breakAtGroupEnd st = let (tks,(_,st')) = runTkSS (breakAtGroupEndM 0) undefined st in (tks,st')
 
-breakAtGroupEndM :: Integer -> TkS [Token]
+breakAtGroupEndM :: Integer -> TkSS [Token]
 breakAtGroupEndM n = do
     tk <- gettokenM
     if (n == 0) && (tokenCategory tk) == EndGroup then
@@ -188,12 +189,12 @@ To handle \tex{\\if} statements, we need to (1) evaluate them and (2) skip over
 the non-important characters. The first step is performed by \code{evaluateif}.
 
 \begin{code}
-evaluateif :: MacroEnvironment -> String -> TkS (Bool,Int)
+evaluateif :: MacroEnvironment -> String -> TkSS Bool
 evaluateif env "\\ifx"  = do
         tok0 <- gettokenM
         tok1 <- gettokenM
         let cond = ifx tok0 tok1
-        return (cond,(if cond then 2 else 0))
+        return cond
     where
         ifx (ControlSequence cs0) (ControlSequence cs1) = samemacro cs0 cs1
         ifx _ _ = False
@@ -201,15 +202,21 @@ evaluateif env "\\ifx"  = do
             (Nothing, Nothing) -> True
             (Just m0, Just m1) -> (m0 == m1)
             _ -> False
-evaluateif env "\\if" = do
-        (cmd0:cmd1:_) <- expandM
+evaluateif _ "\\if" = do
+        cmd0 <- expandedTokenM
+        cmd1 <- expandedTokenM
         let res = evalif cmd0 cmd1
-        let skip = (if res then 2 else 0)
-        return (res,skip)
+        return res
     where
-        evalif (CharCommand c0) (CharCommand c1) = (value c0) == (value c1)
+        evalif (CharToken c0) (CharToken c1) = (value c0) == (value c1)
         evalif _ _ = False
-        expandM = TkS $ \st -> (expand env st, undefined)
+        expandedTokenM = do
+            tk <- gettokenM
+            case tk of
+                (CharToken _) -> return tk
+                (ControlSequence _) -> do
+                    expand1 tk
+                    gettokenM
 evaluateif _e _  = fail "hex.Macros.evaluateif: Cannot handle this type"
 \end{code}
 
@@ -218,8 +225,8 @@ noting. If the condition is false, we skip until the matching \tex{\\else} or
 \tex{\\fi}.
 
 \begin{code}
-skipif True st = st
-skipif False st = droptoken $ snd $ gettokentil st isElseOrFi
+skipifM True = return Nothing
+skipifM False = bTkS (\st -> (Nothing,droptoken $ snd $ gettokentil st isElseOrFi))
     where
         isElseOrFi (ControlSequence c) = c `elem` ["\\else", "\\fi"]
         isElseOrFi _ = False
@@ -232,33 +239,36 @@ the stream. It is the downstream responsibility to deal with it.
 The first function just attempts to extract the macro
 
 \begin{code}
-expand1 :: MacroEnvironment -> TokenStream -> TokenStream
-expand1 env st = case E.lookup csname env of
-                    Just macro -> expand1' macro
-                    Nothing -> streamenqueue r0 $ macronotfounderror csname
+expand1 :: Token -> TkSS ()
+expand1 (ControlSequence csname) = do
+        e <- envM
+        expanded <- (case E.lookup csname e of
+            Just macro -> expand1' macro
+            Nothing -> return (macronotfounderror csname))
+        streamenqueueM expanded
     where
-        (ControlSequence csname, r0) = gettoken st
 \end{code}
 If found, the macro is expanded by \code{expand1'}
 \begin{code}
-        expand1' :: Macro -> TokenStream
-        expand1' (FontMacro fname) = streamenqueue r0 $ selectfont
+        expand1' :: Macro -> TkSS [Token]
+        expand1' (FontMacro fname) = return ((ControlSequence "\\hexinternal"):map toTok ("{selectfont}{" ++ fname ++ "}"))
             where
-                selectfont = ((ControlSequence "\\hexinternal"):map toTok ("{selectfont}{" ++ fname ++ "}"))
                 toTok '{' = (CharToken (TypedChar '{' BeginGroup))
                 toTok '}' = (CharToken (TypedChar '}' EndGroup))
                 toTok c = (CharToken (TypedChar c Letter))
-        expand1' (CharDef cv) = streamenqueue r0 $ ((ControlSequence "\\char"):backtotoks)
+        expand1' (CharDef cv) = return ((ControlSequence "\\char"):backtotoks)
             where
                 backtotoks = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
-        expand1' macro = streamenqueue r1 (if valid then expanded else longerror)
+        expand1' macro = do
+                arguments <- getargs (todelims $ arglist macro)
+                let valid = (isLong macro) || (noPar `all` arguments)
+                    expanded = expandmacro macro arguments
+                return (if valid then expanded else longerror)
             where
                 longerror = errorseq "par in non-long macro"
-                expanded = expandmacro macro arguments
-                arguments :: [(Int,[Token])]
-                (arguments,r1) = runTkS (getargs (todelims $ arglist macro)) r0
-                valid = (isLong macro) || (noPar `all` arguments)
                 noPar (_,tks) = (ControlSequence "\\par") `notElem` tks
+
+expand1 t = error $ concat ["hex.Macros.expand1: asked to expand non-macro: ", show t]
 \end{code}
 
 Matching macro parameters is done by attempting to match delimiters. A special
@@ -279,7 +289,7 @@ todelims (t:ts) = (DelimToken t):(todelims ts)
 arguments.
 
 \begin{code}
-getargs :: [Delim] -> TkS [(Int,[Token])]
+getargs :: [Delim] -> TkSS [(Int,[Token])]
 getargs (DelimEmpty:_) = return []
 getargs (DelimParameter n:d:ds) = do
     maybespaceM
@@ -302,22 +312,28 @@ getargtil (DelimParameter _) = gettokenorgroup
 
 The \code{definemacro} functions defines macros
 \begin{code}
-definemacro env long outer csname st
-    | csname == "\\long" = definemacro env True outer next st'
-    | csname == "\\outer" = definemacro env long True next st'
-    | otherwise = expand env' rest
+definemacro long outer csname = do
+        next <- gettokenM
+        case csname of
+            "\\long" -> definemacro True outer (csnameof next)
+            "\\outer" -> definemacro long True (csnameof next)
+            _ -> do
+                env <- envM
+                args <- bTkS (flip gettokentil isBeginGroup)
+                skiptokenM
+                substitutiontext <- breakAtGroupEndM 0
+                let macro = Macro args substitution outer long
+                    expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
+                    substitution = if edef then expandedsubtext else substitutiontext
+                updateEnvM (insertfunction (csnameof next) macro)
+                return Nothing
     where
-        (ControlSequence next,st') = gettoken st
         edef = csname `elem` ["\\edef", "\\xdef"]
         insertfunction = if csname `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
-        env' = insertfunction next macro env
-        macro = Macro args substitution outer long
-        (args,afterargs) = gettokentil st' isBeginGroup
-        (substitutiontext,rest) = _breakAtGroupEnd $ droptoken afterargs
-        substitution = if edef then expandedsubtext else substitutiontext
-        expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
         isBeginGroup (CharToken tc) = (category tc) == BeginGroup
         isBeginGroup _ = False
+        csnameof (ControlSequence c) = c
+        csnameof _ = error "hex.Macros.definemacro: expected control sequence"
 \end{code}
 
 If we fail to find a macro, we insert a special token sequence:
@@ -329,38 +345,52 @@ errorseq msg = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))
 \end{code}
 
 The main function, \code{expand} is actually very simple and just forwards the
-first token (after checking that the stream is not empty) to \code{expand'}:
+first token (after checking that the stream is not empty) to \code{process1}:
 
 \begin{code}
 expand :: MacroEnvironment -> TokenStream -> [Command]
 expand _ st | emptyTokenStream st = []
-expand env st = expand' env t rest
-    where (t, rest) = gettoken st
+expand env st = case mc of
+        Just c -> c:rest
+        Nothing -> rest
+    where
+        (t, r0) = gettoken st
+        (mc,(env',r1)) = runTkSS (process1 t) env r0
+        rest = (expand env' r1)
 \end{code}
 
-\code{expand'} is structured as a huge case statement (implemented with Haskell
+\code{process1} is structured as a huge case statement (implemented with Haskell
 pattern matching):
 
 \begin{code}
-expand' env (ControlSequence "\\let") st = expand env' rest
-    where
-        ((name,rep) ,rest) = (flip runTkS) st $ do
-            ControlSequence n <- gettokenM
-            maybeeqM
-            r <- gettokenM
-            return (n,r)
-        macro = case rep of
-                (ControlSequence csname) -> E.lookupWithDefault simple csname env
-                (CharToken tc) -> Macro [] [CharToken tc] False False
+type TkSS a = TkS MacroEnvironment a
+runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream))
+runTkSS compute e st = runState compute (e,st)
+
+envM :: TkSS MacroEnvironment
+envM = fst `liftM` get
+updateEnvM :: (MacroEnvironment -> MacroEnvironment) -> TkSS ()
+updateEnvM f = modify (\(e,st) -> (f e, st))
+
+process1 :: Token -> TkSS (Maybe Command)
+process1 (ControlSequence "\\let") = do
+    ControlSequence name <- gettokenM
+    maybeeqM
+    rep <- gettokenM
+    env <- envM
+    let macro = case rep of
+            (ControlSequence csname) -> E.lookupWithDefault simple csname env
+            (CharToken tc) -> Macro [] [CharToken tc] False False
         simple = Macro [] [rep] False False
-        env' = E.insert name macro env
+        t = E.insert name macro
+    updateEnvM t
+    return Nothing
 \end{code}
 
 Dealing with \tex{\\noexpand} is easy, just pass the next token unmodified:
 
 \begin{code}
-expand' env (ControlSequence "\\noexpand") st = (fromToken t:expand env r)
-    where (t,r) = gettoken st
+process1 (ControlSequence "\\noexpand") = (Just . fromToken) `liftM` gettokenM
 \end{code}
 
 \code{expandafter} is dealt in a nice way. Note that, at least in TeX, the
@@ -372,10 +402,12 @@ following leads to an error:
 
 Therefore, the environment cannot change in the inner expansion.
 \begin{code}
-expand' env (ControlSequence "\\expandafter") st = expand env $ streampush rest guard
-        where
-            (guard, afterguard) = gettoken st
-            rest = expand1 env afterguard
+process1 (ControlSequence "\\expandafter") = do
+    unexp <- gettokenM
+    next <- gettokenM
+    expand1 next
+    (streampushM unexp)
+    return Nothing
 \end{code}
 
 Manipulation of catcodes is performed here. It needs to change the token
@@ -384,36 +416,33 @@ stream. In hex, the ``environment'' is actually a few separate namespaces,
 stream:
 
 \begin{code}
-expand' env (ControlSequence "\\catcode") st = expand env altered
-    where
-        (_,altered) = (flip runTkS) st $ do
-            char <- readCharM
-            maybeeqM
-            nvalue <- readNumberM
-            updateCharStreamM (catcode char nvalue)
-        catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
+process1 (ControlSequence "\\catcode") = do
+    char <- readCharM
+    maybeeqM
+    nvalue <- readNumberM
+    let catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
+    (updateCharStreamM (catcode char nvalue))
+    return Nothing
 \end{code}
 
 \begin{code}
-expand' env (ControlSequence "\\mathcode") st = mc:(expand env rest)
-    where
-        (mc,rest) = (flip runTkS) st $ do
-            c <- readCharM
-            maybeeqM
-            n <- readNumberM
-            let mtype = (n `shiftR` 12) .&. 0x0f
-                fam = (n `shiftR` 8) .&. 0x0f
-                val = chr $ fromInteger (n .&. 0xff)
-            return (MathCodeCommand c mtype fam val)
+process1 (ControlSequence "\\mathcode") = do
+    c <- readCharM
+    maybeeqM
+    n <- readNumberM
+    let mtype = (n `shiftR` 12) .&. 0x0f
+        fam = (n `shiftR` 8) .&. 0x0f
+        val = chr $ fromInteger (n .&. 0xff)
+    return $ Just (MathCodeCommand c mtype fam val)
 \end{code}
 
 To handle conditionals, \code{evaluateif} is called.
 \begin{code}
-expand' env (ControlSequence csname) st
-    | csname `elem` ifstarts = drop toskip $ expand env rest
-        where
-            ((cond, toskip), _) = runTkS (evaluateif env csname) st
-            rest = skipif cond st
+process1 (ControlSequence csname)
+    | csname `elem` ifstarts = do
+        e <- envM
+        cond <- evaluateif e csname
+        (skipifM cond)
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -421,12 +450,12 @@ and need to start skipping (if the file is mal-formed and just contains an
 unmatched \tex{\\else}, this becomes \tex{\\iffalse}).
 
 \begin{code}
-expand' env (ControlSequence "\\else") st = expand env $ skipif False st
+process1 (ControlSequence "\\else") = (skipifM False)
 \end{code}
 
 If we encounter a \tex{\\fi}, just ignore it.
 \begin{code}
-expand' env (ControlSequence "\\fi") st = expand env st
+process1 (ControlSequence "\\fi") = return Nothing
 \end{code}
 
 Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
@@ -434,40 +463,42 @@ difference is whether the \code{substitution} is the code that was presently
 directly or its expansion.
 
 \begin{code}
-expand' env (ControlSequence csname) st
-    | isprimitive csname = (PrimitiveCommand csname) : (expand env st)
-    | csname `elem` ["\\def", "\\gdef", "\\edef", "\\xdef", "\\long", "\\outer"] = definemacro env False False csname st
+process1 (ControlSequence csname)
+    | isprimitive csname = return $ Just (PrimitiveCommand csname)
+    | csname `elem` ["\\def", "\\gdef", "\\edef", "\\xdef", "\\long", "\\outer"] = definemacro False False csname
 \end{code}
 
 We handle \code{\\global} by simply transforming it into \code{\\gdef} or
 \code{\\xdef}. This will immediately ``goto'' the code above:
 \begin{code}
-expand' env (ControlSequence "\\global") st
-    | next == "\\def" = expand' env (ControlSequence "\\gdef") rest
-    | next == "\\edef" = expand' env (ControlSequence "\\xdef") rest
-    where (ControlSequence next, rest) = gettoken st
+process1 (ControlSequence "\\global") = do
+    next <- gettokenM
+    case next of
+        ControlSequence "\\def" -> process1 (ControlSequence "\\gdef")
+        ControlSequence "\\edef" -> process1 (ControlSequence "\\xdef")
+        _ -> error "hex.Macros.process1: Unexpected token after \\global"
 \end{code}
 
 \tex{\\chardef} is implemented by transformation into \tex{\\def}:
 \begin{code}
-expand' env (ControlSequence "\\chardef") st = expand (t env) rest
-    where
-        (t,rest) = (flip runTkS) st $ do
-            ControlSequence name <- gettokenM
-            maybeeqM
-            charcode <- readNumberM
-            return (E.insert name (CharDef charcode))
+process1 (ControlSequence "\\chardef") = do
+    ControlSequence name <- gettokenM
+    maybeeqM
+    charcode <- readNumberM
+    updateEnvM (E.insert name (CharDef charcode))
+    return Nothing
 \end{code}
 
 \begin{code}
-expand' env (ControlSequence "\\char") st = (CharCommand (TypedChar (chr $ fromInteger v) Other)):(expand env rest)
-    where (v,rest) = runTkS readNumberM st
+process1 (ControlSequence "\\char") = do
+    v <- readNumberM
+    return $ Just (CharCommand (TypedChar (chr $ fromInteger v) Other))
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
 command, which speaks for itself:
 \begin{code}
-expand' env (ControlSequence "\\bye") st = [InternalCommand env st ByeCommand]
+process1 (ControlSequence "\\bye") = internalCommandM ByeCommand
 \end{code}
 
 The \tex{\\font} command puts a \code{FontMacro} macro in the environment and
@@ -476,84 +507,84 @@ maps what \TeX{} does, even if a lazy load model could be better (in reality,
 the font file is parsed lazily because of Haskell's evaluation model).
 
 \begin{code}
-expand' env (ControlSequence "\\font") st = (InternalCommand env' rest $ LoadfontHCommand fname):(expand env' rest)
-    where
-        ((csname,fname),rest) = (flip runTkS) st $ do
-            ControlSequence cs <- gettokenM
-            maybeeqM
-            fn <- readStrM
-            return (cs,fn)
-        env' = E.insert csname macro env
-        macro = FontMacro fname
+process1 (ControlSequence "\\font") = do
+    ControlSequence csname <- gettokenM
+    maybeeqM
+    fname <- readStrM
+    updateEnvM $ E.insert csname (FontMacro fname)
+    internalCommandM (LoadfontHCommand fname)
 \end{code}
 
 \begin{code}
-expand' env (ControlSequence cs) st
-        | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"]
-            = (InternalCommand env rest fmcmd):(expand env rest)
+process1 (ControlSequence cs)
+    | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"] = do
+        fam <- readNumberM
+        maybeeqM
+        ControlSequence fc <- gettokenM
+        e <- envM
+        internalCommandM (case E.lookup fc e of
+            Just (FontMacro fname) ->
+                SetMathFontHCommand fname fam (fontstyle cs)
+            _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
+            )
     where
-        (fmcmd,rest) = (flip runTkS) st $ do
-            fam <- readNumberM
-            maybeeqM
-            ControlSequence fc <- gettokenM
-            return $ case E.lookup fc env of
-                Just (FontMacro fname) ->
-                    SetMathFontHCommand fname fam (fontstyle cs)
-                _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
         fontstyle "\\textfont" = E.Textfont
         fontstyle "\\scriptfont" = E.Scriptfont
         fontstyle "\\scriptscriptfont" = E.Scriptscriptfont
-        fontstyle _ = error "hex.Macros.expand'.fontstyle: This should never happen"
+        fontstyle _ = error "hex.Macros.process1.fontstyle: This should never happen"
 \end{code}
 
 Errors and messages are similar and handled by the same case:
 \begin{code}
-expand' env (ControlSequence cs) st
-    | cs `elem` ["error","\\message"] = (InternalCommand env rest $ cmd arg):(expand env rest)
-    where
-        cmd = if cs == "error" then ErrorCommand else MessageCommand
-        (arguments,rest) = runTkS (getargs [DelimParameter 0, DelimEmpty]) st
-        [(0,argtoks)] = arguments
+process1 (ControlSequence cs) | cs `elem` ["error","\\message"] = do
+    arguments <- (getargs [DelimParameter 0, DelimEmpty])
+    let [(0,argtoks)] = arguments
         arg = toksToStr argtoks
+        cmd = if cs == "error" then ErrorCommand else MessageCommand
+    internalCommandM (cmd arg)
 \end{code}
 
 The \tex{\\hexinternal} is a generic command for accessing hex internals:
 
 \begin{code}
-expand' env (ControlSequence "\\hexinternal") st = (InternalCommand env rest $ cmd arg):(expand env rest)
-    where
-        (arguments,rest) = runTkS (getargs [DelimParameter 0, DelimParameter 1, DelimEmpty]) st
-        [(0,cmdtoks),(1,argtoks)] = arguments
+process1 (ControlSequence "\\hexinternal") = do
+    arguments <- (getargs [DelimParameter 0, DelimParameter 1, DelimEmpty])
+    let [(0,cmdtoks),(1,argtoks)] = arguments
         cmdname = toksToStr cmdtoks
         arg = toksToStr argtoks
         cmd = case cmdname of
             "loadfont" -> LoadfontHCommand
             "selectfont" -> SelectfontHCommand
-            _ -> error ("hex.Macros.expand': unknown internal command ("++cmdname++")")
+            _ -> error ("hex.Macros.process1: unknown internal command ("++cmdname++")")
+    internalCommandM (cmd arg)
 \end{code}
 
 The \code{\\input} command has slightly different syntax than most commands,
 but again, it is just transformed into an \code{InternalCommand}
 
 \begin{code}
-expand' env (ControlSequence "\\input") st = [InternalCommand env rest $ InputCommand fname]
-    where
-        (fname, rest) = runTkS readStrM st
+process1 (ControlSequence "\\input") = readStrM >>= (internalCommandM . InputCommand)
 \end{code}
 
 Finally, we come to the default cases.
 
 \begin{code}
-expand' env t@(CharToken tc) st
-    | (category tc) == BeginGroup = PushCommand:(expand (E.push env) (updateCharStream st pushst))
-    | (category tc) == EndGroup = PopCommand:(expand (E.pop env) (updateCharStream st popst))
-    | (category tc) == MathShift = MathShiftCommand:(expand env st)
-    | otherwise = (fromToken t):(expand env st)
+process1 t@(CharToken tc)
+    | (category tc) == BeginGroup = (updateEnvM E.push) >> (updateCharStreamM pushst) >> (return $ Just PushCommand)
+    | (category tc) == EndGroup = (updateEnvM E.pop) >> (updateCharStreamM popst) >> (return $ Just PopCommand)
+    | (category tc) == MathShift = return $ Just MathShiftCommand
+    | otherwise = return $ Just (fromToken t)
 \end{code}
 
 If nothing else triggered, we must have a macro, so we call \code{expand1}:
 
 \begin{code}
-expand' env t st = expand env $ expand1 env $ streampush st t
+process1 t = (expand1 t) >> (return Nothing)
 \end{code}
 
+Throughout \code{process1}, we make it easy to output internal commands:
+\begin{code}
+internalCommandM c = do
+    (e,rest) <- get
+    return $ Just (InternalCommand e rest c)
+\end{code}
