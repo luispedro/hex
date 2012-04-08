@@ -222,14 +222,15 @@ evaluateif _e _  = fail "hex.Macros.evaluateif: Cannot handle this type"
 
 Skipping depends on the value of the condition. If the condition is true, we do
 noting. If the condition is false, we skip until the matching \tex{\\else} or
-\tex{\\fi}.
-
+\tex{\\fi}. We always return \code{Nothing} for convenience of use.
 \begin{code}
 skipifM True = return Nothing
-skipifM False = bTkS (\st -> (Nothing,droptoken $ snd $ gettokentil st isElseOrFi))
+skipifM False = (void $ gettokentilM isIfEnd) >>
+                gettokenM >>
+                return Nothing
     where
-        isElseOrFi (ControlSequence c) = c `elem` ["\\else", "\\fi"]
-        isElseOrFi _ = False
+        isIfEnd (ControlSequence c) | (c `elem` ["\\else", "\\fi"]) = True
+        isIfEnd _ = False
 \end{code}
 
 The work horse of this module are the \code{expand1} and \code{expand1'}
@@ -319,7 +320,7 @@ definemacro long outer csname = do
             "\\outer" -> definemacro long True (csnameof next)
             _ -> do
                 env <- envM
-                args <- bTkS (flip gettokentil isBeginGroup)
+                args <- gettokentilM isBeginGroup
                 skiptokenM
                 substitutiontext <- breakAtGroupEndM 0
                 let macro = Macro args substitution outer long
@@ -442,7 +443,7 @@ process1 (ControlSequence csname)
     | csname `elem` ifstarts = do
         e <- envM
         cond <- evaluateif e csname
-        (skipifM cond)
+        skipifM cond
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -450,7 +451,7 @@ and need to start skipping (if the file is mal-formed and just contains an
 unmatched \tex{\\else}, this becomes \tex{\\iffalse}).
 
 \begin{code}
-process1 (ControlSequence "\\else") = (skipifM False)
+process1 (ControlSequence "\\else") = skipifM False
 \end{code}
 
 If we encounter a \tex{\\fi}, just ignore it.

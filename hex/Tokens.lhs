@@ -3,25 +3,21 @@
 module Tokens
     ( Token(..)
     , tokenCategory
-    , skiptoeol
     , TokenStream(..)
     , newTokenStream
     , gettoken
-    , gettokentil
-    , droptoken
     , tokenliststream
     , emptyTokenStream
     , updateCharStream
     , toksToStr
-    , chars2tokens
-    , TkS(..)
-    , bTkS
+    , TkS
     , emptyTkS
     , gettokenM
     , maybetokenM
     , skiptokenM
     , peektokenM
     , maybepeektokenM
+    , gettokentilM
     , streampushM
     , streamenqueueM
     , updateCharStreamM
@@ -34,10 +30,9 @@ module Tokens
 
 import Chars
 import CharStream
-import Defaults (plaintexenv)
 
 import Control.Monad
-import Control.Monad.State (State,get,put)
+import Control.Monad.State (State,get,put,modify)
 \end{code}
 
 Tokens are the next level after annotated characters. A Token is either a
@@ -180,23 +175,6 @@ gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} =
 
 \end{code}
 
-To get a few tokens in a row, we can call \code{gettokentil}. The matching
-token is left in the queue.
-
-\begin{code}
-gettokentil st cond
-    | emptyTokenStream st = ([], st)
-    | (cond c) = ([],st)
-    | otherwise = let (c',st'') = gettokentil st' cond in (c:c', st'')
-    where (c,st') = gettoken st
-
-\end{code}
-
-We define a few helper functions to manipulate the stream.
-
-\begin{code}
-droptoken = snd . gettoken
-\end{code}
 
 Sometimes we want to have a simple stream that only spits out the tokens we
 initialise it with. This is achieved by \code{tokenliststream}:
@@ -232,19 +210,6 @@ We also add a function to manipulate the underlying character stream.
 
 \begin{code}
 updateCharStream t@TokenStream{charsource=s} f = t{charsource=(f s)}
-\end{code}
-
-For debugging and testing purposes, we use a simple helper function. The reason
-that it is not so simple for real usage is that some tokens might cause the
-manipulation of the character stream (for example, by changing the character
-code table).
-
-\begin{code}
-chars2tokens :: [Char] -> [Token]
-chars2tokens str = ts
-    where
-       (ts,_) = gettokentil st $ const False
-       st = newTokenStream $ TypedCharStream plaintexenv str
 \end{code}
 
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
@@ -284,16 +249,30 @@ maybepeektokenM = do
     else Just `liftM` peektokenM
 \end{code}
 
+To get a few tokens in a row, we can call \code{gettokentilM}, which returns
+all token until a certain condition is fulfilled. The matching token is left in
+the queue.
+\begin{code}
+gettokentilM cond = do
+    mc <- maybepeektokenM
+    case mc of
+        Just tk | not (cond tk) -> do
+            void gettokenM
+            rest <- gettokentilM cond
+            return (tk:rest)
+        _ -> return []
+\end{code}
+
 Updating the char stream can also be done in the monad:
 \begin{code}
-updateCharStreamM f = bTkS (\st -> ((),updateCharStream st f))
+updateCharStreamM f = modify (\(e,st) -> (e,updateCharStream st f))
 \end{code}
 
 We can add tokens to the start of the queue, either one (\code{streampushM}) or
 several (\code{streamenqueueM}).
 \begin{code}
-streampushM t = bTkS (\st@TokenStream{queue=ts} -> ((),st{queue=(t:ts)}))
-streamenqueueM nts = bTkS (\st@TokenStream{queue=ts} -> ((),st{queue=(nts ++ ts)}))
+streampushM t = streamenqueueM [t]
+streamenqueueM nts = modify (\(e,st@TokenStream{queue=ts}) -> (e,st{queue=(nts ++ ts)}))
 \end{code}
 
 An often needed operation is to skip an optional space or additional equal

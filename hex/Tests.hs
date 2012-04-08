@@ -128,6 +128,15 @@ case_mode_complex = (length m) @?= 5
         sfc = SelectfontCommand 0 (undefined, undefined)
         e = (E.setfont 0 undefined startenv)
 
+
+chars2tokens :: [Char] -> [Token]
+chars2tokens str = ts
+    where
+       (ts,_) = runTkS (gettokentilM $ const False) st
+       st = newTokenStream $ TypedCharStream plaintexenv str
+
+case_chars2tokens = 4 @=? (length $ chars2tokens "abcd")
+
 -- Test for macro parsing
 case_bracebrace = (chars2tokens "{a}") @=? parsed
     where parsed = fst $ _breakAtGroupEnd (tokenliststream $ chars2tokens "{a}}")

@@ -5,6 +5,7 @@ module Main where
 import qualified Data.ByteString.Lazy as B
 import System.Console.CmdArgs
 import Control.Monad
+import Control.Monad.State
 
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
@@ -34,7 +35,9 @@ table maps strings to these functions.
 prefix = "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
 
 chars = map (annotate plaintexenv)
-tokens = chars2tokens
+tokens str = fst $ runState (gettokentilM $ const False) (undefined,st)
+    where
+       st = newTokenStream $ TypedCharStream plaintexenv str
 expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
 breaklines env = (vMode env) . expanded
 
