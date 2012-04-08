@@ -49,7 +49,7 @@ v0.0.5
 - images
 - basic math formulas
 
-Expected: Dec 31 2011
+Expected: Apr 8 2012
 
 v0.0.6
 ------

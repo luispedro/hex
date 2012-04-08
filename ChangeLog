@@ -1,8 +1,9 @@
-Version 0.0.4 2012-03-23+
+Version 0.0.5 2012-04-08  by luispedro
 	* Implement ^^@ notation
 	* Add subscript and superscript typesetting in simplified math mode
 	* Implement \char (partially) and \chardef
 	* Implement \mathcode
+	* Add correct math spacing (for the cases that hex handles)
 
 Version 0.0.4 2011-12-24 by luispedro
 	* implement \font and its associated machinery
