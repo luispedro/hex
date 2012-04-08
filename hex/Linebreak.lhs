@@ -162,6 +162,7 @@ vargsort vec = runST $ do
                     else compare (vec ! i) (vec ! j)
 \end{code}
 
+The basic goal of line-breaking is to minimise demerits:
 \begin{code}
 demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenalty else plus_inf
     where
@@ -185,12 +186,17 @@ demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenal
         (nt_e,ex_e,sh_e) = nat_exp_shr ! ee
 \end{code}
 
+This is equivalent to cumsum on the 3 dimensions. It makes it fast to compute
+partial sums (i.e., sum (slice velems i j))
 \begin{code}
 _acc_sizes velems = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
     where
         props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 \end{code}
 
+This implements a slightly different algorithm than \TeX\ does. It is a simpler
+and less efficient implementation as it does the full dynamic programming
+without early exits that are easier to achieve in a more imperative style.
 \begin{code}
 _texBreak :: Dimen -> [B.HElement] -> [Int]
 _texBreak _ [] = []
