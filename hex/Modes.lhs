@@ -62,7 +62,7 @@ matchcat cat = matchf testCat
       testCat _ = False
 \end{code}
 
-A simple case is \code{charcommand}:
+A simple case is \code{charcommand}, which matches any \code{CharCommand}:
 \begin{code}
 charcommand = matchf (\c -> case c of { CharCommand _ -> True; _ -> False })
 \end{code}
@@ -77,9 +77,8 @@ readNumber = toNumber `liftM` many (matchf isDigit)
         isDigit (CharCommand (TypedChar c Other)) = (c `elem` "0123456789")
         isDigit _ = False
         toNumber :: [Command] -> Integer
-        toNumber digits = val
+        toNumber digits = read $ cvalue `map` digits
             where
-                val = read $ map cvalue digits
                 cvalue (CharCommand (TypedChar c Other)) = c
                 cvalue _ = error "hex.Modes.readNumber.cvalue: wrong type"
 readUnits :: Modes Unit
@@ -104,8 +103,8 @@ readDimen = do
     return $ dimenFromUnit (fromInteger n) u
 \end{code}
 
-Now, we come to the actual code. \code{_vModeM} implements v-mode (in the
-monad).
+Now, we come to the actual code for hex. \code{_vModeM} implements v-mode (in
+the monad).
 
 \begin{code}
 _vModeM :: Modes [VBox]
@@ -115,21 +114,26 @@ _vModeM = (eof >> return []) <|> do
     return (v++r)
 \end{code}
 
-\code{vMode1} handles one vertical mode command.
-
+\code{vMode1} handles one vertical mode command and drops to hMode if that
+fails. Only a few vertical commands are handled currently.
 \begin{code}
 vMode1 :: Modes [VBox]
 vMode1 = vspace <|> outputfont <|> hMode
+\end{code}
 
-outputfont = do
-    OutputfontCommand fontinfo <- matchf (\c -> case c of { OutputfontCommand _ -> True; _ -> False })
-    let onode = Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)
-    return [onode]
-
+\code{vspace} implements \tex{\\vspace}.
+\begin{code}
 vspace = do
     void $ match (PrimitiveCommand "\\vspace")
     d <- readDimen
     return [Box V d zeroDimen zeroDimen (Kern d)]
+\end{code}
+
+\code{outputfont} is needed for internal reasons and causes a font information to be output.
+\begin{code}
+outputfont = do
+    OutputfontCommand fontinfo <- matchf (\c -> case c of { OutputfontCommand _ -> True; _ -> False })
+    return [Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)]
 \end{code}
 
 Now that we have dealt with vertical mode, we must deal with the horizontal.
@@ -138,16 +142,14 @@ The first function puts down a single character to form an \code{HElement}:
 \begin{code}
 setCharacter :: Modes HElement
 setCharacter = do
-    CharCommand tc <- charcommand
-    e <- environmentM
-    return $ toHElement e tc
-
-toHElement e = toHElement'
+        CharCommand tc <- charcommand
+        e <- environmentM
+        return $ toHElement e tc
     where
-        (fidx,(_,fnt)) = E.currentfont e
-        toHElement' (TypedChar c cat)
-            | cat == Space = spaceInFont fnt
-            | otherwise = charInFont c fidx fnt
+        toHElement e (TypedChar c cat)
+                | cat == Space = spaceInFont fnt
+                | otherwise = charInFont c fidx fnt
+            where (fidx,(_,fnt)) = E.currentfont e
 \end{code}
 
 Selecting a font is easy, just set the font in the environment:
@@ -155,7 +157,6 @@ Selecting a font is easy, just set the font in the environment:
 selectfont = do
     SelectfontCommand i fontinfo <- matchf (\t -> case t of { SelectfontCommand _ _ -> True ; _ -> False })
     modifyState (\st@ModeState{ environment=e } -> st { environment=(E.setfont i fontinfo e) })
-    return ()
 \end{code}
 
 Setting math fonts is similar
@@ -163,20 +164,19 @@ Setting math fonts is similar
 setmathfont = do
     SetMathFontCommand i fontinfo fam fs <- matchf (\t -> case t of { SetMathFontCommand _ _ _ _ -> True; _ -> False})
     modifyState (\st@ModeState{ environment=e } -> st { environment=(E.setmathfont i fontinfo e fam fs) })
-    return ()
 \end{code}
 
+A \code{MathCodeCommand} similarly, just modifies the math environment:
 \begin{code}
 mathcode = do
     MathCodeCommand c mtype fam val <- matchf (\t -> case t of { MathCodeCommand _ _ _ _ -> True; _ -> False})
     modifyState (\st@ModeState{ mathEnvironment = me } -> st {mathEnvironment=(E.insert ('c':[c]) (mtype,fam,val) me)})
-    return ()
 \end{code}
 
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
-\code{HElement}s (but they are still just a list).
-
+\code{HElement}s (but they are still just a list). This is a long
+case-statement; most of the cases got back to \code{_paragraph} to build a list:
 \begin{code}
 _paragraph :: Modes [HElement]
 _paragraph =
@@ -223,7 +223,8 @@ hMode = do
     return $ typesetParagraph e p
 \end{code}
 
-Now get match a single character as a \code{MChar}:
+Math parsing is implemented here, while \code{Maths} implements math typesetting.
+The simplest case is to match a single character as a \code{MChar}:
 \begin{code}
 singlechar :: Modes MList
 singlechar = do
@@ -257,8 +258,9 @@ matom = do
     c <- node
     down <- optionMaybe (matchcat SubScript >> node)
     up <- optionMaybe (matchcat Superscript >> node)
-    return $ MAtom c up down
-
+    case (up,down) of
+        (Nothing, Nothing) -> return c
+        _ -> return $ MAtom c up down
 mlist = (many matom >>= return . MListList)
 \end{code}
 
@@ -280,9 +282,9 @@ typesetMListM ml = do
     e <- environmentM
     return $ typesetMList e ml
 \end{code}
+and we are done with the math mode functionality.
 
 Finally, we hide it all behind a pure interface:
-
 \begin{code}
 vMode :: E.Environment String E.HexType -> [Command] -> [VBox]
 vMode e cs = case runP _vModeM (ModeState e (E.empty)) "input" cs of
