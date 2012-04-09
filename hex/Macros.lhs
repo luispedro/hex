@@ -262,12 +262,27 @@ If found, the macro is expanded by \code{expand1'}
                 backtotoks = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
         expand1' macro = do
                 arguments <- getargs (todelims $ arglist macro)
-                let valid = (isLong macro) || (noPar `all` arguments)
+                e <- envM
+                -- Error checking:
+                --  unless the macro is \long, there should be no \par in the arguments
+                --  there should be no \outer macros in the arguments
+                -- Currently, if both errors trigger, only one (the \par error) is shown
+                let valid_par = (isLong macro) || (noPar `all` arguments)
+                    valid_outer = ((noOuter e) `all` arguments)
+                    valid = valid_par && valid_outer
                     expanded = expandmacro macro arguments
-                return (if valid then expanded else longerror)
+                    err = (if valid_par then outererror else longerror)
+                return (if valid then expanded else err)
             where
                 longerror = errorseq "par in non-long macro"
+                outererror = errorseq "\\outer macro used as argument"
                 noPar (_,tks) = (ControlSequence "\\par") `notElem` tks
+                noOuter e (_,tks) = (isOuterMacro e) `all` tks
+                isOuterMacro e (ControlSequence cn) = case E.lookup cn e of
+                    Just Macro{isOuter=io} -> io
+                    _ -> False
+                isOuterMacro _ _ = False
+
 
 expand1 t = error $ concat ["hex.Macros.expand1: asked to expand non-macro: ", show t]
 \end{code}
@@ -299,7 +314,15 @@ getargs (DelimParameter n:d:ds) = do
     return ((n,val):rest)
 getargs (DelimToken _:ds) = skiptokenM >> getargs ds
 getargs _ = error "getargs"
+\end{code}
+
+
+\begin{code}
 getargtil DelimEmpty = maybespaceM >> gettokenorgroup
+\end{code}
+We cannot simply use \code{gettokentilM} for defining \code{getargtil} because
+we need to respect grouping boundaries:
+\begin{code}
 getargtil d@(DelimToken end) = do
     next <- peektokenM
     if (next == end) then
