@@ -277,7 +277,7 @@ If found, the macro is expanded by \code{expand1'}
                 longerror = errorseq "par in non-long macro"
                 outererror = errorseq "\\outer macro used as argument"
                 noPar (_,tks) = (ControlSequence "\\par") `notElem` tks
-                noOuter e (_,tks) = (isOuterMacro e) `all` tks
+                noOuter e (_,tks) = not $ (isOuterMacro e) `any` tks
                 isOuterMacro e (ControlSequence cn) = case E.lookup cn e of
                     Just Macro{isOuter=io} -> io
                     _ -> False

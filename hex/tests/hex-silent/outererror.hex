@@ -1,0 +1,3 @@
+\outer\def\x{}%
+\def\a#1{#1}%
+\a\x%
