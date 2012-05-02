@@ -185,24 +185,23 @@ breakAtGroupEndM n = do
 \end{code}
 
 
-To handle \tex{\\if} statements, we need to (1) evaluate them and (2) skip over
-the non-important characters. The first step is performed by \code{evaluateif}.
-
+To handle \tex{\\if} statements, we need to evaluate whether they are True or False:
 \begin{code}
-evaluateif :: MacroEnvironment -> String -> TkSS Bool
-evaluateif env "\\ifx"  = do
+evaluateif :: String -> TkSS Bool
+evaluateif "\\ifx"  = do
+        env <- envM
         tok0 <- gettokenM
         tok1 <- gettokenM
-        let cond = ifx tok0 tok1
+        let cond = ifx env tok0 tok1
         return cond
     where
-        ifx (ControlSequence cs0) (ControlSequence cs1) = samemacro cs0 cs1
-        ifx _ _ = False
-        samemacro cs0 cs1 = case ((E.lookup cs0 env),(E.lookup cs1 env)) of
+        ifx env (ControlSequence cs0) (ControlSequence cs1) = samemacro env cs0 cs1
+        ifx _ _ _ = False
+        samemacro env cs0 cs1 = case ((E.lookup cs0 env),(E.lookup cs1 env)) of
             (Nothing, Nothing) -> True
             (Just m0, Just m1) -> (m0 == m1)
             _ -> False
-evaluateif _ "\\if" = do
+evaluateif "\\if" = do
         cmd0 <- expandedTokenM
         cmd1 <- expandedTokenM
         let res = evalif cmd0 cmd1
@@ -217,7 +216,7 @@ evaluateif _ "\\if" = do
                 (ControlSequence _) -> do
                     expand1 tk
                     gettokenM
-evaluateif _e _  = fail "hex.Macros.evaluateif: Cannot handle this type"
+evaluateif _  = fail "hex.Macros.evaluateif: Cannot handle this type"
 \end{code}
 
 Skipping depends on the value of the condition. If the condition is true, we do
@@ -360,13 +359,23 @@ definemacro long outer csname = do
         csnameof _ = error "hex.Macros.definemacro: expected control sequence"
 \end{code}
 
+\code{errorseq} is a sequence of tokens which will produce the passed error message:
+
+\begin{code}
+errorseq msg =
+            [(ControlSequence "error")
+            ,(CharToken (TypedChar '{' BeginGroup))
+            ] ++ errormsg ++ [
+            CharToken (TypedChar '}' EndGroup)]
+    where errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ msg
+\end{code}
+
 If we fail to find a macro, we insert a special token sequence:
 
 \begin{code}
 macronotfounderror csname = errorseq ("Macro `" ++ csname ++ "` not defined.")
-errorseq msg = [(ControlSequence "error"),(CharToken (TypedChar '{' BeginGroup))] ++ errormsg ++ [CharToken (TypedChar '}' EndGroup)]
-    where errormsg = map (\c -> (CharToken $ TypedChar c Letter)) $ msg
 \end{code}
+
 
 The main function, \code{expand} is actually very simple and just forwards the
 first token (after checking that the stream is not empty) to \code{process1}:
@@ -383,9 +392,7 @@ expand env st = case mc of
         rest = (expand env' r1)
 \end{code}
 
-\code{process1} is structured as a huge case statement (implemented with Haskell
-pattern matching):
-
+The \code{TkSS} is a token stream and macro environment state monad:
 \begin{code}
 type TkSS a = TkS MacroEnvironment a
 runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream))
@@ -395,7 +402,14 @@ envM :: TkSS MacroEnvironment
 envM = fst `liftM` get
 updateEnvM :: (MacroEnvironment -> MacroEnvironment) -> TkSS ()
 updateEnvM f = modify (\(e,st) -> (f e, st))
+\end{code}
 
+\code{process1} is structured as a huge case statement (implemented with Haskell
+pattern matching). It consumes as many tokens as necessary to proces it
+sarguments. Some are handled at this level (e.g., \tex{\\let}), while others
+geenreate Commands.
+
+\begin{code}
 process1 :: Token -> TkSS (Maybe Command)
 process1 (ControlSequence "\\let") = do
     ControlSequence name <- gettokenM
@@ -464,8 +478,7 @@ To handle conditionals, \code{evaluateif} is called.
 \begin{code}
 process1 (ControlSequence csname)
     | csname `elem` ifstarts = do
-        e <- envM
-        cond <- evaluateif e csname
+        cond <- evaluateif csname
         skipifM cond
 \end{code}
 
@@ -481,6 +494,8 @@ If we encounter a \tex{\\fi}, just ignore it.
 \begin{code}
 process1 (ControlSequence "\\fi") = return Nothing
 \end{code}
+
+If we have a primitive command, then just wrap it up and ship it down.
 
 Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
 difference is whether the \code{substitution} is the code that was presently
@@ -513,6 +528,7 @@ process1 (ControlSequence "\\chardef") = do
     return Nothing
 \end{code}
 
+\tex{\\char} is very easy:
 \begin{code}
 process1 (ControlSequence "\\char") = do
     v <- readNumberM
@@ -539,6 +555,9 @@ process1 (ControlSequence "\\font") = do
     internalCommandM (LoadfontHCommand fname)
 \end{code}
 
+Setting the math fonts is done at another level, so we just collect the
+information and pass it down.
+
 \begin{code}
 process1 (ControlSequence cs)
     | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"] = do
@@ -558,7 +577,7 @@ process1 (ControlSequence cs)
         fontstyle _ = error "hex.Macros.process1.fontstyle: This should never happen"
 \end{code}
 
-Errors and messages are similar and handled by the same case:
+Errors and messages are similar and handled by the same case (they are similar):
 \begin{code}
 process1 (ControlSequence cs) | cs `elem` ["error","\\message"] = do
     arguments <- (getargs [DelimParameter 0, DelimEmpty])
@@ -600,20 +619,23 @@ process1 t@(CharToken tc)
     | otherwise = return $ Just (fromToken t)
 \end{code}
 
-If nothing else triggered, we must have a macro, so we call \code{expand1}:
+If nothing else triggered, we must have a macro, so we call \code{expand1}. The
+expansion will queue the tokens and they will be handled later.
 
 \begin{code}
 process1 t = (expand1 t) >> (return Nothing)
 \end{code}
 
-Throughout \code{process1}, we make it easy to output internal commands:
+We make it easy to output internal commands:
 \begin{code}
 internalCommandM c = do
     (e,rest) <- get
     return $ Just (InternalCommand e rest c)
 \end{code}
 
-This reads expanded tokens:
+This reads expanded tokens to form a number (including interpreting CharDef as
+a number, which is what TeX does):
+
 \begin{code}
 readENumberM = do
     t <- peektokenM
