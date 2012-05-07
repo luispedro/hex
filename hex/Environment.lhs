@@ -37,6 +37,7 @@ data HexType =
         | HexInteger Integer
         | HexString String
         | HexFontInfo (FontDef, FontInfo)
+        | HexMathCodePoint (Char,Integer)
         | HexScaledNumber Scaled
 \end{code}
 

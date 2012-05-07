@@ -89,6 +89,7 @@ data Command =
         | SelectfontCommand Integer (FontDef,FontInfo)
         | SetMathFontCommand Integer (FontDef,FontInfo) Integer E.MathFontStyle
         | MathCodeCommand Char Integer Integer Char
+        | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -116,6 +117,7 @@ instance Show Command where
     show (SelectfontCommand _ _) = "<selectfont>"
     show (SetMathFontCommand _ _ _ _) = "<setmathfontcommand>"
     show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
+    show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -463,6 +465,7 @@ process1 (ControlSequence "\\catcode") = do
     return Nothing
 \end{code}
 
+There are a few other "code" commands handled here. They are all similar.
 \begin{code}
 process1 (ControlSequence "\\mathcode") = do
     c <- readCharM
@@ -472,6 +475,19 @@ process1 (ControlSequence "\\mathcode") = do
         fam = (n `shiftR` 8) .&. 0x0f
         val = chr $ fromInteger (n .&. 0xff)
     return $ Just (MathCodeCommand c mtype fam val)
+\end{code}
+
+\begin{code}
+process1 (ControlSequence "\\delcode") = do
+    c <- readCharM
+    maybeeqM
+    n <- readENumberM
+    let sfam = (n `shiftR` 16) .&. 0x0f
+        sval = (n `shiftR` 12) .&. 0xff
+        bfam = (n `shiftR` 8) .&. 0x0f
+        bval = n .&. 0xff
+        chr' = chr . fromInteger
+    return $ Just (DelCodeCommand c (chr' sval,sfam) (chr' bval,bfam))
 \end{code}
 
 To handle conditionals, \code{evaluateif} is called.

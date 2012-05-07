@@ -173,6 +173,17 @@ mathcode = do
     modifyState (\st@ModeState{ mathEnvironment = me } -> st {mathEnvironment=(E.insert ('c':[c]) (mtype,fam,val) me)})
 \end{code}
 
+Similarly, a \code{DelCodeCommand} just adds a delcode to the environment as
+well:
+
+\begin{code}
+delcode = do
+    DelCodeCommand c (sval,sfam) (bval,bfam) <- matchf (\t -> case t of { DelCodeCommand _ _ _ -> True; _ -> False})
+    modifyState (\st@ModeState{ environment = e } -> st {environment = (
+                            (E.insert ("delim-small:" ++ [c]) (E.HexMathCodePoint (sval,sfam))) .
+                            (E.insert ("delim-big:" ++ [c]) (E.HexMathCodePoint (bval,bfam)))
+                            ) e })
+\end{code}
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
 \code{HElement}s (but they are still just a list). This is a long
@@ -187,6 +198,7 @@ _paragraph =
     (match  MathShiftCommand >> mMode >>= typesetMListM >>= (\ml -> _paragraph >>= return . (ml++))) <|>
     (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
     (mathcode >> _paragraph) <|>
+    (delcode >> _paragraph) <|>
     (setmathfont >> _paragraph) <|>
     (selectfont >> _paragraph) <|>
     return []
