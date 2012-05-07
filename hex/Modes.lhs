@@ -50,6 +50,7 @@ Small helpers, to match commands that fulfil a certain condition (like
 equality) and to match character categories:
 \begin{code}
 incCol pos _ _  = incSourceColumn pos $ sourceColumn pos
+matchf :: (Command -> Bool) -> Modes Command
 matchf f = Prim.tokenPrim show incCol testChar
     where testChar t = if f t then Just t else Nothing
 
@@ -185,6 +186,15 @@ delcode = do
                             ) e })
 \end{code}
 
+sfcode is as easy:
+\begin{code}
+sfcode = do
+    SfCodeCommand c sfc <- matchf (\t -> case t of { SfCodeCommand _ _ -> True; _ -> False })
+    modifyState (\st@ModeState{ environment = e } -> st { environment =
+                            (E.insert ("sfcode:" ++ [c]) (E.HexInteger sfc))
+                            e })
+\end{code}
+
 Building up, \code{_paragraph} gets a single paragraph as a list of
 \code{HElement}s (but they are still just a list). This is a long
 case-statement; most of the cases got back to \code{_paragraph} to build a list:
@@ -199,6 +209,7 @@ _paragraph =
     (setCharacter >>= (\h -> _paragraph >>= return . (h:))) <|>
     (mathcode >> _paragraph) <|>
     (delcode >> _paragraph) <|>
+    (sfcode >> _paragraph) <|>
     (setmathfont >> _paragraph) <|>
     (selectfont >> _paragraph) <|>
     return []

@@ -90,6 +90,7 @@ data Command =
         | SetMathFontCommand Integer (FontDef,FontInfo) Integer E.MathFontStyle
         | MathCodeCommand Char Integer Integer Char
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
+        | SfCodeCommand Char Integer
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -118,6 +119,7 @@ instance Show Command where
     show (SetMathFontCommand _ _ _ _) = "<setmathfontcommand>"
     show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
     show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
+    show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -488,6 +490,14 @@ process1 (ControlSequence "\\delcode") = do
         bval = n .&. 0xff
         chr' = chr . fromInteger
     return $ Just (DelCodeCommand c (chr' sval,sfam) (chr' bval,bfam))
+\end{code}
+
+\begin{code}
+process1 (ControlSequence "\\sfcode") = do
+    c <- readCharM
+    maybeeqM
+    n <- readENumberM
+    return $ Just (SfCodeCommand c n)
 \end{code}
 
 To handle conditionals, \code{evaluateif} is called.
