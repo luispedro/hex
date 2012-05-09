@@ -542,7 +542,7 @@ process1 (ControlSequence "\\global") = do
     case next of
         ControlSequence "\\def" -> process1 (ControlSequence "\\gdef")
         ControlSequence "\\edef" -> process1 (ControlSequence "\\xdef")
-        _ -> error "hex.Macros.process1: Unexpected token after \\global"
+        c -> error $ concat ["hex.Macros.process1: Unexpected token after \\global (", show c, ")"]
 \end{code}
 
 \tex{\\chardef} and \tex{\\mathchardef} are almost identical:
