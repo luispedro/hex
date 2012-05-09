@@ -35,6 +35,7 @@ data Macro = Macro
             | FontMacro String
             | CharDef Integer
             | MathCharDef Integer
+            | CountDef Integer
             deriving (Eq, Show)
 \end{code}
 
@@ -265,6 +266,7 @@ If found, the macro is expanded by \code{expand1'}
                 toTok c = (CharToken (TypedChar c Letter))
         expand1' (CharDef cv) = return ((ControlSequence "\\char"):backtotoks cv)
         expand1' (MathCharDef cv) = return ((ControlSequence "\\mathchar"):backtotoks cv)
+        expand1' (CountDef cv) = return ((ControlSequence "\\count"):backtotoks cv)
         expand1' macro = do
                 arguments <- getargs (todelims $ arglist macro)
                 e <- envM
@@ -560,6 +562,15 @@ process1 (ControlSequence cdef)
         cdefcons = if cdef == "\\chardef"
                     then CharDef
                     else MathCharDef
+\end{code}
+
+\begin{code}
+process1 (ControlSequence "\\countdef") = do
+    ControlSequence name <- gettokenM    
+    maybeeqM
+    cid <- readNumberM
+    updateEnvM (E.insert name (CountDef cid))
+    return Nothing
 \end{code}
 
 \tex{\\char} is very easy:

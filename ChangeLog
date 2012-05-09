@@ -1,6 +1,7 @@
 Version 0.0.5+
 	* Refactor Macros/Tokens to emphacise Monadic interfact
 	* Update to newer Haskell
+	* Implementation of \countdef
 	* Partial \outer error-detection support
 	* Partial implementation of \mathcharcode, \sfcode, \delcode
 	* Partial implementation of registers
