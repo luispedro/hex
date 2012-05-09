@@ -100,11 +100,17 @@ readDimen = do
 
 The implementation of \tex{\\count} is hidden behind a few helper functions:
 \begin{code}
-getCountM cid = gets (E.lookup ("count-register:"++show cid))
+getCountM cid = do
+    Just (E.HexInteger v) <- gets (E.lookup ("count-register:"++show cid))
+    return v
 setCountM isglobal cid val = modifyState (ins isglobal ("count-register"++show cid) (E.HexInteger val))
-    where
-        ins True = E.globalinsert
-        ins False = E.insert
+
+getDimenM did = do
+    Just (E.HexDimen d) <- gets (E.lookup ("dimen-register"++show did))
+    return d
+setDimenM isglobal did val = modifyState (ins isglobal ("dimen-register"++show did) (E.HexDimen val))
+ins True = E.globalinsert
+ins False = E.insert
 \end{code}
 
 Now, we come to the actual code for hex. \code{_vModeM} implements v-mode (in
@@ -122,7 +128,11 @@ _vModeM = (eof >> return []) <|> do
 fails. Only a few vertical commands are handled currently.
 \begin{code}
 vMode1 :: Modes [VBox]
-vMode1 = vspace <|> setcount <|> outputfont <|> hMode
+vMode1 = vspace
+            <|> setcount
+            <|> setdimen
+            <|> outputfont
+            <|> hMode
 \end{code}
 
 \code{vspace} implements \tex{\\vspace}.
@@ -133,10 +143,15 @@ vspace = do
     return [Box V d zeroDimen zeroDimen (Kern d)]
 \end{code}
 
+\code{setcount} and \code{setdimen} are both very simple:
 \begin{code}
 setcount = do
     SetCountCommand cid val <- matchf (\c -> case c of { SetCountCommand _ _ -> True; _ -> False })
     setCountM False cid val
+    return []
+setdimen = do
+    SetDimenCommand cid val <- matchf (\c -> case c of { SetDimenCommand _ _ -> True; _ -> False })
+    setDimenM False cid val
     return []
 \end{code}
 

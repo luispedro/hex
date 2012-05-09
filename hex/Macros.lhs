@@ -20,6 +20,7 @@ import Fonts
 import Tokens
 import Chars
 import CharStream
+import Measures
 import qualified Environment as E
 \end{code}
 
@@ -36,6 +37,7 @@ data Macro = Macro
             | CharDef Integer
             | MathCharDef Integer
             | CountDef Integer
+            | DimenDef Integer
             deriving (Eq, Show)
 \end{code}
 
@@ -94,6 +96,7 @@ data Command =
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
         | SetCountCommand Integer Integer
+        | SetDimenCommand Integer Dimen
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -124,6 +127,7 @@ instance Show Command where
     show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
+    show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -267,6 +271,7 @@ If found, the macro is expanded by \code{expand1'}
         expand1' (CharDef cv) = return ((ControlSequence "\\char"):backtotoks cv)
         expand1' (MathCharDef cv) = return ((ControlSequence "\\mathchar"):backtotoks cv)
         expand1' (CountDef cv) = return ((ControlSequence "\\count"):backtotoks cv)
+        expand1' (DimenDef cv) = return ((ControlSequence "\\dimen"):backtotoks cv)
         expand1' macro = do
                 arguments <- getargs (todelims $ arglist macro)
                 e <- envM
@@ -565,12 +570,17 @@ process1 (ControlSequence cdef)
 \end{code}
 
 \begin{code}
-process1 (ControlSequence "\\countdef") = do
-    ControlSequence name <- gettokenM    
-    maybeeqM
-    cid <- readNumberM
-    updateEnvM (E.insert name (CountDef cid))
-    return Nothing
+process1 (ControlSequence cddef)
+    | cddef `elem` ["\\countdef", "\\dimendef"] = do
+        ControlSequence name <- gettokenM
+        maybeeqM
+        cid <- readNumberM
+        updateEnvM (E.insert name (c cid))
+        return Nothing
+    where
+        c = if cddef == "\\countdef"
+                then CountDef
+                else DimenDef
 \end{code}
 
 \tex{\\char} is very easy:
@@ -587,6 +597,15 @@ process1 (ControlSequence "\\count") = do
     maybeeqM
     val <- readNumberM
     return $ Just (SetCountCommand cid val)
+\end{code}
+
+\tex{\\dimen} is same thing:
+\begin{code}
+process1 (ControlSequence "\\dimen") = do
+    cid <- readNumberM
+    maybeeqM
+    val <- readDimenM
+    return $ Just (SetDimenCommand cid val)
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
@@ -702,4 +721,18 @@ readENumberM = do
                 Just (MathCharDef v) -> return v
                 Just (Macro _ _ _ _) -> skiptokenM >> expand1 t >> readENumberM
                 _ -> error "hex.readENumberM: unexpected"
+\end{code}
+
+\code{readDimenM} reads a dimension in tokens
+
+\begin{code}
+readDimenM = do
+        n <- readNumberM
+        CharToken c0 <- gettokenM
+        CharToken c1 <- gettokenM
+        return $ dimenFromUnit (fromInteger n) (unit [value c0,value c1])
+    where
+        unit "pt" = UnitPt
+        unit "px" = UnitPx
+        unit un = error ("hex.Macros.unit: not implemented: "++un)
 \end{code}
