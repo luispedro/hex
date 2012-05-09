@@ -34,6 +34,7 @@ The environment holds a sort of variant type, \code{HexType}:
 \begin{code}
 data HexType =
         HexDimen Dimen
+        | HexGlue Dimen
         | HexInteger Integer
         | HexString String
         | HexFontInfo (FontDef, FontInfo)

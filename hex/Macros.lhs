@@ -38,6 +38,7 @@ data Macro = Macro
             | MathCharDef Integer
             | CountDef Integer
             | DimenDef Integer
+            | SkipDef Integer
             deriving (Eq, Show)
 \end{code}
 
@@ -97,6 +98,7 @@ data Command =
         | SfCodeCommand Char Integer
         | SetCountCommand Integer Integer
         | SetDimenCommand Integer Dimen
+        | SetSkipCommand Integer Dimen
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -128,6 +130,7 @@ instance Show Command where
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
     show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
+    show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -272,6 +275,7 @@ If found, the macro is expanded by \code{expand1'}
         expand1' (MathCharDef cv) = return ((ControlSequence "\\mathchar"):backtotoks cv)
         expand1' (CountDef cv) = return ((ControlSequence "\\count"):backtotoks cv)
         expand1' (DimenDef cv) = return ((ControlSequence "\\dimen"):backtotoks cv)
+        expand1' (SkipDef cv) = return ((ControlSequence "\\skip"):backtotoks cv)
         expand1' macro = do
                 arguments <- getargs (todelims $ arglist macro)
                 e <- envM
@@ -571,16 +575,18 @@ process1 (ControlSequence cdef)
 
 \begin{code}
 process1 (ControlSequence cddef)
-    | cddef `elem` ["\\countdef", "\\dimendef"] = do
+    | cddef `elem` ["\\countdef", "\\dimendef", "\\skipdef"] = do
         ControlSequence name <- gettokenM
         maybeeqM
         cid <- readNumberM
         updateEnvM (E.insert name (c cid))
         return Nothing
     where
-        c = if cddef == "\\countdef"
-                then CountDef
-                else DimenDef
+        c = case cddef of
+                "\\countdef" -> CountDef
+                "\\dimendef" -> DimenDef
+                "\\skipdef" -> SkipDef
+                _ -> error "impossible"
 \end{code}
 
 \tex{\\char} is very easy:
@@ -606,6 +612,15 @@ process1 (ControlSequence "\\dimen") = do
     maybeeqM
     val <- readDimenM
     return $ Just (SetDimenCommand cid val)
+\end{code}
+
+\tex{\\skip} is same thing:
+\begin{code}
+process1 (ControlSequence "\\skip") = do
+    cid <- readNumberM
+    maybeeqM
+    val <- readGlueM
+    return $ Just (SetSkipCommand cid val)
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
@@ -735,4 +750,5 @@ readDimenM = do
         unit "pt" = UnitPt
         unit "px" = UnitPx
         unit un = error ("hex.Macros.unit: not implemented: "++un)
+readGlueM = readDimenM
 \end{code}

@@ -116,6 +116,9 @@ setCountM = setRegisterM "count" E.HexInteger
 
 getDimenM = liftM (\(E.HexDimen d) -> d) . getRegisterM "dimen"
 setDimenM = setRegisterM "dimen" E.HexDimen
+
+getSkipM = liftM (\(E.HexGlue g) -> g) . getRegisterM "skip"
+setSkipM = setRegisterM "skip" E.HexGlue
 \end{code}
 
 Now, we come to the actual code for hex. \code{_vModeM} implements v-mode (in
@@ -136,6 +139,7 @@ vMode1 :: Modes [VBox]
 vMode1 = vspace
             <|> setcount
             <|> setdimen
+            <|> setskip
             <|> outputfont
             <|> hMode
 \end{code}
@@ -157,6 +161,10 @@ setcount = do
 setdimen = do
     SetDimenCommand cid val <- matchf (\c -> case c of { SetDimenCommand _ _ -> True; _ -> False })
     setDimenM False cid val
+    return []
+setskip = do
+    SetSkipCommand did val <- matchf (\c -> case c of { SetSkipCommand _ _ -> True; _ -> False })
+    setSkipM False did val
     return []
 \end{code}
 
