@@ -2,7 +2,6 @@
 \begin{code}
 module Modes
     ( vMode
-    , ModeState(..)
     , _vModeM
     , _paragraph
     ) where
@@ -25,25 +24,19 @@ The implementation of the modes is as a Parsec based on \code{[Command]}. The
 state is the environment:
 
 \begin{code}
-data ModeState = ModeState
-    { environment :: E.Environment String E.HexType
-    , mathEnvironment :: E.Environment String (Integer,Integer,Char)
-    }
+type ModeState = E.Environment String E.HexType
 type Modes a = Parsec [Command] ModeState a
 \end{code}
 
 Now a few functions to retrieve and manipulate the environment:
 \begin{code}
 environmentM :: Modes (E.Environment String E.HexType)
-environmentM = environment `liftM` getState
-
-mathEnvironmentM :: Modes (E.Environment String (Integer,Integer,Char))
-mathEnvironmentM = mathEnvironment `liftM` getState
+environmentM = getState
 
 pushE :: Modes ()
-pushE = modifyState (\(ModeState e me) -> ModeState (E.push e) (E.push me))
+pushE = modifyState E.push
 popE :: Modes ()
-popE = modifyState (\(ModeState e me) -> ModeState (E.pop e) (E.pop me))
+popE = modifyState E.pop
 \end{code}
 
 Small helpers, to match commands that fulfil a certain condition (like
@@ -157,21 +150,22 @@ Selecting a font is easy, just set the font in the environment:
 \begin{code}
 selectfont = do
     SelectfontCommand i fontinfo <- matchf (\t -> case t of { SelectfontCommand _ _ -> True ; _ -> False })
-    modifyState (\st@ModeState{ environment=e } -> st { environment=(E.setfont i fontinfo e) })
+    modifyState (E.setfont i fontinfo)
 \end{code}
 
 Setting math fonts is similar
 \begin{code}
 setmathfont = do
     SetMathFontCommand i fontinfo fam fs <- matchf (\t -> case t of { SetMathFontCommand _ _ _ _ -> True; _ -> False})
-    modifyState (\st@ModeState{ environment=e } -> st { environment=(E.setmathfont i fontinfo e fam fs) })
+    modifyState (\e -> E.setmathfont i fontinfo e fam fs)
 \end{code}
 
 A \code{MathCodeCommand} similarly, just modifies the math environment:
 \begin{code}
 mathcode = do
     MathCodeCommand c mtype fam val <- matchf (\t -> case t of { MathCodeCommand _ _ _ _ -> True; _ -> False})
-    modifyState (\st@ModeState{ mathEnvironment = me } -> st {mathEnvironment=(E.insert ('c':[c]) (mtype,fam,val) me)})
+    modifyState $ (E.insert ("mc-type"++[c]) (E.HexInteger mtype)) .
+                (E.insert ("mc-codepoint"++[c]) (E.HexMathCodePoint (val,fam)))
 \end{code}
 
 Similarly, a \code{DelCodeCommand} just adds a delcode to the environment as
@@ -180,19 +174,15 @@ well:
 \begin{code}
 delcode = do
     DelCodeCommand c (sval,sfam) (bval,bfam) <- matchf (\t -> case t of { DelCodeCommand _ _ _ -> True; _ -> False})
-    modifyState (\st@ModeState{ environment = e } -> st {environment = (
-                            (E.insert ("delim-small:" ++ [c]) (E.HexMathCodePoint (sval,sfam))) .
-                            (E.insert ("delim-big:" ++ [c]) (E.HexMathCodePoint (bval,bfam)))
-                            ) e })
+    modifyState $ (E.insert ("delim-small:" ++ [c]) (E.HexMathCodePoint (sval,sfam))) .
+                (E.insert ("delim-big:" ++ [c]) (E.HexMathCodePoint (bval,bfam)))
 \end{code}
 
 sfcode is as easy:
 \begin{code}
 sfcode = do
     SfCodeCommand c sfc <- matchf (\t -> case t of { SfCodeCommand _ _ -> True; _ -> False })
-    modifyState (\st@ModeState{ environment = e } -> st { environment =
-                            (E.insert ("sfcode:" ++ [c]) (E.HexInteger sfc))
-                            e })
+    modifyState (E.insert ("sfcode:" ++ [c]) (E.HexInteger sfc))
 \end{code}
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
@@ -252,8 +242,9 @@ The simplest case is to match a single character as a \code{MChar}:
 singlechar :: Modes MList
 singlechar = do
     CharCommand (TypedChar c _) <- charcommand
-    me <- mathEnvironmentM
-    let (mtype,fam,val) = E.lookupWithDefault (0,0,c) ('c':[c]) me
+    e <- environmentM
+    let E.HexInteger mtype = E.lookupWithDefault (E.HexInteger 0) ("mc-type"++[c]) e
+        E.HexMathCodePoint (val,fam) = E.lookupWithDefault (E.HexMathCodePoint (c,0)) ("mc-codepoint"++[c]) e
     return (case mtype of
         -- 0 ordinary
         0 -> MChar fam val
@@ -310,7 +301,7 @@ and we are done with the math mode functionality.
 Finally, we hide it all behind a pure interface:
 \begin{code}
 vMode :: E.Environment String E.HexType -> [Command] -> [VBox]
-vMode e cs = case runP _vModeM (ModeState e (E.empty)) "input" cs of
+vMode e cs = case runP _vModeM e "input" cs of
     Right res -> res
     Left err -> error $ show err
 \end{code}
