@@ -34,6 +34,7 @@ data Macro = Macro
             }
             | FontMacro String
             | CharDef Integer
+            | MathCharDef Integer
             deriving (Eq, Show)
 \end{code}
 
@@ -260,9 +261,8 @@ If found, the macro is expanded by \code{expand1'}
                 toTok '{' = (CharToken (TypedChar '{' BeginGroup))
                 toTok '}' = (CharToken (TypedChar '}' EndGroup))
                 toTok c = (CharToken (TypedChar c Letter))
-        expand1' (CharDef cv) = return ((ControlSequence "\\char"):backtotoks)
-            where
-                backtotoks = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
+        expand1' (CharDef cv) = return ((ControlSequence "\\char"):backtotoks cv)
+        expand1' (MathCharDef cv) = return ((ControlSequence "\\mathchar"):backtotoks cv)
         expand1' macro = do
                 arguments <- getargs (todelims $ arglist macro)
                 e <- envM
@@ -285,6 +285,7 @@ If found, the macro is expanded by \code{expand1'}
                     Just Macro{isOuter=io} -> io
                     _ -> False
                 isOuterMacro _ _ = False
+        backtotoks cv = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
 
 
 expand1 t = error $ concat ["hex.Macros.expand1: asked to expand non-macro: ", show t]
@@ -544,14 +545,19 @@ process1 (ControlSequence "\\global") = do
         _ -> error "hex.Macros.process1: Unexpected token after \\global"
 \end{code}
 
-\tex{\\chardef} is implemented by transformation into \tex{\\def}:
+\tex{\\chardef} and \tex{\\mathchardef} are almost identical:
 \begin{code}
-process1 (ControlSequence "\\chardef") = do
-    ControlSequence name <- gettokenM
-    maybeeqM
-    charcode <- readNumberM
-    updateEnvM (E.insert name (CharDef charcode))
-    return Nothing
+process1 (ControlSequence cdef)
+    |cdef `elem` ["\\chardef", "\\mathchardef"] = do
+        ControlSequence name <- gettokenM
+        maybeeqM
+        charcode <- readNumberM
+        updateEnvM (E.insert name (cdefcons charcode))
+        return Nothing
+    where
+        cdefcons = if cdef == "\\chardef"
+                    then CharDef
+                    else MathCharDef
 \end{code}
 
 \tex{\\char} is very easy:
@@ -671,6 +677,7 @@ readENumberM = do
             e <- envM
             case E.lookup csname e of
                 Just (CharDef v) -> return v
+                Just (MathCharDef v) -> return v
                 Just (Macro _ _ _ _) -> skiptokenM >> expand1 t >> readENumberM
                 _ -> error "hex.readENumberM: unexpected"
 \end{code}

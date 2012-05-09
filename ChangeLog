@@ -2,6 +2,7 @@ Version 0.0.5+
 	* Refactor Macros/Tokens to emphacise Monadic interfact
 	* Update to newer Haskell
 	* Partial \outer error-detection support
+	* Partial implementation of \mathcharcode, \sfcode, \delcode
 
 Version 0.0.5 2012-04-08  by luispedro
 	* Implement ^^@ notation
