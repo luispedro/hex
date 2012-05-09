@@ -17,7 +17,6 @@ import Maths
 import Text.Parsec hiding (many, optional, (<|>))
 import qualified Text.Parsec.Prim as Prim
 import Control.Monad
-import Control.Monad.State (gets)
 import Control.Applicative
 \end{code}
 
@@ -100,17 +99,23 @@ readDimen = do
 
 The implementation of \tex{\\count} is hidden behind a few helper functions:
 \begin{code}
-getCountM cid = do
-    Just (E.HexInteger v) <- gets (E.lookup ("count-register:"++show cid))
+getRegisterM :: String -> Integer -> Modes E.HexType
+getRegisterM class_ rid = do
+    e <- environmentM
+    let Just v = E.lookup (class_++"-register:"++show rid) e
     return v
-setCountM isglobal cid val = modifyState (ins isglobal ("count-register"++show cid) (E.HexInteger val))
 
-getDimenM did = do
-    Just (E.HexDimen d) <- gets (E.lookup ("dimen-register"++show did))
-    return d
-setDimenM isglobal did val = modifyState (ins isglobal ("dimen-register"++show did) (E.HexDimen val))
-ins True = E.globalinsert
-ins False = E.insert
+setRegisterM class_ wrapper isglobal rid val =
+        modifyState (ins isglobal (class_++"-register"++show rid) (wrapper val))
+    where
+        ins True = E.globalinsert
+        ins False = E.insert
+
+getCountM = liftM (\(E.HexInteger i) -> i) . getRegisterM "count"
+setCountM = setRegisterM "count" E.HexInteger
+
+getDimenM = liftM (\(E.HexDimen d) -> d) . getRegisterM "dimen"
+setDimenM = setRegisterM "dimen" E.HexDimen
 \end{code}
 
 Now, we come to the actual code for hex. \code{_vModeM} implements v-mode (in
