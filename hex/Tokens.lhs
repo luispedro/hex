@@ -315,7 +315,7 @@ readNumberM = do
                     rest <- digits accepted
                     return (value tc:rest)
                 _ -> return []
-        octdigits = "01234567"
+        octdigits = "+-01234567"
         decdigits = octdigits ++ "89"
         hexdigits = decdigits ++ "ABCDEF"
 \end{code}

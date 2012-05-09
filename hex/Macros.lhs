@@ -92,6 +92,7 @@ data Command =
         | MathCodeCommand Char Integer Integer Char
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
+        | SetCountCommand Integer Integer
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -121,6 +122,7 @@ instance Show Command where
     show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
     show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
+    show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -565,6 +567,15 @@ process1 (ControlSequence cdef)
 process1 (ControlSequence "\\char") = do
     v <- readNumberM
     return $ Just (CharCommand (TypedChar (chr $ fromInteger v) Other))
+\end{code}
+
+\tex{\\count} is very easy too:
+\begin{code}
+process1 (ControlSequence "\\count") = do
+    cid <- readNumberM
+    maybeeqM
+    val <- readNumberM
+    return $ Just (SetCountCommand cid val)
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}

@@ -3,6 +3,7 @@ Version 0.0.5+
 	* Update to newer Haskell
 	* Partial \outer error-detection support
 	* Partial implementation of \mathcharcode, \sfcode, \delcode
+	* Partial implementation of registers
 
 Version 0.0.5 2012-04-08  by luispedro
 	* Implement ^^@ notation

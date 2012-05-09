@@ -17,6 +17,7 @@ import Maths
 import Text.Parsec hiding (many, optional, (<|>))
 import qualified Text.Parsec.Prim as Prim
 import Control.Monad
+import Control.Monad.State (gets)
 import Control.Applicative
 \end{code}
 
@@ -97,6 +98,15 @@ readDimen = do
     return $ dimenFromUnit (fromInteger n) u
 \end{code}
 
+The implementation of \tex{\\count} is hidden behind a few helper functions:
+\begin{code}
+getCountM cid = gets (E.lookup ("count-register:"++show cid))
+setCountM isglobal cid val = modifyState (ins isglobal ("count-register"++show cid) (E.HexInteger val))
+    where
+        ins True = E.globalinsert
+        ins False = E.insert
+\end{code}
+
 Now, we come to the actual code for hex. \code{_vModeM} implements v-mode (in
 the monad).
 
@@ -112,7 +122,7 @@ _vModeM = (eof >> return []) <|> do
 fails. Only a few vertical commands are handled currently.
 \begin{code}
 vMode1 :: Modes [VBox]
-vMode1 = vspace <|> outputfont <|> hMode
+vMode1 = vspace <|> setcount <|> outputfont <|> hMode
 \end{code}
 
 \code{vspace} implements \tex{\\vspace}.
@@ -121,6 +131,13 @@ vspace = do
     void $ match (PrimitiveCommand "\\vspace")
     d <- readDimen
     return [Box V d zeroDimen zeroDimen (Kern d)]
+\end{code}
+
+\begin{code}
+setcount = do
+    SetCountCommand cid val <- matchf (\c -> case c of { SetCountCommand _ _ -> True; _ -> False })
+    setCountM False cid val
+    return []
 \end{code}
 
 \code{outputfont} is needed for internal reasons and causes a font information to be output.
