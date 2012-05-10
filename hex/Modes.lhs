@@ -127,7 +127,7 @@ the monad).
 \begin{code}
 _vModeM :: Modes [VBox]
 _vModeM = (eof >> return []) <|> do
-    v <- vMode1
+    v <- (try vMode1) <|> hMode
     r <- _vModeM
     return (v++r)
 \end{code}
@@ -136,43 +136,40 @@ _vModeM = (eof >> return []) <|> do
 fails. Only a few vertical commands are handled currently.
 \begin{code}
 vMode1 :: Modes [VBox]
-vMode1 = vspace
-            <|> setcount
-            <|> setdimen
-            <|> setskip
-            <|> outputfont
-            <|> hMode
+vMode1 = anyToken >>= vMode1'
 \end{code}
 
-\code{vspace} implements \tex{\\vspace}.
 \begin{code}
-vspace = do
-    void $ match (PrimitiveCommand "\\vspace")
+vMode1' (PrimitiveCommand "\\vspace") = do
     d <- readDimen
     return [Box V d zeroDimen zeroDimen (Kern d)]
 \end{code}
 
 \code{setcount} and \code{setdimen} are both very simple:
 \begin{code}
-setcount = do
-    SetCountCommand cid val <- matchf (\c -> case c of { SetCountCommand _ _ -> True; _ -> False })
+vMode1' (SetCountCommand cid val) = do
     setCountM False cid val
     return []
-setdimen = do
-    SetDimenCommand cid val <- matchf (\c -> case c of { SetDimenCommand _ _ -> True; _ -> False })
+
+vMode1' (SetDimenCommand cid val) = do
     setDimenM False cid val
     return []
-setskip = do
-    SetSkipCommand did val <- matchf (\c -> case c of { SetSkipCommand _ _ -> True; _ -> False })
+
+vMode1' (SetSkipCommand did val) = do
     setSkipM False did val
     return []
+
 \end{code}
 
 \code{outputfont} is needed for internal reasons and causes a font information to be output.
 \begin{code}
-outputfont = do
-    OutputfontCommand fontinfo <- matchf (\c -> case c of { OutputfontCommand _ -> True; _ -> False })
+vMode1' (OutputfontCommand fontinfo) =
     return [Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)]
+\end{code}
+
+If nothing matches, make the parser fail:
+\begin{code}
+vMode1' _ = unexpected "not a vmode command"
 \end{code}
 
 Now that we have dealt with vertical mode, we must deal with the horizontal.
