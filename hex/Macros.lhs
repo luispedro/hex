@@ -39,6 +39,7 @@ data Macro = Macro
             | CountDef Integer
             | DimenDef Integer
             | SkipDef Integer
+            | ToksDef Integer
             deriving (Eq, Show)
 \end{code}
 
@@ -276,6 +277,7 @@ If found, the macro is expanded by \code{expand1'}
         expand1' (CountDef cv) = return ((ControlSequence "\\count"):backtotoks cv)
         expand1' (DimenDef cv) = return ((ControlSequence "\\dimen"):backtotoks cv)
         expand1' (SkipDef cv) = return ((ControlSequence "\\skip"):backtotoks cv)
+        expand1' (ToksDef cv) = return ((ControlSequence "\\toks"):backtotoks cv)
         expand1' macro = do
                 arguments <- getargs (todelims $ arglist macro)
                 e <- envM
@@ -575,7 +577,7 @@ process1 (ControlSequence cdef)
 
 \begin{code}
 process1 (ControlSequence cddef)
-    | cddef `elem` ["\\countdef", "\\dimendef", "\\skipdef"] = do
+    | cddef `elem` ["\\countdef", "\\dimendef", "\\skipdef", "\\toksdef"] = do
         ControlSequence name <- gettokenM
         maybeeqM
         cid <- readNumberM
@@ -586,6 +588,7 @@ process1 (ControlSequence cddef)
                 "\\countdef" -> CountDef
                 "\\dimendef" -> DimenDef
                 "\\skipdef" -> SkipDef
+                "\\toksdef" -> ToksDef
                 _ -> error "impossible"
 \end{code}
 
