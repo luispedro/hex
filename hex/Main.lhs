@@ -81,7 +81,7 @@ hexcmds = HexCmd
             verbosity &=
             summary sumtext &=
             details ["Hex implements the TeX language"]
-    where sumtext = concat ["Hex v", version, " (C) Luis Pedro Coelho 2011"]
+    where sumtext = concat ["Hex v", version, " (C) Luis Pedro Coelho 2011-2012"]
 
 \end{code}
 
