@@ -70,6 +70,11 @@ Now, an environment simply maps macro names (\code{String}s) to \code{Macro}s.
 
 \begin{code}
 type MacroEnvironment = E.Environment String Macro
+type Flags = Bool
+data ExpansionEnvironment = ExpansionEnvironment
+                        { definitions :: MacroEnvironment
+                        , flags :: Bool
+                        } deriving (Eq, Show)
 \end{code}
 
 After expansion, we no longer have tokens: we have commands. For the moment, we
@@ -353,30 +358,42 @@ getargtil d@(DelimToken end) = do
 getargtil (DelimParameter _) = gettokenorgroup
 \end{code}
 
+\code{getCSM} gets a control sequence or prints an error:
+\begin{code}
+getCSM errmessage = do
+    tok <- gettokenM
+    case tok of
+        ControlSequence c -> return c
+        _ -> error errmessage
+\end{code}
+
 The \code{definemacro} functions defines macros
 \begin{code}
-definemacro long outer csname = do
-        next <- gettokenM
-        case csname of
-            "\\long" -> definemacro True outer (csnameof next)
-            "\\outer" -> definemacro long True (csnameof next)
-            _ -> do
-                env <- envM
-                args <- gettokentilM isBeginGroup
-                skiptokenM
-                substitutiontext <- breakAtGroupEndM 0
-                let macro = Macro args substitution outer long
-                    expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
-                    substitution = if edef then expandedsubtext else substitutiontext
-                updateEnvM (insertfunction (csnameof next) macro)
-                return Nothing
+definemacro long outer "\\long" = (getCSM "Expected control sequence after \\long") >>= (definemacro True outer)
+definemacro long outer "\\outer" = (getCSM "Expected control sequence after \\outer") >>= (definemacro long True)
+
+definemacro long outer csname
+    | csname `elem` ["\\gdef","\\xdef","\\edef","\\def"] = do
+        next <- getCSM "Expected control sequence after \\def"
+        globalFlag <- flagsM
+        let insertfunction = if
+                    globalFlag || (csname `elem` ["\\gdef", "\\xdef"])
+                then E.globalinsert
+                else E.insert
+        env <- envM
+        args <- gettokentilM isBeginGroup
+        skiptokenM
+        substitutiontext <- breakAtGroupEndM 0
+        let macro = Macro args substitution outer long
+            expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
+            substitution = if edef then expandedsubtext else substitutiontext
+        updateEnvM (insertfunction next macro)
+        return Nothing
+    | otherwise = error "Unexpected control sequence"
     where
         edef = csname `elem` ["\\edef", "\\xdef"]
-        insertfunction = if csname `elem` ["\\gdef", "\\xdef"] then E.globalinsert else E.insert
         isBeginGroup (CharToken tc) = (category tc) == BeginGroup
         isBeginGroup _ = False
-        csnameof (ControlSequence c) = c
-        csnameof _ = error "hex.Macros.definemacro: expected control sequence"
 \end{code}
 
 \code{errorseq} is a sequence of tokens which will produce the passed error message:
@@ -414,14 +431,22 @@ expand env st = case mc of
 
 The \code{TkSS} is a token stream and macro environment state monad:
 \begin{code}
-type TkSS a = TkS MacroEnvironment a
+type TkSS a = TkS ExpansionEnvironment a
 runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream))
-runTkSS compute e st = runState compute (e,st)
+runTkSS compute e st = (v,(definitions me, st'))
+        where
+            (v, (me,st')) = runState compute (ExpansionEnvironment e False, st)
 
 envM :: TkSS MacroEnvironment
-envM = fst `liftM` get
+envM = (definitions . fst) `liftM` get
+
+flagsM :: TkSS Flags
+flagsM = (flags . fst) `liftM` get
+
 updateEnvM :: (MacroEnvironment -> MacroEnvironment) -> TkSS ()
-updateEnvM f = modify (\(e,st) -> (f e, st))
+updateEnvM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment (f e) g, st))
+updateFlagsM :: (Flags -> Flags) -> TkSS ()
+updateFlagsM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment e (f g), st))
 \end{code}
 
 \code{process1} is structured as a huge case statement (implemented with Haskell
@@ -432,7 +457,7 @@ geenreate Commands.
 \begin{code}
 process1 :: Token -> TkSS (Maybe Command)
 process1 (ControlSequence "\\let") = do
-    ControlSequence name <- gettokenM
+    name <- getCSM "Control sequence expected after \\let"
     maybeeqM
     rep <- gettokenM
     env <- envM
@@ -553,11 +578,8 @@ We handle \code{\\global} by simply transforming it into \code{\\gdef} or
 \code{\\xdef}. This will immediately ``goto'' the code above:
 \begin{code}
 process1 (ControlSequence "\\global") = do
-    next <- gettokenM
-    case next of
-        ControlSequence "\\def" -> process1 (ControlSequence "\\gdef")
-        ControlSequence "\\edef" -> process1 (ControlSequence "\\xdef")
-        c -> error $ concat ["hex.Macros.process1: Unexpected token after \\global (", show c, ")"]
+    updateFlagsM (const True)
+    gettokenM >>= process1
 \end{code}
 
 \tex{\\chardef} and \tex{\\mathchardef} are almost identical:
@@ -720,7 +742,7 @@ process1 t = (expand1 t) >> (return Nothing)
 We make it easy to output internal commands:
 \begin{code}
 internalCommandM c = do
-    (e,rest) <- get
+    (ExpansionEnvironment e _,rest) <- get
     return $ Just (InternalCommand e rest c)
 \end{code}
 
