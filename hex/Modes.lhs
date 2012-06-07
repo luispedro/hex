@@ -151,6 +151,11 @@ vMode1' (SetCountCommand cid val) = do
     setCountM False cid val
     return []
 
+vMode1' (AdvanceCountCommand isg cid val) = do
+    v <- getCountM cid
+    setCountM isg cid (v + val)
+    return []
+
 vMode1' (SetDimenCommand cid val) = do
     setDimenM False cid val
     return []

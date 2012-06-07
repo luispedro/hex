@@ -2,6 +2,7 @@ Version 0.0.5+
 	* Refactor Macros/Tokens to emphasise Monadic interface
 	* Update to newer Haskell
 	* Implementation of \countdef & \dimendef & \skipdef & \toksdef
+	* Implementation of \advance for \count registers
 	* Partial \outer error-detection support
 	* Partial implementation of \mathcharcode, \sfcode, \delcode
 	* Partial implementation of registers

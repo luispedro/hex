@@ -105,6 +105,7 @@ data Command =
         | SetCountCommand Integer Integer
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Dimen
+        | AdvanceCountCommand Bool Integer Integer
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -137,6 +138,7 @@ instance Show Command where
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
     show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
     show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
+    show (AdvanceCountCommand isg cid val) = concat ["<advance ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -646,6 +648,33 @@ process1 (ControlSequence "\\skip") = do
     maybeeqM
     val <- readGlueM
     return $ Just (SetSkipCommand cid val)
+\end{code}
+
+
+\begin{code}
+process1 (ControlSequence "\\advance") = do
+        count <- readCountM
+        maybespaceM
+        maybeToksM "by"
+        maybespaceM
+        val <- readNumberM
+        isg <- flagsM
+        updateFlagsM (const False)
+        return . Just $ AdvanceCountCommand isg count val
+    where
+        maybeToksM ts = mapM_ maybeTokM ts
+        maybeTokM c = gettokenM >>= (\t -> case t of CharToken (TypedChar c' _) -> if c /= c' then error ("expected "++[c]) else return ())
+        readCountM = do
+            t <- gettokenM
+            case t of
+                ControlSequence "\\count" -> maybespaceM >> readENumberM
+                ControlSequence csname -> do
+                    e <- envM
+                    case E.lookup csname e of
+                        Just (CountDef v) -> return v
+                        _ -> countExpected
+                _ -> countExpected
+        countExpected = error "Was expecting a count register"
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
