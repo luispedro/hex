@@ -183,14 +183,16 @@ The first function puts down a single character to form an \code{HElement}:
 \begin{code}
 setCharacter :: Modes HElement
 setCharacter = do
-        CharCommand tc <- charcommand
-        e <- environmentM
-        return $ toHElement e tc
-    where
-        toHElement e (TypedChar c cat)
-                | cat == Space = spaceInFont fnt
-                | otherwise = charInFont c fidx fnt
-            where (fidx,(_,fnt)) = E.currentfont e
+    CharCommand (TypedChar c cat) <- charcommand
+    e <- environmentM
+    let (fidx,(_,fnt)) = E.currentfont e
+        element = if cat == Space
+                    then spaceInFont fnt
+                    else charInFont c fidx fnt
+        sf = if cat == Space then 0
+            else let E.HexInteger i = E.lookupWithDefault (E.HexInteger 0) ("spacefactor:"++[c]) e in i
+    modifyState (E.globalinsert "spacefactor" (E.HexInteger sf))
+    return element
 \end{code}
 
 Selecting a font is easy, just set the font in the environment:
