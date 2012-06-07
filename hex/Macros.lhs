@@ -663,7 +663,11 @@ process1 (ControlSequence "\\advance") = do
         return . Just $ AdvanceCountCommand isg count val
     where
         maybeToksM ts = mapM_ maybeTokM ts
-        maybeTokM c = gettokenM >>= (\t -> case t of CharToken (TypedChar c' _) -> if c /= c' then error ("expected "++[c]) else return ())
+        maybeTokM c = do
+            tk <- peektokenM
+            case tk of
+                CharToken (TypedChar c' _) | c == c' -> skiptokenM
+                _ -> return ()
         readCountM = do
             t <- gettokenM
             case t of

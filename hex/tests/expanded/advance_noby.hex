@@ -1,0 +1,4 @@
+\countdef\mycount=1%
+\chardef\two=2%
+\advance\mycount\two%
+\bye%
