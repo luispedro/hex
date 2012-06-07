@@ -1,0 +1,4 @@
+\count1=1%
+\chardef\one=1%
+\advance\count1 by\one%
+\bye%

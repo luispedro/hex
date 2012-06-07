@@ -657,7 +657,7 @@ process1 (ControlSequence "\\advance") = do
         maybespaceM
         maybeToksM "by"
         maybespaceM
-        val <- readNumberM
+        val <- readENumberM
         isg <- flagsM
         updateFlagsM (const False)
         return . Just $ AdvanceCountCommand isg count val
