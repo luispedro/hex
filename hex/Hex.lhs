@@ -118,7 +118,7 @@ processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []
 
 Another simple commmand is the \code{MessageCommand}, which outputs its message.
 \begin{code}
-processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >>= (return $ processinputs cs e)
+processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >> (processinputs cs e)
 \end{code}
 
 \code{ErrorCommand} is similar, except we stop after errors:
