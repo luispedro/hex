@@ -67,7 +67,31 @@ nextFontId = atomicModifyIORef _fontId (\n -> (n+1,n))
 \end{code}
 
 \code{processinputs} processes the special commands in the \code{Command}
-stream. In particular, it process \tex{\\bye}, \tex{\\input}, and
+stream.
+
+
+The implementation of \tex{\\count} is hidden behind a few helper functions:
+\begin{code}
+getRegister :: String -> Integer -> HexEnvironment -> E.HexType
+getRegister class_ rid e = fromJust $ E.lookup (class_++"-register:"++show rid) e
+
+setRegister class_ wrapper isglobal rid val =
+        ins isglobal (class_++"-register"++show rid) (wrapper val)
+    where
+        ins True = E.globalinsert
+        ins False = E.insert
+
+getCount :: Integer -> HexEnvironment -> Integer
+getCount cid = (\(E.HexInteger i) -> i) . getRegister "count" cid
+setCount = setRegister "count" E.HexInteger
+
+getDimen did = (\(E.HexDimen d) -> d) . getRegister "dimen" did
+setDimen = setRegister "dimen" E.HexDimen
+
+getSkip sid = (\(E.HexGlue g) -> g) . getRegister "skip" sid
+setSkip = setRegister "skip" E.HexGlue
+\end{code}
+In particular, it process \tex{\\bye}, \tex{\\input}, and
 \tex{\\message}.
 
 We start with the basics:
@@ -79,6 +103,14 @@ processinputs [] _ = return []
 
 The simplest command is the \tex{\\bye} command. Just stop everything, we are
 done.
+
+\code{setcount} and \code{setdimen} are both very simple:
+\begin{code}
+processinputs ((SetCountCommand cid val):r) e = processinputs r (setCount False cid val e)
+processinputs ((SetDimenCommand cid val):r) e = processinputs r (setDimen False cid val e)
+processinputs ((SetSkipCommand cid val):r) e = processinputs r (setSkip False cid val e)
+processinputs ((AdvanceCountCommand isg cid val):r) e = let v = getCount cid e in processinputs r (setCount isg cid (v + val) e)
+\end{code}
 
 \begin{code}
 processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []

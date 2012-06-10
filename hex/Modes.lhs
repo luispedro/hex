@@ -97,30 +97,6 @@ readDimen = do
     return $ dimenFromUnit (fromInteger n) u
 \end{code}
 
-The implementation of \tex{\\count} is hidden behind a few helper functions:
-\begin{code}
-getRegisterM :: String -> Integer -> Modes E.HexType
-getRegisterM class_ rid = do
-    e <- environmentM
-    let Just v = E.lookup (class_++"-register:"++show rid) e
-    return v
-
-setRegisterM class_ wrapper isglobal rid val =
-        modifyState (ins isglobal (class_++"-register"++show rid) (wrapper val))
-    where
-        ins True = E.globalinsert
-        ins False = E.insert
-
-getCountM = liftM (\(E.HexInteger i) -> i) . getRegisterM "count"
-setCountM = setRegisterM "count" E.HexInteger
-
-getDimenM = liftM (\(E.HexDimen d) -> d) . getRegisterM "dimen"
-setDimenM = setRegisterM "dimen" E.HexDimen
-
-getSkipM = liftM (\(E.HexGlue g) -> g) . getRegisterM "skip"
-setSkipM = setRegisterM "skip" E.HexGlue
-\end{code}
-
 Now, we come to the actual code for hex. \code{_vModeM} implements v-mode (in
 the monad).
 
@@ -143,27 +119,6 @@ vMode1 = anyToken >>= vMode1'
 vMode1' (PrimitiveCommand "\\vspace") = do
     d <- readDimen
     return [Box V d zeroDimen zeroDimen (Kern d)]
-\end{code}
-
-\code{setcount} and \code{setdimen} are both very simple:
-\begin{code}
-vMode1' (SetCountCommand cid val) = do
-    setCountM False cid val
-    return []
-
-vMode1' (AdvanceCountCommand isg cid val) = do
-    v <- getCountM cid
-    setCountM isg cid (v + val)
-    return []
-
-vMode1' (SetDimenCommand cid val) = do
-    setDimenM False cid val
-    return []
-
-vMode1' (SetSkipCommand did val) = do
-    setSkipM False did val
-    return []
-
 \end{code}
 
 \code{outputfont} is needed for internal reasons and causes a font information to be output.
