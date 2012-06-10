@@ -101,9 +101,6 @@ processinputs :: [Command] -> HexEnvironment -> IO [Command]
 processinputs [] _ = return []
 \end{code}
 
-The simplest command is the \tex{\\bye} command. Just stop everything, we are
-done.
-
 \code{setcount} and \code{setdimen} are both very simple:
 \begin{code}
 processinputs ((SetCountCommand cid val):r) e = processinputs r (setCount False cid val e)
@@ -111,6 +108,9 @@ processinputs ((SetDimenCommand cid val):r) e = processinputs r (setDimen False 
 processinputs ((SetSkipCommand cid val):r) e = processinputs r (setSkip False cid val e)
 processinputs ((AdvanceCountCommand isg cid val):r) e = let v = getCount cid e in processinputs r (setCount isg cid (v + val) e)
 \end{code}
+
+The simplest command is the \tex{\\bye} command. Just stop everything, we are
+done.
 
 \begin{code}
 processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []
@@ -187,7 +187,10 @@ processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             Nothing -> ""
             _ -> error "hex.hex.currentdir: environment is messed up"
         addfileenv = (E.globalinsert "currentfile") . E.HexString
+\end{code}
 
+Finally, the default case is to just pass it on.
+\begin{code}
 processinputs (c:cs) e = do
     cs' <- (processinputs cs e)
     return $ (c:cs')
