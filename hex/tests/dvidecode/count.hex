@@ -1,0 +1,8 @@
+\count2=0%
+\ifnum\count2>2%
+    No\else%
+    OK\fi%
+\count2=4%
+\ifnum\count2>2%
+    OK\else%
+    No\fi%

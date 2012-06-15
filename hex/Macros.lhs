@@ -5,6 +5,7 @@ Macros are the mechanism for TeX scripting.
 \begin{code}
 module Macros
     ( expand
+    , Lookup(..)
     , Command(..)
     , HexCommand(..)
     , _breakAtGroupEnd
@@ -88,8 +89,18 @@ data HexCommand =
         | LoadfontHCommand String
         | SelectfontHCommand String
         | SetMathFontHCommand String Integer E.MathFontStyle
+        | LookupCountHCommand Integer (Lookup Integer)
         | ByeCommand
         deriving (Eq)
+\end{code}
+We define an extra type so that we can give it a (meaningless) \code{Eq}
+instance, so that Command can be in \code{Eq} automatically:
+
+\begin{code}
+data Lookup a = Lookup (a -> [Command])
+
+instance Eq (Lookup a) where
+    _a == _b = False
 
 data Command =
         CharCommand TypedChar
@@ -110,6 +121,7 @@ data Command =
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
 
+
 fromToken (ControlSequence csname) = PrimitiveCommand csname
 fromToken (CharToken tc) = CharCommand tc
 
@@ -124,6 +136,7 @@ instance Show HexCommand where
     show (LoadfontHCommand fname) = "loadfont:"++fname
     show (SelectfontHCommand fname) = "selectfont:"++fname
     show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
+    show (LookupCountHCommand cid _) = "lookupcount:"++show cid
     show ByeCommand = "bye"
 
 instance Show Command where
@@ -232,14 +245,12 @@ evaluateif "\\if" = do
     where
         evalif (CharToken c0) (CharToken c1) = (value c0) == (value c1)
         evalif _ _ = False
-        expandedTokenM = do
-            tk <- gettokenM
-            case tk of
-                (CharToken _) -> return tk
-                (ControlSequence _) -> do
-                    expand1 tk
-                    gettokenM
 evaluateif _  = fail "hex.Macros.evaluateif: Cannot handle this type"
+
+evaluatenum v0 '=' v1 = v0 == v1
+evaluatenum v0 '<' v1 = v0 < v1
+evaluatenum v0 '>' v1 = v0 > v1
+evaluatenum _ _ _ = error "hex.Macros.evaluatenum: Cannot handle this relationship"
 \end{code}
 
 Skipping depends on the value of the condition. If the condition is true, we do
@@ -506,7 +517,7 @@ process1 (ControlSequence "\\catcode") = do
     maybeeqM
     nvalue <- readENumberM
     let catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
-    (updateCharStreamM (catcode char nvalue))
+    updateCharStreamM (catcode char nvalue)
     return Nothing
 \end{code}
 
@@ -549,6 +560,21 @@ process1 (ControlSequence csname)
     | csname `elem` ifstarts = do
         cond <- evaluateif csname
         skipifM cond
+\end{code}
+
+Ifnum is a special case because we might need to perform a few lookups:
+\begin{code}
+process1 (ControlSequence "\\ifnum") = do
+    val0 <- readENumberOrCountM
+    CharToken rel <- expandedTokenM
+    val1 <- readENumberOrCountM
+    let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return Nothing
+        mret (Left v) f = f v
+        mret (Right cid) f = do
+            f' <- buildLookup f
+            internalCommandM $ LookupCountHCommand cid f'
+        continuation0 v = mret val1 (continuation v)
+    mret val0 continuation0
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -777,23 +803,45 @@ We make it easy to output internal commands:
 internalCommandM c = do
     (ExpansionEnvironment e _,rest) <- get
     return $ Just (InternalCommand e rest c)
+buildLookup :: (a -> TkSS (Maybe Command)) -> TkSS (Lookup a)
+buildLookup f = do
+    (ExpansionEnvironment e _,rest) <- get
+    return . Lookup $ \v ->
+                let (mc,(e',r)) = runTkSS (f v) e rest
+                    n = expand e' r in
+                maybe n (:n) mc
 \end{code}
 
 This reads expanded tokens to form a number (including interpreting CharDef as
 a number, which is what TeX does):
 
 \begin{code}
-readENumberM = do
+readENumberOrCountM = do
     t <- peektokenM
     case t of
-        CharToken _ -> readNumberM
+        CharToken _ -> Left `liftM` readNumberM
+        ControlSequence "\\count" -> skiptokenM >> readENumberM >>= return . Right
         ControlSequence csname -> do
             e <- envM
             case E.lookup csname e of
-                Just (CharDef v) -> return v
-                Just (MathCharDef v) -> return v
-                Just (Macro _ _ _ _) -> skiptokenM >> expand1 t >> readENumberM
-                _ -> error "hex.readENumberM: unexpected"
+                Just (CharDef v) -> return (Left v)
+                Just (MathCharDef v) -> return (Left v)
+                Just (Macro _ _ _ _) -> skiptokenM >> expand1 t >> readENumberOrCountM
+                Just (CountDef cid) -> return (Right cid)
+                _ -> error "hex.readENumberOrCountM: unexpected"
+
+readENumberM = readENumberOrCountM >>= either return (\_ -> error "expected number")
+\end{code}
+
+Often we need to read an expanded token. This allows mixing between expansion levels:
+\begin{code}
+expandedTokenM = do
+    tk <- gettokenM
+    case tk of
+        (CharToken _) -> return tk
+        (ControlSequence _) -> do
+            expand1 tk
+            gettokenM
 \end{code}
 
 \code{readDimenM} reads a dimension in tokens

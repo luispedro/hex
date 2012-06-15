@@ -73,10 +73,12 @@ stream.
 The implementation of \tex{\\count} is hidden behind a few helper functions:
 \begin{code}
 getRegister :: String -> Integer -> HexEnvironment -> E.HexType
-getRegister class_ rid e = fromJust $ E.lookup (class_++"-register:"++show rid) e
+getRegister class_ rid e = case E.lookup (class_++"-register:"++show rid) e of
+        Just v -> v
+        Nothing -> error $ concat ["hex.getRegister: lookup of ",class_, " ", show rid," failed."]
 
 setRegister class_ wrapper isglobal rid val =
-        ins isglobal (class_++"-register"++show rid) (wrapper val)
+        ins isglobal (class_++"-register:"++show rid) (wrapper val)
     where
         ins True = E.globalinsert
         ins False = E.insert
@@ -155,6 +157,12 @@ processinputs ((InternalCommand _ _ (SetMathFontHCommand fname fam fs)):cs) e = 
     let E.HexFontInfo fontinfo = fromJust $ E.lookup ("font:"++fname) e
     r <- processinputs cs e
     return ((SetMathFontCommand fontindex fontinfo fam fs):r)
+\end{code}
+
+Looking up a value in a register just involves switching the command stream:
+
+\begin{code}
+processinputs ((InternalCommand _ _ (LookupCountHCommand cid (Lookup f))):_) e = processinputs (f $ getCount cid e) e
 \end{code}
 
 Finally, the \code{InputCommand} finds the input file and queues it in
