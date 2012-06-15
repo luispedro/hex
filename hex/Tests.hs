@@ -66,7 +66,7 @@ case_token5 = (length $ chars2tokens "macro") @=? 5
 
 runTkS computation st = (r,st')
     where
-        (r,(_,st')) = runState computation (undefined,st)
+        (r,(_,st')) = runState computation (E.empty,st)
 
 case_readNumberM5 = n @=? 5
     where
