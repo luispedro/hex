@@ -1,0 +1,6 @@
+\count1=1 %
+\count2=2 %
+\countdef\inscount=1 %
+\ifnum\count1<\count2\else\message{error}\fi
+\ifnum\count2<\count1\message{error}\else\fi
+

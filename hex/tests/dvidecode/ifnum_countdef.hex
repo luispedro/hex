@@ -1,0 +1,6 @@
+\count1=1 %
+\count2=2 %
+\countdef\cone=1 %
+\ifnum\count2>\cone OK \else\message{error}\fi
+\ifnum\count2<\cone\message{error}\else OK\fi
+

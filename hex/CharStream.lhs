@@ -47,7 +47,7 @@ This encodes a typed character stream
 data TypedCharStream = TypedCharStream
                 { table :: CategoryTable
                 , remaining :: String
-                } deriving (Eq)
+                } deriving (Eq, Show)
 \end{code}
 
 

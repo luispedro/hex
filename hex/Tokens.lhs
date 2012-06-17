@@ -18,6 +18,7 @@ module Tokens
     , peektokenM
     , maybepeektokenM
     , gettokentilM
+    , puttokenM
     , streampushM
     , streamenqueueM
     , updateCharStreamM
@@ -157,6 +158,8 @@ data TokenStream = TokenStream
 
 instance Eq TokenStream where
     _ == _ = False
+instance Show TokenStream where
+    show (TokenStream _cs _state q) = concat [show _cs, show q]
 
 newTokenStream :: TypedCharStream -> TokenStream
 newTokenStream cs = TokenStream cs sN []
@@ -272,6 +275,7 @@ We can add tokens to the start of the queue, either one (\code{streampushM}) or
 several (\code{streamenqueueM}).
 \begin{code}
 streampushM t = streamenqueueM [t]
+puttokenM t = streamenqueueM [t]
 streamenqueueM nts = modify (\(e,st@TokenStream{queue=ts}) -> (e,st{queue=(nts ++ ts)}))
 \end{code}
 

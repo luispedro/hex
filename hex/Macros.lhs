@@ -817,18 +817,19 @@ a number, which is what TeX does):
 
 \begin{code}
 readENumberOrCountM = do
-    t <- peektokenM
+    t <- gettokenM
     case t of
-        CharToken _ -> Left `liftM` readNumberM
-        ControlSequence "\\count" -> skiptokenM >> readENumberM >>= return . Right
+        CharToken _ -> puttokenM t >> Left `liftM` readNumberM
+        ControlSequence "\\count" -> readENumberM >>= return . Right
         ControlSequence csname -> do
             e <- envM
             case E.lookup csname e of
                 Just (CharDef v) -> return (Left v)
                 Just (MathCharDef v) -> return (Left v)
-                Just (Macro _ _ _ _) -> skiptokenM >> expand1 t >> readENumberOrCountM
+                Just (Macro _ _ _ _) -> expand1 t >> readENumberOrCountM
                 Just (CountDef cid) -> return (Right cid)
-                _ -> error "hex.readENumberOrCountM: unexpected"
+                Nothing -> error $ concat ["hex.readENumberOrCountM undefined ", csname]
+                n -> error $ concat ["hex.readENumberOrCountM: unexpected: ", show n]
 
 readENumberM = readENumberOrCountM >>= either return (\_ -> error "expected number")
 \end{code}

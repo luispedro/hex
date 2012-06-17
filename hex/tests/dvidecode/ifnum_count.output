@@ -1,0 +1,25 @@
+pre 2 25400000 473628672 1000 14 Written by hex
+bop 1 0 0 0 0 0 0 0 0 0 -1
+push
+down4 0
+right4 0
+down4 0
+push
+fnt_def 0 1274110073 655360 655360 0 cmr10
+pop
+down4 0
+down4 0
+push
+right4 28311552
+pop
+down4 0
+down4 0
+push
+right4 0
+pop
+down4 0
+pop
+eop
+post 29 25400000 473628672 1000 43725786 30785863 2 1
+fnt_def 0 1274110073 655360 655360 0 cmr10
+post_post 154 48226271
