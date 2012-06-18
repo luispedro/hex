@@ -566,7 +566,10 @@ Ifnum is a special case because we might need to perform a few lookups:
 \begin{code}
 process1 (ControlSequence "\\ifnum") = do
     val0 <- readENumberOrCountM
-    CharToken rel <- expandedTokenM
+    rel' <- expandedTokenM
+    let rel = case rel' of
+            CharToken r -> r
+            t -> error $ concat ["hex.process1(ifnum): expected relationship character, got ", show t]
     val1 <- readENumberOrCountM
     let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return Nothing
         mret (Left v) f = f v
