@@ -116,7 +116,7 @@ data Command =
         | SetCountCommand Integer Integer
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Dimen
-        | AdvanceCountCommand Bool Integer Integer
+        | AdvanceCountCommand Bool Integer (Either Integer Integer)
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -686,7 +686,7 @@ process1 (ControlSequence "\\advance") = do
         maybespaceM
         maybeToksM "by"
         maybespaceM
-        val <- readENumberM
+        val <- readENumberOrCountM
         isg <- flagsM
         updateFlagsM (const False)
         return . Just $ AdvanceCountCommand isg count val
@@ -834,7 +834,7 @@ readENumberOrCountM = do
                 Nothing -> error $ concat ["hex.readENumberOrCountM undefined ", csname]
                 n -> error $ concat ["hex.readENumberOrCountM: unexpected: ", show n]
 
-readENumberM = readENumberOrCountM >>= either return (\_ -> error "expected number")
+readENumberM = readENumberOrCountM >>= either return (\_ -> error "hex.readENumberM expected number, got count register")
 \end{code}
 
 Often we need to read an expanded token. This allows mixing between expansion levels:

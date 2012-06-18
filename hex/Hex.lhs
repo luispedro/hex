@@ -108,7 +108,10 @@ processinputs [] _ = return []
 processinputs ((SetCountCommand cid val):r) e = processinputs r (setCount False cid val e)
 processinputs ((SetDimenCommand cid val):r) e = processinputs r (setDimen False cid val e)
 processinputs ((SetSkipCommand cid val):r) e = processinputs r (setSkip False cid val e)
-processinputs ((AdvanceCountCommand isg cid val):r) e = let v = getCount cid e in processinputs r (setCount isg cid (v + val) e)
+processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCount isg cid (v + val') e)
+    where
+        v = getCount cid e
+        val' = either id (`getCount` e) val
 \end{code}
 
 The simplest command is the \tex{\\bye} command. Just stop everything, we are
