@@ -579,12 +579,8 @@ process1 (ControlSequence "\\ifnum") = do
             t -> error $ concat ["hex.process1(ifnum): expected relationship character, got ", show t]
     val1 <- readENumberOrCountM
     let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return Nothing
-        mret (Left v) f = f v
-        mret (Right cid) f = do
-            f' <- buildLookup f
-            internalCommandM $ LookupCountHCommand cid f'
-        continuation0 v = mret val1 (continuation v)
-    mret val0 continuation0
+        continuation0 v = maybeLookup val1 (continuation v)
+    maybeLookup val0 continuation0
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -640,9 +636,10 @@ process1 (ControlSequence cddef)
     | cddef `elem` ["\\countdef", "\\dimendef", "\\skipdef", "\\toksdef"] = do
         ControlSequence name <- gettokenM
         maybeeqM
-        cid <- readNumberM
-        updateEnvM (E.insert name (c cid))
-        return Nothing
+        noc <- readENumberOrCountM
+        maybeLookup noc $ \cid -> do
+            updateEnvM (E.insert name (c cid))
+            return Nothing
     where
         c = case cddef of
                 "\\countdef" -> CountDef
@@ -820,6 +817,11 @@ buildLookup f = do
                 let (mc,(e',r)) = runTkSS (f v) e rest
                     n = expand e' r in
                 maybe n (:n) mc
+maybeLookup :: Either Integer Integer -> (Integer -> TkSS (Maybe Command)) -> TkSS (Maybe Command)
+maybeLookup (Left v) f = f v
+maybeLookup (Right cid) f = do
+    f' <- buildLookup f
+    internalCommandM $ LookupCountHCommand cid f'
 \end{code}
 
 A simple function to read an integer from tokens:
