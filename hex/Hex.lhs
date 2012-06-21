@@ -25,6 +25,8 @@ import DVI
 import Tokens (updateCharStream, TokenStream)
 import CharStream (prequeue)
 import qualified Environment as E
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.IO as LT
 type HexEnvironment = E.Environment String E.HexType
 \end{code}
 
@@ -32,8 +34,8 @@ Processing \tex{\\input} is achieved by prequeueing the characters in the input
 file.
 
 \begin{code}
-prequeueChars :: String -> TokenStream -> TokenStream
-prequeueChars q st = updateCharStream st (`prequeue` q)
+prequeueChars :: (String,LT.Text) -> TokenStream -> TokenStream
+prequeueChars q st = updateCharStream st (prequeue q)
 \end{code}
 
 Often we will have to search for a file in several locations and read the first
@@ -41,8 +43,8 @@ one we find. The function \haskell{readOneOf} achieves this:
 
 \begin{code}
 readOneOf [] = error "hex.hex.readOneOf: empty set"
-readOneOf [n] = readFile n
-readOneOf (n:ns) = (readFile n) `catch` (\e -> if isDoesNotExistError e then readOneOf ns else ioError e)
+readOneOf [n] = LT.readFile n
+readOneOf (n:ns) = (LT.readFile n) `catch` (\e -> if isDoesNotExistError e then readOneOf ns else ioError e)
 \end{code}
 
 To read and write fonts:
@@ -173,7 +175,7 @@ Finally, the \code{InputCommand} finds the input file and queues it in
 \begin{code}
 processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             nextfile <- readOneOf possiblefiles;
-            processinputs (expand env $ prequeueChars nextfile rest) (addfileenv nextfile e);
+            processinputs (expand env $ prequeueChars (nfname,nextfile) rest) (addfileenv nfname e);
         } `catch` printerror
     where
         printerror err =

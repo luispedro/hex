@@ -3,6 +3,8 @@
 module Main where
 
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.IO as LT
 import System.Console.CmdArgs
 import Control.Monad
 import Control.Monad.State
@@ -32,19 +34,20 @@ input file (as a string) and produces an output string. The \var{function}
 table maps strings to these functions.
 
 \begin{code}
-prefix = "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
+prefix = LT.pack "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
 
-chars = map (annotate plaintexenv)
-tokens str = fst $ runState (gettokentilM $ const False) (undefined,st)
+chars = map (annotate plaintexenv) . LT.unpack
+tokens str = fst $ runState (gettokentilM $ const False) (undefined,astokenstream str)
     where
-       st = newTokenStream $ TypedCharStream plaintexenv str
-expanded str = expand E.empty $ newTokenStream $ TypedCharStream plaintexenv str
+        astokenstream = newTokenStream . TypedCharStream plaintexenv
+
+expanded = expand E.empty . newTokenStream . TypedCharStream plaintexenv
 breaklines env = (vMode env) . expanded
 
-function :: String -> String -> IO ()
+function :: String -> LT.Text -> IO ()
 function "chars" = putStrLn . concatMap show . chars
-function "tokens" = putStrLn . concatMap show . tokens
-function "expanded" = putStrLn . concatMap show . expanded
+function "tokens" = putStrLn . concatMap show . tokens . asqueue "<input>"
+function "expanded" = putStrLn . concatMap show . expanded . asqueue "<input>"
 
 function "breaklines" = \inputstr -> do
     fontinfo <- readFont "cmr10"
@@ -52,13 +55,17 @@ function "breaklines" = \inputstr -> do
             concatMap ((++"\n") . show) $
             filter (\b -> case b of Boxes.Kern _ -> False; _ -> True) $
             (map Boxes.boxContents) $
-            breaklines (E.setfont 0 fontinfo startenv) inputstr
+            breaklines (E.setfont 0 fontinfo startenv) (asqueue "<input>" inputstr)
 function hmode = \_ -> putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
-        inputstr <- readFile fname
-        commands <- processinputs (expanded $ concat [prefix,inputstr]) startingenv
+        inputstr <- LT.readFile fname
+        let fileq :: TokenStream
+            fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue fname inputstr
+            q = updateCharStream fileq (prequeue ("prexif",prefix))
+
+        commands <- processinputs (expand E.empty q) startingenv
         let result = buildout startingenv commands
         when output (B.putStr result)
         return ()
@@ -96,7 +103,7 @@ main = do
         "hex" -> hex True f
         "hex-silent" -> hex False f
         _ -> do
-            str <- (if f == "-" then getContents else readFile f)
+            str <- (if f == "-" then LT.getContents else LT.readFile f)
             function m str
 \end{code}
 

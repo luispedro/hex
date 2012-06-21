@@ -183,7 +183,7 @@ Sometimes we want to have a simple stream that only spits out the tokens we
 initialise it with. This is achieved by \code{tokenliststream}:
 
 \begin{code}
-tokenliststream toks = TokenStream (TypedCharStream [] []) sN toks
+tokenliststream toks = TokenStream emptyTCS sN toks
 \end{code}
 
 \code{emptyTokenStream} is surprisingly tricky. In fact, we need to look ahead

@@ -7,12 +7,16 @@ to transform them into typed chars.
 module CharStream
     ( CategoryTable
     , annotate
+    , asqueue
+    , _safeget
     , TypedCharStream(..)
     , getchar
     , emptyStream
+    , emptyTCS
     , pushst
     , popst
     , prequeue
+    , _ncsPrequeue
     ) where
 
 import Data.Char
@@ -26,6 +30,9 @@ module.
 import Chars
 
 import qualified Environment as E
+import qualified Data.Text.Lazy as LT
+import Data.Maybe
+import Control.Monad
 
 type CategoryTable = E.Environment Char CharCategory
 \end{code}
@@ -44,9 +51,39 @@ annotate tab c = TypedChar{value=c, category=E.lookupWithDefault Other c tab}
 This encodes a typed character stream
 
 \begin{code}
+
+data NamedCharStream = EofNCS
+    | NamedCharStream
+                { ncsData :: LT.Text
+                , ncsLine :: !Int
+                , _ncsFname :: String
+                , ncsNext :: NamedCharStream
+                }
+    deriving (Eq, Show)
+
+asqueue :: String -> LT.Text -> NamedCharStream
+asqueue fname cs = NamedCharStream cs 0 fname EofNCS
+
+_safeget EofNCS = Nothing
+_safeget s@NamedCharStream{ncsData=r, ncsLine=line, ncsNext=next} = case LT.uncons r of
+    Nothing -> _safeget next
+    Just ('\n',cs) -> Just ('\n',s{ncsData=cs,ncsLine=(1+line)})
+    Just (c,cs) -> Just (c,s{ncsData=cs})
+
+gethathat :: NamedCharStream -> Maybe (Char, NamedCharStream)
+gethathat s0 = do
+    (c1,s1) <- _safeget s0
+    guard (c1 == '^')
+    (c2,s2) <- _safeget s1
+    guard (c2 == '^')
+    (v,s3) <- _safeget s2
+    let ov = ord v
+        c = chr $ ov + (if ov >= 64 then (-64) else 64)
+    return (c,s3)
+
 data TypedCharStream = TypedCharStream
                 { table :: CategoryTable
-                , remaining :: String
+                , remaining :: NamedCharStream
                 } deriving (Eq, Show)
 \end{code}
 
@@ -56,20 +93,21 @@ stream. This is a similar interface to the state monad.
 
 \begin{code}
 getchar :: TypedCharStream -> (TypedChar, TypedCharStream)
-getchar st@TypedCharStream{remaining=('^':'^':v:cs)} = getchar st{remaining=(c:cs)}
+getchar st@TypedCharStream{table=tab,remaining=q }
+    | emptyStream st = error "hex.getchar on an empty stream"
+    | otherwise = (annotate tab c, st')
     where
-        c = chr $ ov + (if ov >= 64 then (-64) else 64)
-        ov = (ord v)
-getchar st@TypedCharStream{table=tab, remaining=(c:cs)} = (annotate tab c, st{remaining=cs})
-getchar _ = error "getchar on an empty stream"
+        (c,q') = fromMaybe (fromJust $ _safeget q) (gethathat q)
+        st' = st{remaining=q'}
 \end{code}
 
 A simple function to test for an empty stream:
 
 \begin{code}
 emptyStream :: TypedCharStream -> Bool
-emptyStream TypedCharStream{remaining=[]} = True
-emptyStream _ = False
+emptyStream = isNothing . _safeget . remaining
+
+emptyTCS = TypedCharStream [] EofNCS
 \end{code}
 
 To manipulate the stream, we use two functions:
@@ -82,7 +120,11 @@ popst st@TypedCharStream{table=t} = st{table=E.pop t}
 We can pre-queue a string:
 
 \begin{code}
-prequeue st@TypedCharStream{remaining=q} nq = st{remaining=(nq++q)}
+prequeue :: (String,LT.Text) -> TypedCharStream -> TypedCharStream
+prequeue input st@TypedCharStream{remaining=q} = st { remaining=_ncsPrequeue input q }
+
+_ncsPrequeue :: (String,LT.Text) -> NamedCharStream -> NamedCharStream
+_ncsPrequeue (name,rs) s = NamedCharStream rs 0 name s
 \end{code}
 
 

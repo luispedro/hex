@@ -12,6 +12,7 @@ import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
 import System.IO.Unsafe
 import qualified Data.Vector as V
+import qualified Data.Text.Lazy as LT
 import Text.Parsec hiding (many, optional, (<|>))
 import Control.Monad.State (runState)
 
@@ -63,6 +64,28 @@ case_token5 = (length $ chars2tokens "macro") @=? 5
 --case_sM1 = (length $ applyStateFunction sM $ map (annotate plaintextable) "     ") @=? 1
 --case_sM2 = (length $ applyStateFunction sM $ map (annotate plaintextable) "a    ") @=? 2
 
+case_readCharStream = LT.length cs @=? nr_read q
+    where
+        cs = LT.pack "abcdefgh"
+        q = asqueue "<test-input>" cs
+
+case_readCharStream2 = (LT.length c0s + LT.length c1s) @=? nr_read q
+    where
+        c0s = LT.pack "abcdefgh"
+        c1s = LT.pack "123456"
+        q0 = asqueue "<test-input>" c0s
+        q = _ncsPrequeue ("<test-input2>",c1s) q0
+case_readCharStream3 = (LT.length c0s + LT.length c1s + LT.length c2s) @=? nr_read q
+    where
+        c0s = LT.pack "abcdefgh"
+        c1s = LT.pack "123456"
+        c2s = LT.pack "123456"
+        q0 = asqueue "<test-input>" c0s
+        q1 = _ncsPrequeue ("<test-input2>",c1s) q0
+        q = _ncsPrequeue ("<test-input2>",c2s) q1
+
+nr_read q = maybe 0 (\(_,q') -> 1+(nr_read q')) (_safeget q)
+
 
 runTkS computation st = (r,st')
     where
@@ -96,7 +119,8 @@ case_readNumberMfollowEmpty = (emptyTokenStream rest) @=? True
     where
         (ControlSequence _,rest) = runTkS (readNumberM >> gettokenM) (asTokenStream "15\\relax")
 
-asTokenStream s = (newTokenStream $ TypedCharStream plaintexenv s)
+asTokenStream :: String -> TokenStream
+asTokenStream = newTokenStream . TypedCharStream plaintexenv . asqueue "<test-input>" . LT.pack
 
 -- Simple string tests for find.
 
@@ -133,7 +157,7 @@ chars2tokens :: [Char] -> [Token]
 chars2tokens str = ts
     where
        (ts,_) = runTkS (gettokentilM $ const False) st
-       st = newTokenStream $ TypedCharStream plaintexenv str
+       st = asTokenStream str
 
 case_chars2tokens = 4 @=? (length $ chars2tokens "abcd")
 
