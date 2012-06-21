@@ -382,8 +382,8 @@ getCSM errmessage = do
 
 The \code{definemacro} functions defines macros
 \begin{code}
-definemacro long outer "\\long" = (getCSM "Expected control sequence after \\long") >>= (definemacro True outer)
-definemacro long outer "\\outer" = (getCSM "Expected control sequence after \\outer") >>= (definemacro long True)
+definemacro _long outer "\\long" = (getCSM "Expected control sequence after \\long") >>= (definemacro True outer)
+definemacro long _outer "\\outer" = (getCSM "Expected control sequence after \\outer") >>= (definemacro long True)
 
 definemacro long outer csname
     | csname `elem` ["\\gdef","\\xdef","\\edef","\\def"] = do
