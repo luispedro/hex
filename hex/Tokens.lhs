@@ -32,6 +32,7 @@ module Tokens
 import Chars
 import CharStream
 
+import Data.Maybe
 import Control.Monad
 import Control.Monad.State (State,get,put,modify)
 \end{code}
@@ -67,11 +68,11 @@ up to, and including, a newline.
 
 \begin{code}
 skiptoeol :: TypedCharStream -> TypedCharStream
-skiptoeol st
-    | emptyStream st = st
-    | (category c) == EOL = st'
-    | otherwise = skiptoeol st'
-    where (c,st') = getchar st
+skiptoeol st = case getchar st of
+    Nothing -> st
+    Just (c,st')
+        | category c == EOL -> st'
+        | otherwise -> skiptoeol st'
 \end{code}
 
 In order to have the state functions return themselves, we need to define them
@@ -87,19 +88,19 @@ Now, the implementation of the two easy states: S \& N.
 
 \begin{code}
 sN = StateFunction sN' where
-    sN' st
-        | emptyStream st = ([],st,sN)
-        | (category c) == EOL = ([ControlSequence "\\par"], rest, sN)
-        | (category c) == Space = sN' rest
-        | otherwise = applyStateFunction sM st
-        where (c,rest) = getchar st
+    sN' st = case getchar st of
+        Nothing -> ([],st,sN)
+        Just (c,rest)
+            | category c == EOL -> ([ControlSequence "\\par"], rest, sN)
+            | category c == Space -> sN' rest
+            | otherwise -> applyStateFunction sM st
 sS = StateFunction sS' where
-    sS' st
-        | emptyStream st = ([], st, sS)
-        | (category c) == EOL = applyStateFunction sN rest
-        | (category c) == Space = applyStateFunction sS rest
-        | otherwise = applyStateFunction sM st
-        where (c,rest) = getchar st
+    sS' st = case getchar st of
+        Nothing -> ([],st,sS)
+        Just (c,rest)
+            | category c == EOL -> applyStateFunction sN rest
+            | category c == Space -> applyStateFunction sS rest
+            | otherwise -> applyStateFunction sM st
 \end{code}
 
 \code{sM} does most of the real work of transforming \code{TypedChar}s into
@@ -116,32 +117,31 @@ the Texbook.
 \begin{code}
 
 sM = StateFunction sM' where
-    sM' st
-        | emptyStream st = ([], st, sM)
+    sM' st = case getchar st of
+        Nothing -> ([], st, sM)
                                 -- Maybe below should be (TypedChar '\n' Space) ?
-        | (category c) == EOL = ([CharToken (TypedChar ' ' Space)], rest, sN)
-        | (category c) == Space = ([CharToken c], rest, sS)
-        | (category c) == Comment = applyStateFunction sN $ skiptoeol rest
-        | (category c) == Active = ([ControlSequence [value c]], rest, sM)
-        | (category c) /= Escape = ([CharToken c], rest, sM)
-        where (c,rest) = getchar st
-    sM' st = ([ControlSequence ('\\':name)], rest', nextstate)
+        Just (c,rest)
+            | category c == EOL -> ([CharToken (TypedChar ' ' Space)], rest, sN)
+            | category c == Space -> ([CharToken c], rest, sS)
+            | category c == Comment -> applyStateFunction sN $ skiptoeol rest
+            | category c == Active -> ([ControlSequence [value c]], rest, sM)
+            | category c /= Escape -> ([CharToken c], rest, sM)
+            | otherwise -> ([ControlSequence ('\\':name)], rest', nextstate)
+            where
+                (name, rest', nextstate) = breakup rest
         where
-            (_,rest) = getchar st
-            (name, rest', nextstate) = breakup rest
-            breakup st'
-                | emptyStream st' = ([], st', sN)
-                | (category c) == Space = ([value c], brest, sS)
-                | (category c) /= Letter = ([value c], brest, sM)
-                | otherwise = breakup' [] st'
-                where (c,brest) = getchar st'
-            breakup' acc st'
-                | emptyStream st' = (acc, st', sS)
-                | (category c) == Space = (acc, brest, sS)
-                | (category c) /= Letter = (acc, st', sM)
-                | otherwise = breakup' (acc ++ [value c]) brest
-                where
-                    (c,brest) = getchar st'
+            breakup st' = case getchar st' of
+                Nothing -> ([],st',sN)
+                Just (c,brest)
+                    | category c == Space -> ([value c], brest, sS)
+                    | category c /= Letter -> ([value c], brest, sM)
+                    | otherwise -> breakup' [] st'
+            breakup' acc st' = case getchar st' of
+                Nothing -> (acc, st', sS)
+                Just (c,brest)
+                    | (category c) == Space -> (acc, brest, sS)
+                    | (category c) /= Letter -> (acc, st', sM)
+                    | otherwise -> breakup' (acc ++ [value c]) brest
 \end{code}
 
 Similar to \code{TypedCharStream}, we define a \code{TokenStream} which
@@ -198,7 +198,9 @@ emptyTokenStream TokenStream{queue=(_:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
     | otherwise = (null q && emptyStream st')
-        where (q,st',_) = applyStateFunction s st
+    where
+        (q,st',_) = applyStateFunction s st
+        emptyStream = isNothing . getchar
 \end{code}
 
 \begin{code}

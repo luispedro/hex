@@ -11,7 +11,6 @@ module CharStream
     , _safeget
     , TypedCharStream(..)
     , getchar
-    , emptyStream
     , emptyTCS
     , pushst
     , popst
@@ -31,8 +30,8 @@ import Chars
 
 import qualified Environment as E
 import qualified Data.Text.Lazy as LT
-import Data.Maybe
 import Control.Monad
+import Control.Applicative
 
 type CategoryTable = E.Environment Char CharCategory
 \end{code}
@@ -92,21 +91,13 @@ To retrieve a character, the \code{getchar} returns both the character and the
 stream. This is a similar interface to the state monad.
 
 \begin{code}
-getchar :: TypedCharStream -> (TypedChar, TypedCharStream)
-getchar st@TypedCharStream{table=tab,remaining=q }
-    | emptyStream st = error "hex.getchar on an empty stream"
-    | otherwise = (annotate tab c, st')
-    where
-        (c,q') = fromMaybe (fromJust $ _safeget q) (gethathat q)
-        st' = st{remaining=q'}
+getchar :: TypedCharStream -> Maybe (TypedChar, TypedCharStream)
+getchar st@TypedCharStream{table=tab,remaining=q } = (gethathat q <|> _safeget q) >>= (\(c,q') -> Just (annotate tab c, st{remaining=q'}))
 \end{code}
 
 A simple function to test for an empty stream:
 
 \begin{code}
-emptyStream :: TypedCharStream -> Bool
-emptyStream = isNothing . _safeget . remaining
-
 emptyTCS = TypedCharStream [] EofNCS
 \end{code}
 
