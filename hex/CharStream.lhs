@@ -62,7 +62,7 @@ data NamedCharStream = EofNCS
     deriving (Eq, Show)
 
 asqueue :: String -> LT.Text -> NamedCharStream
-asqueue fname cs = NamedCharStream cs 0 fname EofNCS
+asqueue fname cs = NamedCharStream cs 1 fname EofNCS
 
 _safeget EofNCS = Nothing
 _safeget s@NamedCharStream{ncsData=r, ncsLine=line, ncsNext=next} = case LT.uncons r of
