@@ -1,0 +1,2 @@
+\count1=2%
+\chardef\testme=\count1%

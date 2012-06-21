@@ -622,9 +622,10 @@ process1 (ControlSequence cdef)
     |cdef `elem` ["\\chardef", "\\mathchardef"] = do
         ControlSequence name <- gettokenM
         maybeeqM
-        charcode <- readNumberM
-        updateEnvM (E.insert name (cdefcons charcode))
-        return Nothing
+        noc <- readENumberOrCountM
+        maybeLookup noc $ \charcode -> do
+            updateEnvM (E.insert name (cdefcons charcode))
+            return Nothing
     where
         cdefcons = if cdef == "\\chardef"
                     then CharDef
