@@ -19,7 +19,6 @@ module Tokens
     , maybepeektokenM
     , gettokentilM
     , puttokenM
-    , streampushM
     , streamenqueueM
     , updateCharStreamM
     , maybespaceM
@@ -273,10 +272,9 @@ Updating the char stream can also be done in the monad:
 updateCharStreamM f = modify (\(e,st) -> (e,updateCharStream st f))
 \end{code}
 
-We can add tokens to the start of the queue, either one (\code{streampushM}) or
+We can add tokens to the start of the queue, either one (\code{puttokenM}) or
 several (\code{streamenqueueM}).
 \begin{code}
-streampushM t = streamenqueueM [t]
 puttokenM t = streamenqueueM [t]
 streamenqueueM nts = modify (\(e,st@TokenStream{queue=ts}) -> (e,st{queue=(nts ++ ts)}))
 \end{code}

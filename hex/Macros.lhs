@@ -502,7 +502,7 @@ process1 (ControlSequence "\\expandafter") = do
     unexp <- gettokenM
     next <- gettokenM
     expand1 next
-    (streampushM unexp)
+    puttokenM unexp
     return Nothing
 \end{code}
 
