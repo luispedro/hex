@@ -23,9 +23,9 @@ module Tokens
     , updateCharStreamM
     , maybespaceM
     , maybeeqM
-    , readNumberM
     , readCharM
     , readStrM
+    , fNamePosM
     ) where
 
 import Chars
@@ -298,31 +298,6 @@ maybespaceM = maybetokM ((== Space) . tokenCategory)
 maybeeqM = maybetokM (== (CharToken (TypedChar '=' Other)))
 \end{code}
 
-Finally, a simple function to read an integer from tokens:
-\begin{code}
-readNumberM :: TkS e Integer
-readNumberM = do
-        tk <- peektokenM
-        case tk of
-            CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
-            CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
-            CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
-            t -> error $ concat ["hex.Tokens.readNumberM: expected number (got ", show t, ")"]
-    where
-        readNumber prefix cond = (read . prefix) `liftM` (digits cond)
-        digits :: [Char] -> TkS e [Char]
-        digits accepted = do
-            tok <- maybepeektokenM
-            case tok of
-                Just (CharToken tc) | ((`elem` accepted) . value) tc -> do
-                    skiptokenM
-                    rest <- digits accepted
-                    return (value tc:rest)
-                _ -> return []
-        octdigits = "+-01234567"
-        decdigits = octdigits ++ "89"
-        hexdigits = decdigits ++ "ABCDEF"
-\end{code}
 
 A few primitives (e.g., \tex{\\catcode}) need to read characters:
 \begin{code}
@@ -348,4 +323,8 @@ readStrM = do
                 cs <- readStrM
                 return (c:cs)
         _ -> return []
+\end{code}
+
+\begin{code}
+fNamePosM = bTkS (\tks -> (fnameLine $ charsource tks,tks))
 \end{code}

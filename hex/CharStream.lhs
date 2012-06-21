@@ -11,6 +11,7 @@ module CharStream
     , _safeget
     , TypedCharStream(..)
     , getchar
+    , fnameLine
     , emptyTCS
     , pushst
     , popst
@@ -55,7 +56,7 @@ data NamedCharStream = EofNCS
     | NamedCharStream
                 { ncsData :: LT.Text
                 , ncsLine :: !Int
-                , _ncsFname :: String
+                , ncsFname :: String
                 , ncsNext :: NamedCharStream
                 }
     deriving (Eq, Show)
@@ -95,7 +96,10 @@ getchar :: TypedCharStream -> Maybe (TypedChar, TypedCharStream)
 getchar st@TypedCharStream{table=tab,remaining=q } = (gethathat q <|> _safeget q) >>= (\(c,q') -> Just (annotate tab c, st{remaining=q'}))
 \end{code}
 
-A simple function to test for an empty stream:
+
+\begin{code}
+fnameLine TypedCharStream{remaining=q} = (ncsFname q, ncsLine q)
+\end{code}
 
 \begin{code}
 emptyTCS = TypedCharStream [] EofNCS

@@ -8,6 +8,7 @@ module Macros
     , Lookup(..)
     , Command(..)
     , HexCommand(..)
+    , readNumberM
     , _breakAtGroupEnd
     ) where
 
@@ -191,7 +192,7 @@ gettokenorgroup :: TkSS [Token]
 gettokenorgroup = do
     mt <- maybetokenM
     case mt of
-        Nothing -> fail "hex.gettokenorgroup end of file"
+        Nothing -> syntaxError "hex.gettokenorgroup end of file"
         Just t -> if tokenCategory t == BeginGroup
             then breakAtGroupEndM 0
             else return [t]
@@ -218,6 +219,12 @@ breakAtGroupEndM n = do
         n' BeginGroup = n + 1
         n' EndGroup = n - 1
         n' _ = n
+\end{code}
+
+\begin{code}
+syntaxError msg = do
+    (fname,line) <- fNamePosM
+    error $ concat [fname, ":", show line, " syntax error: ", msg]
 \end{code}
 
 
@@ -350,7 +357,7 @@ getargs (DelimParameter n:d:ds) = do
     rest <- getargs (d:ds)
     return ((n,val):rest)
 getargs (DelimToken _:ds) = skiptokenM >> getargs ds
-getargs _ = error "getargs"
+getargs _ = fail "getargs"
 \end{code}
 
 
@@ -377,7 +384,7 @@ getCSM errmessage = do
     tok <- gettokenM
     case tok of
         ControlSequence c -> return c
-        _ -> error errmessage
+        _ -> syntaxError errmessage
 \end{code}
 
 The \code{definemacro} functions defines macros
@@ -402,7 +409,7 @@ definemacro long outer csname
             substitution = if edef then expandedsubtext else substitutiontext
         updateEnvM (insertfunction next macro)
         return Nothing
-    | otherwise = error "Unexpected control sequence"
+    | otherwise = fail "Unexpected control sequence"
     where
         edef = csname `elem` ["\\edef", "\\xdef"]
         isBeginGroup (CharToken tc) = (category tc) == BeginGroup
@@ -707,7 +714,7 @@ process1 (ControlSequence "\\advance") = do
                         Just (CountDef v) -> return v
                         _ -> countExpected
                 _ -> countExpected
-        countExpected = error "Was expecting a count register"
+        countExpected = syntaxError "Was expecting a count register"
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
@@ -773,7 +780,7 @@ process1 (ControlSequence "\\hexinternal") = do
         cmd = case cmdname of
             "loadfont" -> LoadfontHCommand
             "selectfont" -> SelectfontHCommand
-            _ -> error ("hex.Macros.process1: unknown internal command ("++cmdname++")")
+            _ -> fail ("hex.Macros.process1: unknown internal command ("++cmdname++")")
     internalCommandM (cmd arg)
 \end{code}
 
@@ -815,6 +822,31 @@ buildLookup f = do
                 maybe n (:n) mc
 \end{code}
 
+A simple function to read an integer from tokens:
+\begin{code}
+readNumberM :: TkS e Integer
+readNumberM = do
+        tk <- peektokenM
+        case tk of
+            CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
+            CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
+            CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
+            t -> syntaxError $ concat ["hex.Tokens.readNumberM: expected number (got ", show t, ")"]
+    where
+        readNumber prefix cond = (read . prefix) `liftM` (digits cond)
+        digits :: [Char] -> TkS e [Char]
+        digits accepted = do
+            tok <- maybepeektokenM
+            case tok of
+                Just (CharToken tc) | ((`elem` accepted) . value) tc -> do
+                    skiptokenM
+                    rest <- digits accepted
+                    return (value tc:rest)
+                _ -> return []
+        octdigits = "+-01234567"
+        decdigits = octdigits ++ "89"
+        hexdigits = decdigits ++ "ABCDEF"
+\end{code}
 This reads expanded tokens to form a number (including interpreting CharDef as
 a number, which is what TeX does):
 
@@ -831,10 +863,10 @@ readENumberOrCountM = do
                 Just (MathCharDef v) -> return (Left v)
                 Just (Macro _ _ _ _) -> expand1 t >> readENumberOrCountM
                 Just (CountDef cid) -> return (Right cid)
-                Nothing -> error $ concat ["hex.readENumberOrCountM undefined ", csname]
-                n -> error $ concat ["hex.readENumberOrCountM: unexpected: ", show n]
+                Nothing -> syntaxError $ concat ["hex.readENumberOrCountM undefined ", csname]
+                n -> syntaxError $ concat ["hex.readENumberOrCountM: unexpected: ", show n]
 
-readENumberM = readENumberOrCountM >>= either return (\_ -> error "hex.readENumberM expected number, got count register")
+readENumberM = readENumberOrCountM >>= either return (\_ -> syntaxError "hex.readENumberM expected number, got count register")
 \end{code}
 
 Often we need to read an expanded token. This allows mixing between expansion levels:

@@ -7,6 +7,7 @@ Version 0.0.5+
 	* Partial implementation of \mathcharcode, \sfcode, \delcode
 	* Partial implementation of registers
 	* Implement \ifnum
+	* Line numbers on syntax errors
 
 Version 0.0.5 2012-04-08  by luispedro
 	* Implement ^^@ notation
