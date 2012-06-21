@@ -661,8 +661,9 @@ process1 (ControlSequence "\\char") = do
 process1 (ControlSequence "\\count") = do
     cid <- readNumberM
     maybeeqM
-    val <- readNumberM
-    return $ Just (SetCountCommand cid val)
+    noc <- readENumberOrCountM
+    maybeLookup noc $ \val ->
+        return $ Just (SetCountCommand cid val)
 \end{code}
 
 \tex{\\dimen} is same thing:

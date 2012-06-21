@@ -1,0 +1,3 @@
+\count1=1%
+\countdef\newcount=2%
+\newcount=\count10%
