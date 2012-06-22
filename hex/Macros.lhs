@@ -812,17 +812,15 @@ We make it easy to output internal commands:
 internalCommandM c = do
     (ExpansionEnvironment e _,rest) <- get
     return $ Just (InternalCommand e rest c)
-buildLookup :: (a -> TkSS (Maybe Command)) -> TkSS (Lookup a)
-buildLookup f = do
-    (ExpansionEnvironment e _,rest) <- get
-    return . Lookup $ \v ->
-                let (mc,(e',r)) = runTkSS (f v) e rest
-                    n = expand e' r in
-                maybe n (:n) mc
+
 maybeLookup :: Either Integer Integer -> (Integer -> TkSS (Maybe Command)) -> TkSS (Maybe Command)
 maybeLookup (Left v) f = f v
 maybeLookup (Right cid) f = do
-    f' <- buildLookup f
+    (ExpansionEnvironment e _,rest) <- get
+    let f' = Lookup $ \v ->
+                let (mc,(e',r)) = runTkSS (f v) e rest
+                    n = expand e' r in
+                maybe n (:n) mc
     internalCommandM $ LookupCountHCommand cid f'
 \end{code}
 
