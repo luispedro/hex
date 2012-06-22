@@ -101,6 +101,7 @@ getchar st@TypedCharStream{table=tab,remaining=q } = (gethathat q <|> _safeget q
 fnameLine TypedCharStream{remaining=q} = (ncsFname q, ncsLine q)
 \end{code}
 
+An empty \code{TypedCharStream}:
 \begin{code}
 emptyTCS = TypedCharStream [] EofNCS
 \end{code}
