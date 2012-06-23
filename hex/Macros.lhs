@@ -283,9 +283,9 @@ The first function just attempts to extract the macro
 expand1 :: Token -> TkSS ()
 expand1 (ControlSequence csname) = do
         e <- envM
-        expanded <- (case E.lookup csname e of
+        expanded <- case E.lookup csname e of
             Just macro -> expand1' macro
-            Nothing -> return (macronotfounderror csname))
+            Nothing -> macronotfounderror csname
         streamenqueueM expanded
     where
 \end{code}
@@ -390,6 +390,7 @@ getCSM errmessage = do
 
 The \code{definemacro} functions defines macros
 \begin{code}
+definemacro :: Bool -> Bool -> String -> TkSS (Maybe Command)
 definemacro _long outer "\\long" = (getCSM "Expected control sequence after \\long") >>= (definemacro True outer)
 definemacro long _outer "\\outer" = (getCSM "Expected control sequence after \\outer") >>= (definemacro long True)
 
@@ -431,7 +432,9 @@ errorseq msg =
 If we fail to find a macro, we insert a special token sequence:
 
 \begin{code}
-macronotfounderror csname = errorseq ("Macro `" ++ csname ++ "` not defined.")
+macronotfounderror csname = do
+    (fname,line) <- fNamePosM
+    return . errorseq $ concat [fname, ":", show line, " Macro `", csname, "` not defined."]
 \end{code}
 
 
