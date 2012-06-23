@@ -23,7 +23,7 @@ for sub in `ls tests`; do
         if test "$1" = "-v"; then
             echo testing $sub $t ...
         fi
-        run $t
+        run $t &
     done
+    wait
 done
-
