@@ -458,10 +458,10 @@ runTkSS compute e st = (v,(definitions me, st'))
             (v, (me,st')) = runState compute (ExpansionEnvironment e False, st)
 
 envM :: TkSS MacroEnvironment
-envM = (definitions . fst) `liftM` get
+envM = gets (definitions . fst)
 
 flagsM :: TkSS Flags
-flagsM = (flags . fst) `liftM` get
+flagsM = gets (flags . fst)
 
 updateEnvM :: (MacroEnvironment -> MacroEnvironment) -> TkSS ()
 updateEnvM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment (f e) g, st))
@@ -697,7 +697,7 @@ process1 (ControlSequence "\\advance") = do
         updateFlagsM (const False)
         return . Just $ AdvanceCountCommand isg count val
     where
-        maybeToksM ts = mapM_ maybeTokM ts
+        maybeToksM = mapM_ maybeTokM
         maybeTokM c = do
             tk <- peektokenM
             case tk of
@@ -857,7 +857,7 @@ readENumberOrCountM = do
     t <- gettokenM
     case t of
         CharToken _ -> puttokenM t >> Left `liftM` readNumberM
-        ControlSequence "\\count" -> readENumberM >>= return . Right
+        ControlSequence "\\count" -> Right `liftM` readENumberM
         ControlSequence csname -> do
             e <- envM
             case E.lookup csname e of

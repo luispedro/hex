@@ -68,7 +68,7 @@ is poor.
 readNumber :: Modes Integer
 readNumber = toNumber `liftM` many (matchf isDigit)
     where
-        isDigit (CharCommand (TypedChar c Other)) = (c `elem` "0123456789")
+        isDigit (CharCommand (TypedChar c Other)) = c `elem` "0123456789"
         isDigit _ = False
         toNumber :: [Command] -> Integer
         toNumber digits = read $ cvalue `map` digits
@@ -103,7 +103,7 @@ the monad).
 \begin{code}
 _vModeM :: Modes [VBox]
 _vModeM = (eof >> return []) <|> do
-    v <- (try vMode1) <|> hMode
+    v <- try vMode1 <|> hMode
     r <- _vModeM
     return (v++r)
 \end{code}
@@ -160,14 +160,14 @@ selectfont = do
 Setting math fonts is similar
 \begin{code}
 setmathfont = do
-    SetMathFontCommand i fontinfo fam fs <- matchf (\t -> case t of { SetMathFontCommand _ _ _ _ -> True; _ -> False})
+    SetMathFontCommand i fontinfo fam fs <- matchf (\t -> case t of { SetMathFontCommand{} -> True; _ -> False})
     modifyState (\e -> E.setmathfont i fontinfo e fam fs)
 \end{code}
 
 A \code{MathCodeCommand} similarly, just modifies the math environment:
 \begin{code}
 mathcode = do
-    MathCodeCommand c mtype fam val <- matchf (\t -> case t of { MathCodeCommand _ _ _ _ -> True; _ -> False})
+    MathCodeCommand c mtype fam val <- matchf (\t -> case t of { MathCodeCommand{} -> True; _ -> False})
     modifyState $ (E.insert ("mc-type"++[c]) (E.HexInteger mtype)) .
                 (E.insert ("mc-codepoint"++[c]) (E.HexMathCodePoint (val,fam)))
 \end{code}
@@ -177,7 +177,7 @@ well:
 
 \begin{code}
 delcode = do
-    DelCodeCommand c (sval,sfam) (bval,bfam) <- matchf (\t -> case t of { DelCodeCommand _ _ _ -> True; _ -> False})
+    DelCodeCommand c (sval,sfam) (bval,bfam) <- matchf (\t -> case t of { DelCodeCommand{} -> True; _ -> False})
     modifyState $ (E.insert ("delim-small:" ++ [c]) (E.HexMathCodePoint (sval,sfam))) .
                 (E.insert ("delim-big:" ++ [c]) (E.HexMathCodePoint (bval,bfam)))
 \end{code}
@@ -213,7 +213,7 @@ Given the list of \code{HElement}s, we need to set them in lines, represented
 by \code{VBox}es. \code{typesetParagraph} performs this function:
 
 \begin{code}
-typesetParagraph env p = (spreadlines baselineskip $ breakintolines linewidth p)
+typesetParagraph env p = spreadlines baselineskip $ breakintolines linewidth p
     where
         Just (E.HexDimen linewidth) = E.lookup "textwidth" env
         Just (E.HexScaledNumber baselineskip) = E.lookup "baselineskip" env
@@ -286,8 +286,7 @@ End of math mode:
 
 \begin{code}
 eomath :: Modes ()
-eomath = do
-    void $ match MathShiftCommand
+eomath = void $ match MathShiftCommand
 
 mMode :: Modes MList
 mMode = pushE *> mlist <* eomath <* popE

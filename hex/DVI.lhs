@@ -36,7 +36,7 @@ simple to implement and are supported by \TeX. Therefore, in order to be full
 
 \begin{code}
 import qualified Data.ByteString.Lazy as B
-import Control.Monad.State (State, modify, get)
+import Control.Monad.State (State, modify, get, gets)
 import Control.Monad
 import Data.Word
 import Data.Char
@@ -117,19 +117,19 @@ Now, a few functions to retrieve and manipulate the state:
 
 \begin{code}
 getCurPos :: State DVIStream Integer
-getCurPos = get >>= (return . pos)
-getLastBop = get >>= (return . lastBop)
+getCurPos = gets pos
+getLastBop = gets lastBop
 putLastBop b = modify (\st -> st { lastBop=b })
 
-getMaxPush = get >>= (return . maxPush)
+getMaxPush = gets maxPush
 pushOne = modify (\st -> let nd = (curPush st) + 1 in  st { curPush=nd, maxPush=(max (maxPush st) nd) })
 popOne = modify (\st -> st { curPush=((curPush st) - 1) })
 
-getTotalPages = get >>= (return . totalPages)
+getTotalPages = gets totalPages
 putTotalPages p = modify (\st -> st { totalPages=p })
-getFonts = get >>= (return . fontDefs)
+getFonts = gets fontDefs
 getNFonts :: State DVIStream Integer
-getNFonts = get >>= (return . toInteger . length . fontDefs)
+getNFonts = gets (toInteger . length . fontDefs)
 appendFont fnt = modify appendFont'
     where
         appendFont' st@(DVIStream {fontDefs=fs}) = st { fontDefs=(fs ++ [fnt]) }
@@ -326,6 +326,6 @@ endfile = do
     where
         putfonts _ [] = return ()
         putfonts n (f:fs) = putfont n f >> (putfonts (n+1) fs)
-        putfont n (FontDef c (FixWord s) (FixWord d) a l fpath) = do
+        putfont n (FontDef c (FixWord s) (FixWord d) a l fpath) =
             fnt_def1 n c s d a l (map toInteger fpath)
 \end{code}

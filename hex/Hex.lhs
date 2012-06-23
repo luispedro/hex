@@ -75,9 +75,8 @@ stream.
 The implementation of \tex{\\count} is hidden behind a few helper functions:
 \begin{code}
 getRegister :: String -> Integer -> HexEnvironment -> E.HexType
-getRegister class_ rid e = case E.lookup (class_++"-register:"++show rid) e of
-        Just v -> v
-        Nothing -> error $ concat ["hex.getRegister: lookup of ",class_, " ", show rid," failed."]
+getRegister class_ rid = E.lookupWithDefault errormsg (class_++"-register:"++show rid)
+    where errormsg = error $ concat ["hex.getRegister: lookup of ",class_, " ", show rid," failed."]
 
 setRegister class_ wrapper isglobal rid val =
         ins isglobal (class_++"-register:"++show rid) (wrapper val)

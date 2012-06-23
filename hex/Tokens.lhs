@@ -1,4 +1,7 @@
 \section{Tokens}
+
+This handles Token parsing into a token stream
+
 \begin{code}
 module Tokens
     ( Token(..)
@@ -33,7 +36,7 @@ import CharStream
 
 import Data.Maybe
 import Control.Monad
-import Control.Monad.State (State,get,put,modify)
+import Control.Monad.State (State,get,gets,put,modify)
 \end{code}
 
 Tokens are the next level after annotated characters. A Token is either a
@@ -138,8 +141,8 @@ sM = StateFunction sM' where
             breakup' acc st' = case getchar st' of
                 Nothing -> (acc, st', sS)
                 Just (c,brest)
-                    | (category c) == Space -> (acc, brest, sS)
-                    | (category c) /= Letter -> (acc, st', sM)
+                    | category c == Space -> (acc, brest, sS)
+                    | category c /= Letter -> (acc, st', sM)
                     | otherwise -> breakup' (acc ++ [value c]) brest
 \end{code}
 
@@ -158,7 +161,7 @@ data TokenStream = TokenStream
 instance Eq TokenStream where
     _ == _ = False
 instance Show TokenStream where
-    show (TokenStream _cs _state q) = concat [show _cs, show q]
+    show (TokenStream _cs _state q) = show _cs ++ show q
 
 newTokenStream :: TypedCharStream -> TokenStream
 newTokenStream cs = TokenStream cs sN []
@@ -183,7 +186,7 @@ initialise it with. This is achieved by \code{tokenliststream}:
 
 \begin{code}
 tokenliststream :: [Token] -> TokenStream
-tokenliststream toks = TokenStream emptyTCS sN toks
+tokenliststream = TokenStream emptyTCS sN
 \end{code}
 
 \code{emptyTokenStream} is surprisingly tricky. In fact, we need to look ahead
@@ -197,14 +200,15 @@ state functions would be potentially more complex.
 emptyTokenStream TokenStream{queue=(_:_)} = False
 emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
     | emptyStream st = True
-    | otherwise = (null q && emptyStream st')
+    | otherwise = null q && emptyStream st'
     where
         (q,st',_) = applyStateFunction s st
         emptyStream = isNothing . getchar
 \end{code}
 
+Convert a sequence of \code{CharToken} into a \code{String}
 \begin{code}
-toksToStr toks = map charof toks
+toksToStr = map charof
     where
         charof (CharToken (TypedChar c _)) = c
         charof _ = error "hex.Tokens.toksToStr.charof: Unexpected token"
@@ -214,7 +218,7 @@ toksToStr toks = map charof toks
 We also add a function to manipulate the underlying character stream.
 
 \begin{code}
-updateCharStream t@TokenStream{charsource=s} f = t{charsource=(f s)}
+updateCharStream t@TokenStream{charsource=s} f = t{charsource=f s}
 \end{code}
 
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
@@ -234,9 +238,7 @@ We add several helper function to check the status of the stream and get tokens
 
 \begin{code}
 emptyTkS :: TkS e Bool
-emptyTkS = do
-    tks <- snd `liftM` get
-    return (emptyTokenStream tks) 
+emptyTkS = gets (emptyTokenStream . snd)
 
 gettokenM :: TkS e Token
 gettokenM = bTkS gettoken
@@ -250,8 +252,9 @@ skiptokenM = void gettokenM
 peektokenM = bTkS (\tks -> let (t,_) = gettoken tks in (t,tks))
 maybepeektokenM = do
     e <- emptyTkS
-    if e then return Nothing
-    else Just `liftM` peektokenM
+    if e
+        then return Nothing
+        else Just `liftM` peektokenM
 \end{code}
 
 To get a few tokens in a row, we can call \code{gettokentilM}, which returns
@@ -277,7 +280,7 @@ We can add tokens to the start of the queue, either one (\code{puttokenM}) or
 several (\code{streamenqueueM}).
 \begin{code}
 puttokenM t = streamenqueueM [t]
-streamenqueueM nts = modify (\(e,st@TokenStream{queue=ts}) -> (e,st{queue=(nts ++ ts)}))
+streamenqueueM nts = modify (\(e,st@TokenStream{queue=ts}) -> (e,st{queue=nts ++ ts}))
 \end{code}
 
 An often needed operation is to skip an optional space or additional equal
@@ -296,7 +299,7 @@ Now, \code{maybespaceM} and \code{maybeeqM} are simply defined as calls to
 \code{maybetokM}:
 \begin{code}
 maybespaceM = maybetokM ((== Space) . tokenCategory)
-maybeeqM = maybetokM (== (CharToken (TypedChar '=' Other)))
+maybeeqM = maybetokM (== CharToken (TypedChar '=' Other))
 \end{code}
 
 

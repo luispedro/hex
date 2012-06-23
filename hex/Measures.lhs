@@ -38,7 +38,7 @@ scale x = Scaled $ round $ x * scalefactor
 And we add a few conversion functions:
 \begin{code}
 scaledToRational :: Scaled -> Rational
-scaledToRational (Scaled sp) = sp % (round (scalefactor :: Float))
+scaledToRational (Scaled sp) = sp % round (scalefactor :: Float)
 \end{code}
 
 In this section, we deal with dimensions. The basic unit is \emph{scaled
@@ -50,7 +50,7 @@ data Dimen = Dimen
             } deriving (Eq)
 
 instance Show Dimen where
-    show (Dimen n) = (show n) ++ "pt"
+    show (Dimen n) = show n ++ "pt"
 
 instance Ord Dimen where
     compare (Dimen np0) (Dimen np1) = compare np0 np1

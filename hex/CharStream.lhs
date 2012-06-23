@@ -120,7 +120,7 @@ prequeue :: (String,LT.Text) -> TypedCharStream -> TypedCharStream
 prequeue input st@TypedCharStream{remaining=q} = st { remaining=_ncsPrequeue input q }
 
 _ncsPrequeue :: (String,LT.Text) -> NamedCharStream -> NamedCharStream
-_ncsPrequeue (name,rs) s = NamedCharStream rs 0 name s
+_ncsPrequeue (name,rs) = NamedCharStream rs 0 name
 \end{code}
 
 

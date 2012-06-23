@@ -142,7 +142,7 @@ case_modes_2 = (length m) @?= 2
 
 case_modes_32 = (length m) @?= 32
     where
-        Right m = runP _vModeM E.empty "<test>" $ take 32 $ repeat ofc
+        Right m = runP _vModeM E.empty "<test>" $ replicate 32 ofc
         ofc = OutputfontCommand undefined
 
 case_mode_complex = (length m) @?= 5
@@ -188,7 +188,7 @@ case_hbox_width_sh = (totalwidth hbox3elems_sh) @?= textwidth
 
 case_hbox_nr_elems = (length hbox3elems) @?= 3
 case_hbox_glue =
-    case (hbox3elems !! 1) of
+    case hbox3elems !! 1 of
         B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
         _ -> error "should have matched!"
 
@@ -274,20 +274,20 @@ case_value_penalty = (-10000) @=? (demerit w velems nat_exp_shr 0 (n-1))
 
 case_break_byte = (10,15) @=? (_breakByte 4 (0xaf::Int))
 
-case_fixword_1 = (f0*f1) @?= ((fromInteger 1) :: FixWord)
+case_fixword_1 = (f0*f1) @?= (1 :: FixWord)
     where
-        f0 = (fromInteger 1) :: FixWord
-        f1 = (fromInteger 1) :: FixWord
+        f0 = 1 :: FixWord
+        f1 = 1 :: FixWord
 
 case_fixword_1float = (fixToFloat $ f0*f1) @?= 1.0
     where
-        f0 = (fromInteger 1) :: FixWord
-        f1 = (fromInteger 1) :: FixWord
+        f0 = 1 :: FixWord
+        f1 = 1 :: FixWord
 
-case_fixword_1_2 = (f0+f1) @?= ((fromInteger 2) :: FixWord)
+case_fixword_1_2 = (f0+f1) @?= (2 :: FixWord)
     where
-        f0 = (fromInteger 1) :: FixWord
-        f1 = (fromInteger 1) :: FixWord
+        f0 = 1 :: FixWord
+        f1 = 1 :: FixWord
 
 -- Beh is just for the benefit of the Arbitrary instance
 -- Otherwise, we would have an orphan instance declaration.

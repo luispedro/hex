@@ -189,7 +189,7 @@ demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenal
 This is equivalent to cumsum on the 3 dimensions. It makes it fast to compute
 partial sums (i.e., sum (slice velems i j))
 \begin{code}
-_acc_sizes velems = V.scanl props (zeroDimen,zeroDimen,zeroDimen) velems
+_acc_sizes = V.scanl props (zeroDimen,zeroDimen,zeroDimen)
     where
         props (w,st,sh) e = (w `dplus` (leWidth e), st `dplus` (leStretch e), sh `dplus` (leShrink e))
 \end{code}
