@@ -380,6 +380,7 @@ getargtil (DelimParameter _) = gettokenorgroup
 
 \code{getCSM} gets a control sequence or prints an error:
 \begin{code}
+getCSM :: String -> TkSS String
 getCSM errmessage = do
     tok <- gettokenM
     case tok of

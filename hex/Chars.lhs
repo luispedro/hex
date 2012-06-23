@@ -30,68 +30,20 @@ data CharCategory = Escape |
                 Other |
                 Active |
                 Comment |
-                Invalid deriving (Eq, Enum, Bounded)
-
-instance Show CharCategory where
-    show Escape = "Escape"
-    show BeginGroup = "BeginGroup"
-    show EndGroup = "EndGroup"
-    show MathShift = "MathShift"
-    show AlignmentTab = "AlignmentTan"
-    show EOL = "EOL"
-    show Parameter = "Parameter"
-    show Superscript = "Superscript"
-    show SubScript = "SubScript"
-    show Ignored= "Ignored"
-    show Space = "Space"
-    show Letter = "Letter"
-    show Other = "Other"
-    show Active = "Active"
-    show Comment = "Comment"
-    show Invalid = "Invalid"
+                Invalid deriving (Eq, Enum, Bounded, Show)
 \end{code}
 
 In order to be able to go back and forth between these names and the category
 codes, we define a pair of translation functions. Unit tests verify that
-\code{(codeCategory $ categoryCode i) == i}, for all relevant $i$.
+\code{(codeCategory $ categoryCode i) == i}, for all relevant $i$. This is
+automatically derived by Haskell, but we give it a better name here:
 
 \begin{code}
 codeCategory :: CharCategory -> Integer
-codeCategory Escape = 0
-codeCategory BeginGroup = 1
-codeCategory EndGroup = 2
-codeCategory MathShift = 3
-codeCategory AlignmentTab = 4
-codeCategory EOL = 5
-codeCategory Parameter = 6
-codeCategory Superscript = 7
-codeCategory SubScript = 8
-codeCategory Ignored= 9
-codeCategory Space = 10
-codeCategory Letter = 11
-codeCategory Other = 12
-codeCategory Active = 13
-codeCategory Comment = 14
-codeCategory Invalid = 15
+codeCategory = toInteger . fromEnum
 
 categoryCode :: Integer -> CharCategory
-categoryCode 0 = Escape
-categoryCode 1 = BeginGroup
-categoryCode 2 = EndGroup
-categoryCode 3 = MathShift
-categoryCode 4 = AlignmentTab
-categoryCode 5 = EOL
-categoryCode 6 = Parameter
-categoryCode 7 = Superscript
-categoryCode 8 = SubScript
-categoryCode 9 = Ignored
-categoryCode 10 = Space
-categoryCode 11 = Letter
-categoryCode 12 = Other
-categoryCode 13 = Active
-categoryCode 14 = Comment
-categoryCode 15 = Invalid
-categoryCode _ = error "Category code is too large"
+categoryCode = toEnum . fromInteger
 \end{code}
 
 Now we define the typed char as consisting of both a character and its

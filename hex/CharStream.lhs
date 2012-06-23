@@ -37,8 +37,6 @@ import Control.Applicative
 type CategoryTable = E.Environment Char CharCategory
 \end{code}
 
-We define a few manipulation functions:
-
 We now define the \code{annotate} function, which is a trivial function. The
 reason it takes the table as its \emph{first} argument is that it makes it
 easier to curry.
@@ -64,6 +62,7 @@ data NamedCharStream = EofNCS
 asqueue :: String -> LT.Text -> NamedCharStream
 asqueue fname cs = NamedCharStream cs 1 fname EofNCS
 
+_safeget :: NamedCharStream -> Maybe (Char,NamedCharStream)
 _safeget EofNCS = Nothing
 _safeget s@NamedCharStream{ncsData=r, ncsLine=line, ncsNext=next} = case LT.uncons r of
     Nothing -> _safeget next
@@ -89,14 +88,15 @@ data TypedCharStream = TypedCharStream
 
 
 To retrieve a character, the \code{getchar} returns both the character and the
-stream. This is a similar interface to the state monad.
+stream. This is a similar interface to the state monad. If EOF is reached,
+returns \code{Nothing}. Up to this level, \code{error} is never called.
 
 \begin{code}
 getchar :: TypedCharStream -> Maybe (TypedChar, TypedCharStream)
 getchar st@TypedCharStream{table=tab,remaining=q } = (gethathat q <|> _safeget q) >>= (\(c,q') -> Just (annotate tab c, st{remaining=q'}))
 \end{code}
 
-
+This is retrieves the inner positional information:
 \begin{code}
 fnameLine TypedCharStream{remaining=q} = (ncsFname q, ncsLine q)
 \end{code}
