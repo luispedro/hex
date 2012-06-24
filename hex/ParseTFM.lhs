@@ -43,7 +43,7 @@ There several fix word arrays, so we define a little helper function to get
 them:
 
 \begin{code}
-getFixWordArray n = (const getFixWord) `mapM` [1..n]
+getFixWordArray n = replicateM (convert n) getFixWord
 \end{code}
 
 The TFM file uses a palette-like scheme for the sizes of characters. They are
@@ -59,6 +59,7 @@ data CharInfo = CharInfo Int Int Int Int deriving (Show, Eq)
 Most of the work is done by this monadic function.
 
 \begin{code}
+parseTFMM :: String -> Get (FontDef, FontInfo)
 parseTFMM fname = do
     _lf <- getWord16 --  1
     lh <- getWord16 --  2
