@@ -39,30 +39,29 @@ char 84(T)
 char 104(h)
 char 105(i)
 char 115(s)
-right4 218773
+right4 218776
 char 105(i)
 char 115(s)
-right4 218773
+right4 218776
 char 99(c)
 char 109(m)
 char 114(r)
-right4 218773
-right4 234767
+right4 218776
 fnt_num 1
 char 84(T)
 char 104(h)
 char 105(i)
 char 115(s)
-right4 234767
+right4 234770
 char 105(i)
 char 115(s)
-right4 234767
+right4 234770
 char 99(c)
 char 109(m)
 char 116(t)
 char 105(i)
-right4 234767
-right4 20905767
+right4 234770
+right4 21140513
 pop
 down4 0
 down4 568888
@@ -75,4 +74,4 @@ eop
 post 29 25400000 473628672 1000 43725786 30785863 2 1
 fnt_def 0 1274110073 655360 655360 0 cmr10
 fnt_def 1 -50321606 655360 655360 0 cmti10
-post_post 291 48226271
+post_post 286 48226271

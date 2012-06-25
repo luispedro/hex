@@ -13,12 +13,10 @@ push
 fnt_num 0
 char 79(O)
 char 75(K)
-right4 218845
-right4 218845
+right4 218852
 char 79(O)
 char 75(K)
-right4 218845
-right4 25616136
+right4 26053820
 pop
 down4 0
 down4 559775
@@ -30,4 +28,4 @@ pop
 eop
 post 29 25400000 473628672 1000 43725786 30785863 2 1
 fnt_def 0 1274110073 655360 655360 0 cmr10
-post_post 174 48226271
+post_post 164 48226271

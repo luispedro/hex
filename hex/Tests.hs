@@ -55,7 +55,7 @@ case_categoryCode_codeCategory = [0..15] @=? (map (codeCategory .categoryCode) [
 plaintextable = plaintexenv
 case_token1 = (length $ chars2tokens "\\macro") @=? 1
 case_token_par = (length $ chars2tokens "\\par") @=? 1
-case_token_par_nl = (length $ chars2tokens "\\par\n") @=? 2
+case_token_par_nl = (length $ chars2tokens "\\par\n") @?= 1
 case_token_a_nl = (length $ chars2tokens "a\n") @=? 2
 case_token_sp_nl = (length $ chars2tokens " \n") @=? 1
 case_token_a_sp_nl = (length $ chars2tokens "a \n") @=? 2

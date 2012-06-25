@@ -141,8 +141,7 @@ sM = StateFunction sM' where
             breakup' acc st' = case getchar st' of
                 Nothing -> (acc, st', sS)
                 Just (c,brest)
-                    | category c == Space -> (acc, brest, sS)
-                    | category c /= Letter -> (acc, st', sM)
+                    | category c /= Letter -> (acc, st', sS)
                     | otherwise -> breakup' (acc ++ [value c]) brest
 \end{code}
 
