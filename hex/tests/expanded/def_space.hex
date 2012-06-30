@@ -1,0 +1,3 @@
+\catcode`A=13%
+\def A{\def}A
+\x{OK}\x

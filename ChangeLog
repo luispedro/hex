@@ -8,6 +8,7 @@ Version 0.0.5+
 	* Partial implementation of registers
 	* Implement \ifnum
 	* Line numbers on syntax errors
+	* Parse xii.tex (even if the output is wrong)
 
 Version 0.0.5 2012-04-08  by luispedro
 	* Implement ^^@ notation

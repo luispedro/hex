@@ -382,6 +382,7 @@ getargtil (DelimParameter _) = gettokenorgroup
 \begin{code}
 getCSM :: String -> TkSS String
 getCSM errmessage = do
+    maybespaceM
     tok <- gettokenM
     case tok of
         ControlSequence c -> return c
