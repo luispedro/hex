@@ -1,4 +1,4 @@
-Version 0.0.5+
+Version 0.0.6 2012-06-30 by luispedro
 	* Refactor Macros/Tokens to emphasise Monadic interface
 	* Update to newer Haskell
 	* Implementation of \countdef & \dimendef & \skipdef & \toksdef
