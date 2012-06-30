@@ -290,7 +290,7 @@ maybetokM :: (Token -> Bool) -> TkS e ()
 maybetokM cond = do
     mt <- maybepeektokenM
     case mt of
-        Just t | cond t -> void gettokenM
+        Just t | cond t -> skiptokenM
         _ -> return ()
 \end{code}
 
@@ -328,6 +328,7 @@ readStrM = do
         _ -> return []
 \end{code}
 
+Retrieve the current position:
 \begin{code}
 fNamePosM = bTkS (\tks -> (fnameLine $ charsource tks,tks))
 \end{code}
