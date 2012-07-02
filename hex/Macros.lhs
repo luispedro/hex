@@ -8,6 +8,7 @@ module Macros
     , Lookup(..)
     , Command(..)
     , HexCommand(..)
+    , ExpansionEnvironment(..)
     , gettokenM
     , gettokentilM
     , readNumberM
@@ -201,7 +202,7 @@ gettokenorgroup :: TkSS [Token]
 gettokenorgroup = do
     mt <- maybetokenM
     case mt of
-        Nothing -> syntaxError "hex.gettokenorgroup end of file"
+        Nothing -> syntaxError "hex.gettokenorgroup end of file" >> return []
         Just t -> if tokenCategory t == BeginGroup
             then breakAtGroupEndM 0
             else return [t]
@@ -234,7 +235,12 @@ breakAtGroupEndM n = do
 syntaxError msg = do
     (fname,line) <- fNamePosM
     context <- ask
-    error $ concat [fname, ":", show line, " syntax error: ", msg, " in context `", context, "`"]
+    internalCommandM (ErrorCommand $ concat [fname, ":", show line, " syntax error: ", msg, " in context `", context, "`"])
+\end{code}
+
+And a little helper function
+\begin{code}
+syntaxErrorConcat = syntaxError . concat
 \end{code}
 
 
@@ -338,7 +344,7 @@ If found, the macro is expanded by \code{expand1'}
         backtotoks cv = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
 
 
-expand1 t = error $ concat ["hex.Macros.expand1: asked to expand non-macro: ", show t]
+expand1 t = syntaxErrorConcat ["hex.Macros.expand1: asked to expand non-macro: ", show t]
 \end{code}
 
 Matching macro parameters is done by attempting to match delimiters. A special
@@ -396,7 +402,7 @@ getCSM errmessage = do
     tok <- gettokenM
     case tok of
         ControlSequence c -> return c
-        _ -> syntaxError errmessage
+        _ -> syntaxError errmessage >> return []
 \end{code}
 
 The \code{definemacro} functions defines macros
@@ -837,8 +843,8 @@ process1 (ControlSequence "\\advance") = do
                     e <- envM
                     case E.lookup csname e of
                         Just (CountDef v) -> return v
-                        _ -> countExpected
-                _ -> countExpected
+                        _ -> countExpected >> return 0
+                _ -> countExpected >> return 0
         countExpected = syntaxError "Was expecting a count register"
 \end{code}
 
@@ -868,15 +874,16 @@ information and pass it down.
 \begin{code}
 process1 (ControlSequence cs)
     | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"] = do
-        fam <- readNumberM
-        maybeeqM
-        ControlSequence fc <- gettokenM
-        e <- envM
-        internalCommandM (case E.lookup fc e of
-            Just (FontMacro fname) ->
-                SetMathFontHCommand fname fam (fontstyle cs)
-            _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
-            )
+        mfam <- readENumberOrCountM
+        maybeLookup mfam $ \fam -> do
+            maybeeqM
+            ControlSequence fc <- gettokenM
+            e <- envM
+            internalCommandM (case E.lookup fc e of
+                Just (FontMacro fname) ->
+                    SetMathFontHCommand fname fam (fontstyle cs)
+                _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
+                )
     where
         fontstyle "\\textfont" = E.Textfont
         fontstyle "\\scriptfont" = E.Scriptfont
@@ -951,14 +958,14 @@ maybeLookup (Right cid) f = do
 
 A simple function to read an integer from tokens:
 \begin{code}
-readNumberM :: TkS e Integer
+readNumberM :: TkSS Integer
 readNumberM = local (++" -> readNumberM") $ do
         tk <- peektokenM
         case tk of
             CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
             CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
             CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
-            t -> syntaxError $ concat ["hex.Macros.readNumberM: expected number (got ", show t, ")"]
+            t -> syntaxErrorConcat ["hex.Macros.readNumberM: expected number (got ", show t, ")"] >> return 0
     where
         readNumber prefix cond = (read . prefix) `liftM` (digits cond)
         digits :: [Char] -> TkS e [Char]
@@ -990,10 +997,10 @@ readENumberOrCountM = local (++" -> readENumberOrCountM") $ do
                 Just (MathCharDef v) -> return (Left v)
                 Just (Macro _ _ _ _) -> expand1 t >> readENumberOrCountM
                 Just (CountDef cid) -> return (Right cid)
-                Nothing -> syntaxError $ concat ["hex.readENumberOrCountM undefined ", csname]
-                n -> syntaxError $ concat ["hex.readENumberOrCountM: unexpected: ", show n]
+                Nothing -> syntaxErrorConcat ["hex.readENumberOrCountM undefined ", csname] >> return (Left 0)
+                n -> syntaxErrorConcat ["hex.readENumberOrCountM: unexpected: ", show n] >> return (Left 0)
 
-readENumberM = local (++" -> readENumberM") $ readENumberOrCountM >>= either return (\_ -> syntaxError "hex.readENumberM expected number, got count register")
+readENumberM = local (++" -> readENumberM") $ readENumberOrCountM >>= either return (\_ -> syntaxError "hex.readENumberM expected number, got count register" >> return 0)
 \end{code}
 
 Often we need to read an expanded token. This allows mixing between expansion levels:

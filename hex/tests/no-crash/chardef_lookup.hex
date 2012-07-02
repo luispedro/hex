@@ -1,0 +1,4 @@
+\font\tenit=cmti10 % text italic
+\count1=4%
+\chardef\value=\count1%
+\count2=\value
