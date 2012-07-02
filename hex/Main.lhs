@@ -37,7 +37,7 @@ table maps strings to these functions.
 prefix = LT.pack "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
 
 chars = map (annotate plaintexenv) . LT.unpack
-tokens str = fst3 $ runRWS (gettokentilM $ const False) () (undefined,astokenstream str)
+tokens str = fst3 $ runRWS (gettokentilM $ const False) "top" (undefined,astokenstream str)
     where
         fst3 (a,_,_) = a
         astokenstream = newTokenStream . TypedCharStream plaintexenv

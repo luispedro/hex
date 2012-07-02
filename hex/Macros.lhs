@@ -229,7 +229,8 @@ breakAtGroupEndM n = do
 \begin{code}
 syntaxError msg = do
     (fname,line) <- fNamePosM
-    error $ concat [fname, ":", show line, " syntax error: ", msg]
+    context <- ask
+    error $ concat [fname, ":", show line, " syntax error: ", msg, " in context `", context, "`"]
 \end{code}
 
 
@@ -286,7 +287,7 @@ The first function just attempts to extract the macro
 
 \begin{code}
 expand1 :: Token -> TkSS ()
-expand1 (ControlSequence csname) = do
+expand1 (ControlSequence csname) = local (++" -> expanding `" ++csname++"`") $ do
         e <- envM
         expanded <- case E.lookup csname e of
             Just macro -> expand1' macro
@@ -452,6 +453,7 @@ expand env st = DL.toList cs
     where
         (_,_,cs) = runTkSS expandM env st
 
+expandM :: TkSS ()
 expandM = do
     mt <- maybetokenM
     case mt of
@@ -463,7 +465,7 @@ To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
 
 \begin{code}
 type CList = DL.DList Command
-type TkS e a = RWS () CList (e,TokenStream) a
+type TkS e a = RWS String CList (e,TokenStream) a
 
 tell1 = tell . DL.singleton
 bTkS :: (TokenStream -> (a,TokenStream)) -> TkS e a
@@ -580,7 +582,7 @@ type TkSS a = TkS ExpansionEnvironment a
 runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream), CList)
 runTkSS compute e st = (v,(definitions me, st'),cs)
         where
-            (v, (me,st'),cs) = runRWS compute () (ExpansionEnvironment e False, st)
+            (v, (me,st'),cs) = runRWS compute "top" (ExpansionEnvironment e False, st)
 
 envM :: TkSS MacroEnvironment
 envM = gets (definitions . fst)
@@ -946,13 +948,13 @@ maybeLookup (Right cid) f = do
 A simple function to read an integer from tokens:
 \begin{code}
 readNumberM :: TkS e Integer
-readNumberM = do
+readNumberM = local (++" -> readNumberM") $ do
         tk <- peektokenM
         case tk of
             CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
             CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
             CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
-            t -> syntaxError $ concat ["hex.Tokens.readNumberM: expected number (got ", show t, ")"]
+            t -> syntaxError $ concat ["hex.Macros.readNumberM: expected number (got ", show t, ")"]
     where
         readNumber prefix cond = (read . prefix) `liftM` (digits cond)
         digits :: [Char] -> TkS e [Char]
@@ -972,7 +974,7 @@ This reads expanded tokens to form a number (including interpreting CharDef as
 a number, which is what TeX does):
 
 \begin{code}
-readENumberOrCountM = do
+readENumberOrCountM = local (++" -> readENumberOrCountM") $ do
     t <- gettokenM
     case t of
         CharToken _ -> puttokenM t >> Left `liftM` readNumberM
@@ -987,7 +989,7 @@ readENumberOrCountM = do
                 Nothing -> syntaxError $ concat ["hex.readENumberOrCountM undefined ", csname]
                 n -> syntaxError $ concat ["hex.readENumberOrCountM: unexpected: ", show n]
 
-readENumberM = readENumberOrCountM >>= either return (\_ -> syntaxError "hex.readENumberM expected number, got count register")
+readENumberM = local (++" -> readENumberM") $ readENumberOrCountM >>= either return (\_ -> syntaxError "hex.readENumberM expected number, got count register")
 \end{code}
 
 Often we need to read an expanded token. This allows mixing between expansion levels:
@@ -1004,7 +1006,7 @@ expandedTokenM = do
 \code{readDimenM} reads a dimension in tokens
 
 \begin{code}
-readDimenM = do
+readDimenM = local (++" -> readDimen") $ do
         n <- readNumberM
         CharToken c0 <- gettokenM
         CharToken c1 <- gettokenM
@@ -1013,5 +1015,5 @@ readDimenM = do
         unit "pt" = UnitPt
         unit "px" = UnitPx
         unit un = error ("hex.Macros.unit: not implemented: "++un)
-readGlueM = readDimenM
+readGlueM = local (++" -> readGlue") readDimenM
 \end{code}
