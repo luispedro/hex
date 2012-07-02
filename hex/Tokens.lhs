@@ -82,8 +82,7 @@ as a datatype. Unfortunately, we also need to define the ugly
 \code{applyStateFunction} helper.
 
 \begin{code}
-newtype StateFunction = StateFunction ( TypedCharStream -> ([Token], TypedCharStream, StateFunction) )
-applyStateFunction (StateFunction s) = s
+newtype StateFunction = StateFunction { applyStateFunction :: TypedCharStream -> Maybe (Token, TypedCharStream, StateFunction) }
 \end{code}
 
 Now, the implementation of the two easy states: S \& N.
@@ -91,14 +90,14 @@ Now, the implementation of the two easy states: S \& N.
 \begin{code}
 sN = StateFunction sN' where
     sN' st = case getchar st of
-        Nothing -> ([],st,sN)
+        Nothing -> Nothing
         Just (c,rest)
-            | category c == EOL -> ([ControlSequence "\\par"], rest, sN)
+            | category c == EOL -> Just (ControlSequence "\\par", rest, sN)
             | category c == Space -> sN' rest
             | otherwise -> applyStateFunction sM st
 sS = StateFunction sS' where
     sS' st = case getchar st of
-        Nothing -> ([],st,sS)
+        Nothing -> Nothing
         Just (c,rest)
             | category c == EOL -> applyStateFunction sN rest
             | category c == Space -> applyStateFunction sS rest
@@ -120,15 +119,15 @@ the Texbook.
 
 sM = StateFunction sM' where
     sM' st = case getchar st of
-        Nothing -> ([], st, sM)
+        Nothing -> Nothing
                                 -- Maybe below should be (TypedChar '\n' Space) ?
         Just (c,rest)
-            | category c == EOL -> ([CharToken (TypedChar ' ' Space)], rest, sN)
-            | category c == Space -> ([CharToken c], rest, sS)
+            | category c == EOL -> Just (CharToken (TypedChar ' ' Space), rest, sN)
+            | category c == Space -> Just (CharToken c, rest, sS)
             | category c == Comment -> applyStateFunction sN $ skiptoeol rest
-            | category c == Active -> ([ControlSequence [value c]], rest, sM)
-            | category c /= Escape -> ([CharToken c], rest, sM)
-            | otherwise -> ([ControlSequence ('\\':name)], rest', nextstate)
+            | category c == Active -> Just (ControlSequence [value c], rest, sM)
+            | category c /= Escape -> Just (CharToken c, rest, sM)
+            | otherwise -> Just (ControlSequence ('\\':name), rest', nextstate)
             where
                 (name, rest', nextstate) = breakup rest
         where
@@ -171,12 +170,11 @@ The main function of this module is \code{gettoken}, which returns a pair
 interface.
 
 \begin{code}
-gettoken st | emptyTokenStream st = error "hex.Tokens.gettoken: empty stream"
+-- gettoken :: TokenStream -> Maybe (Token, TokenStream)
 gettoken tSt@TokenStream{queue=(t:ts)} = (t,tSt{queue=ts})
-gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} =
-    gettoken tSt{charsource=st',state=s',queue=q}
-        where (q,st',s') = applyStateFunction s st
-
+gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} = case applyStateFunction s st of
+        Nothing -> error "hex.Tokens.gettoken: empty stream"
+        Just (tk,st',s') -> (tk,tSt{charsource=st',state=s'})
 \end{code}
 
 
@@ -196,13 +194,7 @@ always read as much as they could), this function could be simpler, but the
 state functions would be potentially more complex.
 
 \begin{code}
-emptyTokenStream TokenStream{queue=(_:_)} = False
-emptyTokenStream TokenStream{charsource=st, state=s, queue=[]}
-    | emptyStream st = True
-    | otherwise = null q && emptyStream st'
-    where
-        (q,st',_) = applyStateFunction s st
-        emptyStream = isNothing . getchar
+emptyTokenStream TokenStream{charsource=st, state=s, queue=q} = null q && (isNothing $ applyStateFunction s st)
 \end{code}
 
 Convert a sequence of \code{CharToken} into a \code{String}
