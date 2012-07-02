@@ -51,8 +51,8 @@ category.
 
 \begin{code}
 data TypedChar = TypedChar
-                 { value :: Char
-                 , category :: CharCategory
+                 { value :: !Char
+                 , category :: !CharCategory
                  } deriving (Eq)
 \end{code}
 
