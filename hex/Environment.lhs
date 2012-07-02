@@ -74,7 +74,8 @@ Pushing and popping environments are simple list manipulations:
 
 \begin{code}
 push = (:) (M.empty :: (BaseEnvironment a b))
-pop = tail
+pop [] = error "popping empty environment"
+pop (_:es) = es
 \end{code}
 
 There are two types of insertions. Insertion in the current environment and
