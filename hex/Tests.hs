@@ -14,7 +14,7 @@ import System.IO.Unsafe
 import qualified Data.Vector as V
 import qualified Data.Text.Lazy as LT
 import Text.Parsec hiding (many, optional, (<|>))
-import Control.Monad.State (runState)
+import Control.Monad.RWS.Strict (runRWS)
 
 
 
@@ -89,7 +89,7 @@ nr_read q = maybe 0 (\(_,q') -> 1+(nr_read q')) (_safeget q)
 
 runTkS computation st = (r,st')
     where
-        (r,(_,st')) = runState computation (E.empty,st)
+        (r,(_,st'),_) = runRWS computation () (E.empty,st)
 
 case_readNumberM5 = n @=? 5
     where

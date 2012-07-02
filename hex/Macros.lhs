@@ -18,7 +18,9 @@ import Data.List (sortBy)
 import Data.Char (chr)
 import Data.Bits
 import Data.Maybe
-import Control.Monad.State
+import Control.Monad
+import Control.Monad.Trans.RWS.Strict
+import qualified Data.DList as DL
 
 import DVI
 import Fonts
@@ -460,7 +462,8 @@ expand env st = case mc of
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
 
 \begin{code}
-type TkS e a = State (e,TokenStream) a
+type CList = DL.DList Command
+type TkS e a = RWS () CList (e,TokenStream) a
 bTkS :: (TokenStream -> (a,TokenStream)) -> TkS e a
 bTkS f = do
     (e,st) <- get
@@ -575,7 +578,7 @@ type TkSS a = TkS ExpansionEnvironment a
 runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream))
 runTkSS compute e st = (v,(definitions me, st'))
         where
-            (v, (me,st')) = runState compute (ExpansionEnvironment e False, st)
+            (v, (me,st'),_) = runRWS compute () (ExpansionEnvironment e False, st)
 
 envM :: TkSS MacroEnvironment
 envM = gets (definitions . fst)

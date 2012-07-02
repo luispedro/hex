@@ -7,7 +7,7 @@ import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.IO as LT
 import System.Console.CmdArgs
 import Control.Monad
-import Control.Monad.State
+import Control.Monad.RWS.Strict
 
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
@@ -37,8 +37,9 @@ table maps strings to these functions.
 prefix = LT.pack "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
 
 chars = map (annotate plaintexenv) . LT.unpack
-tokens str = fst $ runState (gettokentilM $ const False) (undefined,astokenstream str)
+tokens str = fst3 $ runRWS (gettokentilM $ const False) () (undefined,astokenstream str)
     where
+        fst3 (a,_,_) = a
         astokenstream = newTokenStream . TypedCharStream plaintexenv
 
 expanded = expand E.empty . newTokenStream . TypedCharStream plaintexenv
