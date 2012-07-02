@@ -210,7 +210,7 @@ for testing, but the implementation is based on the monadic
 \begin{code}
 
 _breakAtGroupEnd :: TokenStream -> ([Token], TokenStream)
-_breakAtGroupEnd st = let (tks,(_,st')) = runTkSS (breakAtGroupEndM 0) undefined st in (tks,st')
+_breakAtGroupEnd st = let (tks,(_,st'),_) = runTkSS (breakAtGroupEndM 0) undefined st in (tks,st')
 
 breakAtGroupEndM :: Integer -> TkSS [Token]
 breakAtGroupEndM n = do
@@ -269,10 +269,10 @@ Skipping depends on the value of the condition. If the condition is true, we do
 noting. If the condition is false, we skip until the matching \tex{\\else} or
 \tex{\\fi}. We always return \code{Nothing} for convenience of use.
 \begin{code}
-skipifM True = return Nothing
+skipifM True = return ()
 skipifM False = (void $ gettokentilM isIfEnd) >>
                 gettokenM >>
-                return Nothing
+                return ()
     where
         isIfEnd (ControlSequence c) | (c `elem` ["\\else", "\\fi"]) = True
         isIfEnd _ = False
@@ -396,7 +396,7 @@ getCSM errmessage = do
 
 The \code{definemacro} functions defines macros
 \begin{code}
-definemacro :: Bool -> Bool -> String -> TkSS (Maybe Command)
+definemacro :: Bool -> Bool -> String -> TkSS ()
 definemacro _long outer "\\long" = (getCSM "Expected control sequence after \\long") >>= (definemacro True outer)
 definemacro long _outer "\\outer" = (getCSM "Expected control sequence after \\outer") >>= (definemacro long True)
 
@@ -416,7 +416,6 @@ definemacro long outer csname
             expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
             substitution = if edef then expandedsubtext else substitutiontext
         updateEnvM (insertfunction next macro)
-        return Nothing
     | otherwise = fail "Unexpected control sequence"
     where
         edef = csname `elem` ["\\edef", "\\xdef"]
@@ -449,14 +448,15 @@ first token (after checking that the stream is not empty) to \code{process1}:
 
 \begin{code}
 expand :: MacroEnvironment -> TokenStream -> [Command]
-expand _ st | emptyTokenStream st = []
-expand env st = case mc of
-        Just c -> c:rest
-        Nothing -> rest
+expand env st = DL.toList cs
     where
-        Just (t, r0) = gettoken st
-        (mc,(env',r1)) = runTkSS (process1 t) env r0
-        rest = (expand env' r1)
+        (_,_,cs) = runTkSS expandM env st
+
+expandM = do
+    mt <- maybetokenM
+    case mt of
+        Nothing -> return ()
+        Just t -> (process1 t) >> expandM
 \end{code}
 
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
@@ -464,6 +464,8 @@ To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
 \begin{code}
 type CList = DL.DList Command
 type TkS e a = RWS () CList (e,TokenStream) a
+
+tell1 = tell . DL.singleton
 bTkS :: (TokenStream -> (a,TokenStream)) -> TkS e a
 bTkS f = do
     (e,st) <- get
@@ -575,10 +577,10 @@ fNamePosM = bTkS (\tks -> (fnameLine $ charsource tks,tks))
 The \code{TkSS} is a token stream and macro environment state monad:
 \begin{code}
 type TkSS a = TkS ExpansionEnvironment a
-runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream))
-runTkSS compute e st = (v,(definitions me, st'))
+runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream), CList)
+runTkSS compute e st = (v,(definitions me, st'),cs)
         where
-            (v, (me,st'),_) = runRWS compute () (ExpansionEnvironment e False, st)
+            (v, (me,st'),cs) = runRWS compute () (ExpansionEnvironment e False, st)
 
 envM :: TkSS MacroEnvironment
 envM = gets (definitions . fst)
@@ -598,7 +600,7 @@ sarguments. Some are handled at this level (e.g., \tex{\\let}), while others
 geenreate Commands.
 
 \begin{code}
-process1 :: Token -> TkSS (Maybe Command)
+process1 :: Token -> TkSS ()
 process1 (ControlSequence "\\let") = do
     name <- getCSM "Control sequence expected after \\let"
     maybeeqM
@@ -610,13 +612,12 @@ process1 (ControlSequence "\\let") = do
         simple = Macro [] [rep] False False
         t = E.insert name macro
     updateEnvM t
-    return Nothing
 \end{code}
 
 Dealing with \tex{\\noexpand} is easy, just pass the next token unmodified:
 
 \begin{code}
-process1 (ControlSequence "\\noexpand") = (Just . fromToken) `liftM` gettokenM
+process1 (ControlSequence "\\noexpand") = gettokenM >>= (tell1 . fromToken)
 \end{code}
 
 \code{expandafter} is dealt in a nice way. Note that, at least in TeX, the
@@ -633,7 +634,6 @@ process1 (ControlSequence "\\expandafter") = do
     next <- gettokenM
     expand1 next
     puttokenM unexp
-    return Nothing
 \end{code}
 
 Manipulation of catcodes is performed here. It needs to change the token
@@ -648,7 +648,6 @@ process1 (ControlSequence "\\catcode") = do
     nvalue <- readENumberM
     let catcode c v s@TypedCharStream{table=tab} = s{table=(E.insert c (categoryCode v) tab)}
     updateCharStreamM (catcode char nvalue)
-    return Nothing
 \end{code}
 
 There are a few other "code" commands handled here. They are all similar.
@@ -660,7 +659,7 @@ process1 (ControlSequence "\\mathcode") = do
     let mtype = (n `shiftR` 12) .&. 0x0f
         fam = (n `shiftR` 8) .&. 0x0f
         val = chr $ fromInteger (n .&. 0xff)
-    return $ Just (MathCodeCommand c mtype fam val)
+    tell1 (MathCodeCommand c mtype fam val)
 \end{code}
 
 \begin{code}
@@ -673,7 +672,7 @@ process1 (ControlSequence "\\delcode") = do
         bfam = (n `shiftR` 8) .&. 0x0f
         bval = n .&. 0xff
         chr' = chr . fromInteger
-    return $ Just (DelCodeCommand c (chr' sval,sfam) (chr' bval,bfam))
+    tell1 (DelCodeCommand c (chr' sval,sfam) (chr' bval,bfam))
 \end{code}
 
 \begin{code}
@@ -681,7 +680,7 @@ process1 (ControlSequence "\\sfcode") = do
     c <- readCharM
     maybeeqM
     n <- readENumberM
-    return $ Just (SfCodeCommand c n)
+    tell1 (SfCodeCommand c n)
 \end{code}
 
 To handle conditionals, \code{evaluateif} is called.
@@ -701,7 +700,7 @@ process1 (ControlSequence "\\ifnum") = do
             CharToken r -> r
             t -> error $ concat ["hex.process1(ifnum): expected relationship character, got ", show t]
     val1 <- readENumberOrCountM
-    let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return Nothing
+    let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return ()
         continuation0 v = maybeLookup val1 (continuation v)
     maybeLookup val0 continuation0
 \end{code}
@@ -716,7 +715,7 @@ process1 (ControlSequence "\\else") = skipifM False
 
 If we encounter a \tex{\\fi}, just ignore it.
 \begin{code}
-process1 (ControlSequence "\\fi") = return Nothing
+process1 (ControlSequence "\\fi") = return ()
 \end{code}
 
 If we have a primitive command, then just wrap it up and ship it down.
@@ -727,7 +726,7 @@ directly or its expansion.
 
 \begin{code}
 process1 (ControlSequence csname)
-    | isprimitive csname = return $ Just (PrimitiveCommand csname)
+    | isprimitive csname = tell1 (PrimitiveCommand csname)
     | csname `elem` ["\\def", "\\gdef", "\\edef", "\\xdef", "\\long", "\\outer"] = definemacro False False csname
 \end{code}
 
@@ -748,7 +747,6 @@ process1 (ControlSequence cdef)
         noc <- readENumberOrCountM
         maybeLookup noc $ \charcode -> do
             updateEnvM (E.insert name (cdefcons charcode))
-            return Nothing
     where
         cdefcons = if cdef == "\\chardef"
                     then CharDef
@@ -763,7 +761,6 @@ process1 (ControlSequence cddef)
         noc <- readENumberOrCountM
         maybeLookup noc $ \cid -> do
             updateEnvM (E.insert name (c cid))
-            return Nothing
     where
         c = case cddef of
                 "\\countdef" -> CountDef
@@ -777,7 +774,7 @@ process1 (ControlSequence cddef)
 \begin{code}
 process1 (ControlSequence "\\char") = do
     v <- readNumberM
-    return $ Just (CharCommand (TypedChar (chr $ fromInteger v) Other))
+    tell1 (CharCommand (TypedChar (chr $ fromInteger v) Other))
 \end{code}
 
 \tex{\\count} is very easy too:
@@ -787,7 +784,7 @@ process1 (ControlSequence "\\count") = do
     maybeeqM
     noc <- readENumberOrCountM
     maybeLookup noc $ \val ->
-        return $ Just (SetCountCommand cid val)
+        tell1 (SetCountCommand cid val)
 \end{code}
 
 \tex{\\dimen} is same thing:
@@ -796,7 +793,7 @@ process1 (ControlSequence "\\dimen") = do
     cid <- readNumberM
     maybeeqM
     val <- readDimenM
-    return $ Just (SetDimenCommand cid val)
+    tell1 (SetDimenCommand cid val)
 \end{code}
 
 \tex{\\skip} is same thing:
@@ -805,7 +802,7 @@ process1 (ControlSequence "\\skip") = do
     cid <- readNumberM
     maybeeqM
     val <- readGlueM
-    return $ Just (SetSkipCommand cid val)
+    tell1 (SetSkipCommand cid val)
 \end{code}
 
 
@@ -818,7 +815,7 @@ process1 (ControlSequence "\\advance") = do
         val <- readENumberOrCountM
         isg <- flagsM
         updateFlagsM (const False)
-        return . Just $ AdvanceCountCommand isg count val
+        tell1 (AdvanceCountCommand isg count val)
     where
         maybeToksM = mapM_ maybeTokM
         maybeTokM c = do
@@ -917,33 +914,32 @@ Finally, we come to the default cases.
 
 \begin{code}
 process1 t@(CharToken tc)
-    | (category tc) == BeginGroup = (updateEnvM E.push) >> (updateCharStreamM pushst) >> (return $ Just PushCommand)
-    | (category tc) == EndGroup = (updateEnvM E.pop) >> (updateCharStreamM popst) >> (return $ Just PopCommand)
-    | (category tc) == MathShift = return $ Just MathShiftCommand
-    | otherwise = return $ Just (fromToken t)
+    | (category tc) == BeginGroup = (updateEnvM E.push) >> (updateCharStreamM pushst) >> (tell1 PushCommand)
+    | (category tc) == EndGroup = (updateEnvM E.pop) >> (updateCharStreamM popst) >> (tell1 PopCommand)
+    | (category tc) == MathShift = tell1 MathShiftCommand
+    | otherwise = tell1 (fromToken t)
 \end{code}
 
 If nothing else triggered, we must have a macro, so we call \code{expand1}. The
 expansion will queue the tokens and they will be handled later.
 
 \begin{code}
-process1 t = (expand1 t) >> (return Nothing)
+process1 t = void (expand1 t)
 \end{code}
 
 We make it easy to output internal commands:
 \begin{code}
 internalCommandM c = do
     (ExpansionEnvironment e _,rest) <- get
-    return $ Just (InternalCommand e rest c)
+    tell1 (InternalCommand e rest c)
 
-maybeLookup :: Either Integer Integer -> (Integer -> TkSS (Maybe Command)) -> TkSS (Maybe Command)
+maybeLookup :: Either Integer Integer -> (Integer -> TkSS ()) -> TkSS ()
 maybeLookup (Left v) f = f v
 maybeLookup (Right cid) f = do
     (ExpansionEnvironment e _,rest) <- get
     let f' = Lookup $ \v ->
-                let (mc,(e',r)) = runTkSS (f v) e rest
-                    n = expand e' r in
-                maybe n (:n) mc
+                let (_,_,cs) = runTkSS (f v >> expandM) e rest in
+                DL.toList cs
     internalCommandM $ LookupCountHCommand cid f'
 \end{code}
 
