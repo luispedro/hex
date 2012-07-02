@@ -22,6 +22,7 @@ import Macros
 import ParseTFM
 import Fonts
 import DVI
+import Measures
 import Tokens (updateCharStream, TokenStream)
 import CharStream (prequeue)
 import qualified Environment as E
@@ -113,6 +114,14 @@ processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCoun
     where
         v = getCount cid e
         val' = either id (`getCount` e) val
+processinputs ((AdvanceDimenCommand isg did val):r) e = processinputs r (setDimen isg did (v `dplus` val') e)
+    where
+        v = getDimen did e
+        val' = either id (`getDimen` e) val
+processinputs ((AdvanceSkipCommand isg did val):r) e = processinputs r (setSkip isg did (v `dplus` val') e)
+    where
+        v = getSkip did e
+        val' = either id (`getSkip` e) val
 \end{code}
 
 The simplest command is the \tex{\\bye} command. Just stop everything, we are

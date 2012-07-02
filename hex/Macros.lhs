@@ -123,6 +123,8 @@ data Command =
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Dimen
         | AdvanceCountCommand Bool Integer (Either Integer Integer)
+        | AdvanceDimenCommand Bool Integer (Either Dimen Integer)
+        | AdvanceSkipCommand Bool Integer (Either Dimen Integer)
         | PrimitiveCommand String
         | InternalCommand MacroEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -157,7 +159,9 @@ instance Show Command where
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
     show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
     show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
-    show (AdvanceCountCommand isg cid val) = concat ["<advance ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
+    show (AdvanceCountCommand isg cid val) = concat ["<advance count ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
+    show (AdvanceDimenCommand isg cid val) = concat ["<advance dimen ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
+    show (AdvanceSkipCommand isg cid val) = concat ["<advance skip ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
