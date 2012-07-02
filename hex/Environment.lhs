@@ -5,6 +5,7 @@ module Environment
     , BaseEnvironment
     , Environment
     , empty
+    , level
     , lookup
     , lookupWithDefault
     , push
@@ -57,6 +58,11 @@ mapping. The list should never become empty.
 \begin{code}
 empty :: Environment a b
 empty = [M.empty :: (BaseEnvironment a b)]
+\end{code}
+
+\begin{code}
+level :: Environment a b -> Int
+level = length
 \end{code}
 
 Lookup is done by looking through the list for the first match.

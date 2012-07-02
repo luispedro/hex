@@ -18,7 +18,6 @@ module Macros
 import Data.List (sortBy)
 import Data.Char (chr)
 import Data.Bits
-import Data.Maybe
 import Control.Monad
 import Control.Monad.Trans.RWS.Strict
 import qualified Data.DList as DL
@@ -490,24 +489,29 @@ We add several helper function to check the status of the stream and get tokens
 (while watching out for eof conditions)
 
 \begin{code}
-emptyTkS :: TkS e Bool
-emptyTkS = gets (emptyTokenStream . snd)
+gettokenM :: TkSS Token
+gettokenM = do
+    mt <- maybetokenM
+    case mt of
+        Just t -> return t
+        Nothing -> syntaxError "hex.gettokenM: Unexpected EOF" >> return (CharToken (TypedChar '\0' Invalid))
 
-gettokenM :: TkS e Token
-gettokenM = bTkS (fromJust . gettoken)
-maybetokenM = do
-    t <- maybepeektokenM
-    case t of
-        Nothing -> return Nothing
-        Just _ -> gettokenM >> return t
+maybetokenM = bTkS $ \ts ->
+            case gettoken ts of
+                Nothing -> (Nothing, ts)
+                Just (t,ts') -> (Just t, ts')
+skiptokenM = void maybetokenM
 
-skiptokenM = void gettokenM
-peektokenM = bTkS (\tks -> let Just (t,_) = gettoken tks in (t,tks))
-maybepeektokenM = do
-    e <- emptyTkS
-    if e
-        then return Nothing
-        else Just `liftM` peektokenM
+peektokenM = do
+    mt <- maybepeektokenM
+    case mt of
+        Nothing -> syntaxError "hex.peektokenM: Unexpected EOF" >> return (CharToken (TypedChar '\0' Invalid))
+        Just t -> return t
+
+maybepeektokenM = bTkS $ \ts ->
+        case gettoken ts of
+            Nothing -> (Nothing, ts)
+            Just (t,_) -> (Just t,ts)
 \end{code}
 
 To get a few tokens in a row, we can call \code{gettokentilM}, which returns
@@ -558,7 +562,7 @@ maybeeqM = maybetokM (== CharToken (TypedChar '=' Other))
 
 A few primitives (e.g., \tex{\\catcode}) need to read characters:
 \begin{code}
-readCharM :: TkS e Char
+readCharM :: TkSS Char
 readCharM = do
     skiptokenM
     tk <- gettokenM
@@ -928,7 +932,11 @@ Finally, we come to the default cases.
 \begin{code}
 process1 t@(CharToken tc)
     | (category tc) == BeginGroup = (updateEnvM E.push) >> (updateCharStreamM pushst) >> (tell1 PushCommand)
-    | (category tc) == EndGroup = (updateEnvM E.pop) >> (updateCharStreamM popst) >> (tell1 PopCommand)
+    | (category tc) == EndGroup = do
+            e <- envM
+            case E.level e of
+                1 -> syntaxError "closing environment at top level"
+                _ -> (updateEnvM E.pop) >> (updateCharStreamM popst) >> (tell1 PopCommand)
     | (category tc) == MathShift = tell1 MathShiftCommand
     | otherwise = tell1 (fromToken t)
 \end{code}
