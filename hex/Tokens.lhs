@@ -13,30 +13,12 @@ module Tokens
     , emptyTokenStream
     , updateCharStream
     , toksToStr
-    , TkS
-    , emptyTkS
-    , gettokenM
-    , maybetokenM
-    , skiptokenM
-    , peektokenM
-    , maybepeektokenM
-    , gettokentilM
-    , puttokenM
-    , streamenqueueM
-    , updateCharStreamM
-    , maybespaceM
-    , maybeeqM
-    , readCharM
-    , readStrM
-    , fNamePosM
     ) where
 
 import Chars
 import CharStream
 
 import Data.Maybe
-import Control.Monad
-import Control.Monad.State (State,get,gets,put,modify)
 \end{code}
 
 Tokens are the next level after annotated characters. A Token is either a
@@ -170,11 +152,11 @@ The main function of this module is \code{gettoken}, which returns a pair
 interface.
 
 \begin{code}
--- gettoken :: TokenStream -> Maybe (Token, TokenStream)
-gettoken tSt@TokenStream{queue=(t:ts)} = (t,tSt{queue=ts})
-gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} = case applyStateFunction s st of
-        Nothing -> error "hex.Tokens.gettoken: empty stream"
-        Just (tk,st',s') -> (tk,tSt{charsource=st',state=s'})
+gettoken :: TokenStream -> Maybe (Token, TokenStream)
+gettoken tSt@TokenStream{queue=(t:ts)} = Just (t,tSt{queue=ts})
+gettoken tSt@TokenStream{charsource=st, state=s, queue=[]} = do
+    (tk,st',s') <- applyStateFunction s st
+    return (tk,tSt{charsource=st',state=s'})
 \end{code}
 
 
@@ -199,6 +181,7 @@ emptyTokenStream TokenStream{charsource=st, state=s, queue=q} = null q && (isNot
 
 Convert a sequence of \code{CharToken} into a \code{String}
 \begin{code}
+toksToStr :: [Token] -> [Char]
 toksToStr = map charof
     where
         charof (CharToken (TypedChar c _)) = c
@@ -212,115 +195,3 @@ We also add a function to manipulate the underlying character stream.
 updateCharStream t@TokenStream{charsource=s} f = t{charsource=f s}
 \end{code}
 
-To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
-
-\begin{code}
-type TkS e a = State (e,TokenStream) a
-bTkS :: (TokenStream -> (a,TokenStream)) -> TkS e a
-bTkS f = do
-    (e,st) <- get
-    let (r,st') = f st
-    put (e,st')
-    return r
-\end{code}
-
-We add several helper function to check the status of the stream and get tokens
-(while watching out for eof conditions)
-
-\begin{code}
-emptyTkS :: TkS e Bool
-emptyTkS = gets (emptyTokenStream . snd)
-
-gettokenM :: TkS e Token
-gettokenM = bTkS gettoken
-maybetokenM = do
-    t <- maybepeektokenM
-    case t of
-        Nothing -> return Nothing
-        Just _ -> gettokenM >> return t
-
-skiptokenM = void gettokenM
-peektokenM = bTkS (\tks -> let (t,_) = gettoken tks in (t,tks))
-maybepeektokenM = do
-    e <- emptyTkS
-    if e
-        then return Nothing
-        else Just `liftM` peektokenM
-\end{code}
-
-To get a few tokens in a row, we can call \code{gettokentilM}, which returns
-all token until a certain condition is fulfilled. The matching token is left in
-the queue.
-\begin{code}
-gettokentilM cond = do
-    mc <- maybepeektokenM
-    case mc of
-        Just tk | not (cond tk) -> do
-            void gettokenM
-            rest <- gettokentilM cond
-            return (tk:rest)
-        _ -> return []
-\end{code}
-
-Updating the char stream can also be done in the monad:
-\begin{code}
-updateCharStreamM f = modify (\(e,st) -> (e,updateCharStream st f))
-\end{code}
-
-We can add tokens to the start of the queue, either one (\code{puttokenM}) or
-several (\code{streamenqueueM}).
-\begin{code}
-puttokenM t = streamenqueueM [t]
-streamenqueueM nts = modify (\(e,st@TokenStream{queue=ts}) -> (e,st{queue=nts ++ ts}))
-\end{code}
-
-An often needed operation is to skip an optional space or additional equal
-signs. We first implement a generic \code{maybetokM} function, which takes a
-condition and skips a token if it matches that condition.
-\begin{code}
-maybetokM :: (Token -> Bool) -> TkS e ()
-maybetokM cond = do
-    mt <- maybepeektokenM
-    case mt of
-        Just t | cond t -> skiptokenM
-        _ -> return ()
-\end{code}
-
-Now, \code{maybespaceM} and \code{maybeeqM} are simply defined as calls to
-\code{maybetokM}:
-\begin{code}
-maybespaceM = maybetokM ((== Space) . tokenCategory)
-maybeeqM = maybetokM (== CharToken (TypedChar '=' Other))
-\end{code}
-
-
-A few primitives (e.g., \tex{\\catcode}) need to read characters:
-\begin{code}
-readCharM :: TkS e Char
-readCharM = do
-    skiptokenM
-    tk <- gettokenM
-    return (case tk of
-        CharToken (TypedChar c _) -> c
-        ControlSequence ['\\',c] -> c
-        _ -> '\0')
-\end{code}
-
-Others need to read a string:
-\begin{code}
-readStrM = do
-    t <- maybepeektokenM
-    case t of
-        Just (CharToken (TypedChar c cat))
-            | cat == Space -> return []
-            | otherwise -> do
-                skiptokenM
-                cs <- readStrM
-                return (c:cs)
-        _ -> return []
-\end{code}
-
-Retrieve the current position:
-\begin{code}
-fNamePosM = bTkS (\tks -> (fnameLine $ charsource tks,tks))
-\end{code}

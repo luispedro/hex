@@ -12,7 +12,7 @@ import Control.Monad.State
 import CharStream -- (annotate,TypedCharStream)
 import qualified Boxes
 import Tokens
-import Macros (expand)
+import Macros (expand, gettokentilM)
 import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
