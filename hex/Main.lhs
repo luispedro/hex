@@ -26,7 +26,7 @@ import qualified Environment as E
 The version is kept right at the top so it is easy to spot and change.
 
 \begin{code}
-version = "0.0.6"
+version = "0.0.6+git"
 \end{code}
 
 The implementation is simple: each subcommand is a function which takes the
