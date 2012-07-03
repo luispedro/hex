@@ -183,14 +183,14 @@ Finally, the \code{InputCommand} finds the input file and queues it in
 \begin{code}
 processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             nextfile <- readOneOf possiblefiles;
-            processinputs (expand env $ prequeueChars (nfname,nextfile) rest) (addfileenv nfname e);
+            processinputs (expandE env $ prequeueChars (nfname,nextfile) rest) (addfileenv nfname e);
         } `catch` printerror
     where
         printerror err =
             if isDoesNotExistError err then do
                 putStrLn ("Could not open file: `" ++ nfname ++ "`")
                 putStrLn ("\tAttempted to open one of: " ++ (concatMap (++" ") possiblefiles))
-                processinputs (expand env rest) e
+                processinputs (expandE env rest) e
             else
                 ioError err
         possiblefiles

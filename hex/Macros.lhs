@@ -5,6 +5,7 @@ Macros are the mechanism for TeX scripting.
 \begin{code}
 module Macros
     ( expand
+    , expandE
     , Lookup(..)
     , Command(..)
     , HexCommand(..)
@@ -126,7 +127,7 @@ data Command =
         | AdvanceDimenCommand Bool Integer (Either Dimen Integer)
         | AdvanceSkipCommand Bool Integer (Either Dimen Integer)
         | PrimitiveCommand String
-        | InternalCommand MacroEnvironment TokenStream HexCommand
+        | InternalCommand ExpansionEnvironment TokenStream HexCommand
         deriving (Eq)
 
 
@@ -421,7 +422,7 @@ definemacro long outer csname
         skiptokenM
         substitutiontext <- breakAtGroupEndM 0
         let macro = Macro args substitution outer long
-            expandedsubtext = map toToken $ expand env $ tokenliststream substitutiontext
+            expandedsubtext = map toToken $ expandE (ExpansionEnvironment env False) $ tokenliststream substitutiontext
             substitution = if edef then expandedsubtext else substitutiontext
         updateEnvM (insertfunction next macro)
     | otherwise = fail "Unexpected control sequence"
@@ -451,11 +452,12 @@ macronotfounderror csname = do
 \end{code}
 
 
-The main function, \code{expand} is a wrapper around the monadi \code{expandM}:
+The main function, \code{expand} is a wrapper around the monadic \code{expandM}:
 
 \begin{code}
-expand :: MacroEnvironment -> TokenStream -> [Command]
-expand env st = DL.toList cs
+expand = expandE (ExpansionEnvironment E.empty False)
+expandE :: ExpansionEnvironment -> TokenStream -> [Command]
+expandE env st = DL.toList cs
     where
         (_,_,cs) = runTkSS expandM env st
 \end{code}
@@ -596,10 +598,10 @@ fNamePosM = bTkS (\tks -> (fnameLine $ charsource tks,tks))
 The \code{TkSS} is a token stream and macro environment state monad:
 \begin{code}
 type TkSS a = TkS ExpansionEnvironment a
-runTkSS :: (TkSS a) -> MacroEnvironment -> TokenStream -> (a, (MacroEnvironment, TokenStream), CList)
-runTkSS compute e st = (v,(definitions me, st'),cs)
+runTkSS :: (TkSS a) -> ExpansionEnvironment -> TokenStream -> (a, (ExpansionEnvironment, TokenStream), CList)
+runTkSS compute e st = (v,(e', st'),cs)
         where
-            (v, (me,st'),cs) = runRWS compute "top" (ExpansionEnvironment e False, st)
+            (v, (e',st'),cs) = runRWS compute "top" (e, st)
 
 envM :: TkSS MacroEnvironment
 envM = gets (definitions . fst)
@@ -954,13 +956,13 @@ process1 t = void (expand1 t)
 We make it easy to output internal commands:
 \begin{code}
 internalCommandM c = do
-    (ExpansionEnvironment e _,rest) <- get
+    (e,rest) <- get
     tell1 (InternalCommand e rest c)
 
 maybeLookup :: Either Integer Integer -> (Integer -> TkSS ()) -> TkSS ()
 maybeLookup (Left v) f = f v
 maybeLookup (Right cid) f = do
-    (ExpansionEnvironment e _,rest) <- get
+    (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
                 DL.toList cs

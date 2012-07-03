@@ -42,7 +42,7 @@ tokens str = fst3 $ runRWS (gettokentilM $ const False) "top" (undefined,astoken
         fst3 (a,_,_) = a
         astokenstream = newTokenStream . TypedCharStream plaintexenv
 
-expanded = expand E.empty . newTokenStream . TypedCharStream plaintexenv
+expanded = expand . newTokenStream . TypedCharStream plaintexenv
 breaklines env = (vMode env) . expanded
 
 function :: String -> LT.Text -> IO ()
@@ -66,7 +66,7 @@ hex output fname = do
             fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue fname inputstr
             q = updateCharStream fileq (prequeue ("prexif",prefix))
 
-        commands <- processinputs (expand E.empty q) startingenv
+        commands <- processinputs (expand q) startingenv
         let result = buildout startingenv commands
         when output (B.putStr result)
         return ()
