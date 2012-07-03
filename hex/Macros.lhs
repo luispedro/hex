@@ -280,9 +280,7 @@ noting. If the condition is false, we skip until the matching \tex{\\else} or
 \tex{\\fi}. We always return \code{Nothing} for convenience of use.
 \begin{code}
 skipifM True = return ()
-skipifM False = (void $ gettokentilM isIfEnd) >>
-                gettokenM >>
-                return ()
+skipifM False = (void $ gettokentilM isIfEnd) >> skiptokenM
     where
         isIfEnd (ControlSequence c) | (c `elem` ["\\else", "\\fi"]) = True
         isIfEnd _ = False
@@ -453,15 +451,20 @@ macronotfounderror csname = do
 \end{code}
 
 
-The main function, \code{expand} is actually very simple and just forwards the
-first token (after checking that the stream is not empty) to \code{process1}:
+The main function, \code{expand} is a wrapper around the monadi \code{expandM}:
 
 \begin{code}
 expand :: MacroEnvironment -> TokenStream -> [Command]
 expand env st = DL.toList cs
     where
         (_,_,cs) = runTkSS expandM env st
+\end{code}
 
+
+\code{expandM} is actually very simple and just forwards the first token (after
+checking that the stream is not empty) to \code{process1}:
+
+\begin{code}
 expandM :: TkSS ()
 expandM = do
     mt <- maybetokenM
