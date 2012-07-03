@@ -1032,10 +1032,16 @@ expandedTokenM = do
 \begin{code}
 readDimenM = local (++" -> readDimen") $ do
         n <- readNumberM
-        CharToken c0 <- gettokenM
-        CharToken c1 <- gettokenM
-        return $ dimenFromUnit (fromInteger n) (unit [value c0,value c1])
+        c0 <- readC
+        c1 <- readC
+        return $ dimenFromUnit (fromInteger n) (unit [c0,c1])
     where
+        readC = do
+            t <- gettokenM
+            case t of
+                CharToken c -> return $ value c
+                _ -> syntaxErrorConcat ["Expected char token, got ", show t] >> return '\0'
+
         unit "pt" = UnitPt
         unit "px" = UnitPx
         unit un = error ("hex.Macros.unit: not implemented: "++un)
