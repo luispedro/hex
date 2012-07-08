@@ -1,0 +1,4 @@
+\def\myname{David}%
+\def\MYNAME{\uppercase{David}}%
+\myname
+\MYNAME

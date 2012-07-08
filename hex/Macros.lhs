@@ -17,7 +17,7 @@ module Macros
     ) where
 
 import Data.List (sortBy)
-import Data.Char (chr)
+import Data.Char (chr, toUpper)
 import Data.Bits
 import Control.Monad
 import Control.Monad.Trans.RWS.Strict
@@ -48,6 +48,7 @@ data Macro = Macro
             | DimenDef Integer
             | SkipDef Integer
             | ToksDef Integer
+            | UcCode Char
             deriving (Eq, Show)
 \end{code}
 
@@ -702,6 +703,29 @@ process1 (ControlSequence "\\sfcode") = do
     maybeeqM
     n <- readENumberM
     tell1 (SfCodeCommand c n)
+\end{code}
+
+\begin{code}
+process1 (ControlSequence "\\uccode") = do
+    c <- readCharM
+    maybeeqM
+    uc <- readCharM
+    updateEnvM (E.insert ("uccode:"++[c]) (UcCode uc))
+\end{code}
+
+\begin{code}
+process1 (ControlSequence "\\uppercase") = do
+        argument <- gettokenorgroup
+        e <- envM
+        streamenqueueM (map (uppercaseToken e) argument)
+    where
+        uppercaseToken e (CharToken (TypedChar c cat)) =
+                        let uc = case E.lookup ("uccode:"++[c]) e of
+                                Just (UcCode c') -> c'
+                                _ -> toUpper c
+                        in (CharToken (TypedChar uc cat))
+        uppercaseToken _ t = t
+
 \end{code}
 
 To handle conditionals, \code{evaluateif} is called.
