@@ -121,6 +121,7 @@ data Command =
         | MathCodeCommand Char Integer Integer Char
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
+        | SetIParameterCommand String Integer
         | SetCountCommand Integer Integer
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Dimen
@@ -158,6 +159,7 @@ instance Show Command where
     show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
     show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
+    show (SetIParameterCommand cid val) = concat ["<iparameter ", show cid, " = ", show val, ">"]
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
     show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
     show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
@@ -193,6 +195,69 @@ primitives =
     ,"\\vspace"
     ]
 isprimitive = (`elem` primitives)
+
+iparameters =
+    ["\\adjdemerits"
+    ,"\\binoppenalty"
+    ,"\\brokenpenalty"
+    ,"\\clubpenalty"
+    ,"\\day"
+    ,"\\defaulthyphenchar"
+    ,"\\defaultskewchar"
+    ,"\\delimiterfactor"
+    ,"\\displaywidowpenalty"
+    ,"\\doublehyphendemerits"
+    ,"\\endlinechar"
+    ,"\\errorcontextlines"
+    ,"\\escapechar"
+    ,"\\exhyphenpenalty"
+    ,"\\fam"
+    ,"\\finalhyphendemerits"
+    ,"\\floatingpenalty"
+    ,"\\globaldefs"
+    ,"\\hangafter"
+    ,"\\hbadness"
+    ,"\\holdinginserts"
+    ,"\\hyphenpenalty"
+    ,"\\interlinepenalty"
+    ,"\\language"
+    ,"\\lefthyphenmin"
+    ,"\\linepenalty"
+    ,"\\looseness"
+    ,"\\mag"
+    ,"\\maxdeadcycles"
+    ,"\\month"
+    ,"\\newlinechar"
+    ,"\\outputpenalty"
+    ,"\\pausing"
+    ,"\\postdisplaypenalty"
+    ,"\\predisplaypenalty"
+    ,"\\pretolerance"
+    ,"\\relpenalty"
+    ,"\\righthyphenmin"
+    ,"\\showboxbreadth"
+    ,"\\showboxdepth"
+    ,"\\time"
+    ,"\\tolerance"
+    ,"\\tracingcommands"
+    ,"\\tracinglostchars"
+    ,"\\tracingmacros"
+    ,"\\tracingonline"
+    ,"\\tracingoutput"
+    ,"\\tracingpages"
+    ,"\\tracingparagraphs"
+    ,"\\tracingrestores"
+    ,"\\tracingstats"
+    ,"\\uchyph"
+    ,"\\vbadness"
+    ,"\\widowpenalty"
+    ,"\\year"
+    ]
+
+not_implemented =
+    ["\\pausing"
+    ,"\\newlinechar"
+    ]
 \end{code}
 
 We need a few helper functions. \code{gettokenorgroup} retrieves the next
@@ -830,6 +895,15 @@ process1 (ControlSequence "\\count") = do
     noc <- readENumberOrCountM
     maybeLookup noc $ \val ->
         tell1 (SetCountCommand cid val)
+\end{code}
+
+\begin{code}
+process1 (ControlSequence csname)
+    | csname `elem` iparameters = do
+        maybeeqM
+        noc <- readENumberOrCountM
+        maybeLookup noc $ \val ->
+            tell1 (SetIParameterCommand csname val)
 \end{code}
 
 \tex{\\dimen} is same thing:
