@@ -92,6 +92,7 @@ have only very simple commands:
 \begin{code}
 data HexCommand =
         ErrorCommand String
+        | DeprecatedCommand String
         | InputCommand String
         | MessageCommand String
         | LoadfontHCommand String
@@ -142,6 +143,7 @@ toToken _ = error "hex.Macros.toToken: Cannot handle this case"
 
 instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
+    show (DeprecatedCommand errmsg) = "deprecated:"++errmsg
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand msg) = "message:"++msg
     show (LoadfontHCommand fname) = "loadfont:"++fname
@@ -254,10 +256,6 @@ iparameters =
     ,"\\year"
     ]
 
-not_implemented =
-    ["\\pausing"
-    ,"\\newlinechar"
-    ]
 \end{code}
 
 We need a few helper functions. \code{gettokenorgroup} retrieves the next
@@ -538,7 +536,7 @@ expandM = do
     mt <- maybetokenM
     case mt of
         Nothing -> return ()
-        Just t -> (process1 t) >> expandM
+        Just t -> (deprecated t) >> (process1 t) >> expandM
 \end{code}
 
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
@@ -679,6 +677,16 @@ updateEnvM :: (MacroEnvironment -> MacroEnvironment) -> TkSS ()
 updateEnvM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment (f e) g, st))
 updateFlagsM :: (Flags -> Flags) -> TkSS ()
 updateFlagsM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment e (f g), st))
+\end{code}
+
+\begin{code}
+deprecated (ControlSequence "\\newlinechar") = deprecatedWarning "\\newlinechar is always \\"
+deprecated (ControlSequence "\\pausing") = deprecatedWarning "\\pausing does nothing"
+deprecated _ = return ()
+deprecatedWarning msg = do
+    (fname,line) <- fNamePosM
+    context <- ask
+    internalCommandM (DeprecatedCommand $ concat [fname, ":", show line, " deprecated command: ", msg, " in context `", context, "`"])
 \end{code}
 
 \code{process1} is structured as a huge case statement (implemented with Haskell

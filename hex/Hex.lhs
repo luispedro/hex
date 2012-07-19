@@ -137,6 +137,11 @@ Another simple commmand is the \code{MessageCommand}, which outputs its message.
 processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >> (processinputs cs e)
 \end{code}
 
+At the moment, deprecated commands are handled like messages:
+\begin{code}
+processinputs ((InternalCommand _ _ (DeprecatedCommand msg)):cs) e = (putStrLn msg) >> (processinputs cs e)
+\end{code}
+
 \code{ErrorCommand} is similar, except we stop after errors:
 \begin{code}
 processinputs ((InternalCommand _ _ (ErrorCommand msg)):_) _e = (putStrLn msg) >> return []
