@@ -17,7 +17,7 @@ module Macros
     ) where
 
 import Data.List (sortBy)
-import Data.Char (chr, toUpper)
+import Data.Char (chr, toUpper, ord)
 import Data.Bits
 import Control.Monad
 import Control.Monad.Trans.RWS.Strict
@@ -1083,6 +1083,11 @@ readNumberM = local (++" -> readNumberM") $ do
         case tk of
             CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
             CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
+            CharToken (TypedChar '`' _) -> skiptokenM >> gettokenM >>= (\t -> case t of
+                            CharToken (TypedChar c _) -> return $! toInteger . ord $ c
+                            ControlSequence ['\\',c] -> return $! toInteger . ord $ c
+                            _ -> syntaxErrorConcat ["Expected character, got ", show t]  >> return 0
+                            )
             CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
             t -> syntaxErrorConcat ["hex.Macros.readNumberM: expected number (got ", show t, ")"] >> return 0
     where
