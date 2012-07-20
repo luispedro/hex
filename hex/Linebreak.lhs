@@ -29,13 +29,13 @@ Digital Typography by D.~E. Knuth.
 \begin{code}
 
 leWidth (B.EBox hb) = B.width hb
-leWidth (B.EGlue g) = B.size g
+leWidth (B.EGlue g) = size g
 leWidth (B.EPenalty _) = zeroDimen
 leStretch (B.EBox _) = zeroDimen
-leStretch (B.EGlue g) = B.expandable g
+leStretch (B.EGlue g) = expandable g
 leStretch (B.EPenalty _) = zeroDimen
 leShrink (B.EBox _) = zeroDimen
-leShrink (B.EGlue g) = B.shrinkage g
+leShrink (B.EGlue g) = shrinkage g
 leShrink (B.EPenalty _) = zeroDimen
 lePenalty (B.EBox _) = 0
 lePenalty (B.EGlue _) = 0
@@ -48,7 +48,7 @@ lePenalty (B.EPenalty p) = B.value p
 A helper function to fix a glue to a particular size.
 
 \begin{code}
-fixGlue (B.Glue s _ _ _)= B.Box
+fixGlue (Glue s _ _ _)= B.Box
                 { B.boxType=B.H
                 , B.width=s
                 , B.depth=zeroDimen
@@ -87,11 +87,11 @@ _preprocessParagraph pars = pars ++
                                 [ penalty infPenalty
                                 , spaceEGlue
                                 , penalty minfPenalty]
-    where spaceEGlue = B.EGlue $ B.Glue
-            { B.size=zeroDimen
-            , B.expandable=(dimenFromInches 1000)
-            , B.shrinkage=zeroDimen
-            , B.infLevel=1
+    where spaceEGlue = B.EGlue $ Glue
+            { size=zeroDimen
+            , expandable=(dimenFromInches 1000)
+            , shrinkage=zeroDimen
+            , infLevel=1
             }
 \end{code}
 

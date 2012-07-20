@@ -173,14 +173,14 @@ hbox3elems = B.hboxto textwidth elems
     where
         elems = [
                 B.EBox (B.Box B.H (di 0) (di 1) (di 2) (B.CharContent 'S' 0)),
-                B.EGlue (B.Glue (di 1) (di 2) (di 2) 0),
+                B.EGlue (Glue (di 1) (di 2) (di 2) 0),
                 B.EBox (B.Box B.H (di 0) (di 1) (di 1) (B.CharContent 'E' 0))
                 ]
 hbox3elems_sh = B.hboxto textwidth elems
     where
         elems = [
                 B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'S' 0)),
-                B.EGlue (B.Glue (di 2) (di 2) (di 2) 0),
+                B.EGlue (Glue (di 2) (di 2) (di 2) 0),
                 B.EBox (B.Box B.H (di 2) (di 2) (di 2) (B.CharContent 'E' 0))
                 ]
 case_hbox_width = (totalwidth hbox3elems) @?= textwidth
@@ -189,7 +189,7 @@ case_hbox_width_sh = (totalwidth hbox3elems_sh) @?= textwidth
 case_hbox_nr_elems = (length hbox3elems) @?= 3
 case_hbox_glue =
     case hbox3elems !! 1 of
-        B.EGlue g -> (B.size g) @?= (dimenFromInches 2)
+        B.EGlue g -> (size g) @?= (dimenFromInches 2)
         _ -> error "should have matched!"
 
 case_font_dq = ((fixToFloat w) > 4.9) @?= True
@@ -223,7 +223,7 @@ rep :: Int -> [B.HElement]
 rep 0 = []
 rep n = (x:sp:rep (n-1))
 
-sp = B.EGlue (B.Glue (Dimen 10) (Dimen 5) (Dimen 4) 0)
+sp = B.EGlue (Glue (Dimen 10) (Dimen 5) (Dimen 4) 0)
 x = B.EBox (B.Box B.H zeroDimen zeroDimen (Dimen 20) xc)
 xc = B.CharContent 'x' 0
 

@@ -17,7 +17,6 @@ module Boxes
     , Box(..)
     , HBox
     , VBox
-    , Glue(..)
     , Penalty(..)
     , HPenalty
     , VPenalty
@@ -106,18 +105,6 @@ type VBox = Box V
 
 instance (BoxType b) => Show (Box b) where
     show (Box t h d w _) = printf "%sB[[w(%s)d(%s)h(%s)]]" (codefor t) (show w) (show d) (show h)
-\end{code}
-
-We also define ``glue'' here (as D.~E. Knuth himself points out, this should
-have been called ``springs'', but the word glue stuck).
-
-\begin{code}
-data Glue = Glue
-            { size :: Dimen
-            , shrinkage :: Dimen
-            , expandable :: Dimen
-            , infLevel :: Integer
-            } deriving (Eq, Show)
 \end{code}
 
 The final type of element we can have are \emph{penalties}, h- or v-penalties:

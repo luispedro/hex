@@ -5,6 +5,7 @@ module Measures
     , scale
     , scaledToRational
     , Dimen(..)
+    , Glue(..)
     , Unit(..)
     , zeroDimen
     , dimenFromInches
@@ -100,6 +101,18 @@ dimenFromUnit val UnitIn = dimenFromInches val
 dimenFromUnit _ _ = error "dimenFromUnit: not implemented"
 \end{code}
 
+
+We also define ``glue'' here (as D.~E. Knuth himself points out, this should
+have been called ``springs'', but the word glue stuck).
+
+\begin{code}
+data Glue = Glue
+            { size :: Dimen
+            , shrinkage :: Dimen
+            , expandable :: Dimen
+            , infLevel :: Integer
+            } deriving (Eq, Show)
+\end{code}
 Eventually, this module will grow. For now, we define only paper size and hard
 code the size of American letter paper:
 
