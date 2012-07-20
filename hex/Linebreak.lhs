@@ -48,7 +48,7 @@ lePenalty (B.EPenalty p) = B.value p
 A helper function to fix a glue to a particular size.
 
 \begin{code}
-fixGlue (B.Glue _ s _ _ _)= B.Box
+fixGlue (B.Glue s _ _ _)= B.Box
                 { B.boxType=B.H
                 , B.width=s
                 , B.depth=zeroDimen
@@ -88,8 +88,7 @@ _preprocessParagraph pars = pars ++
                                 , spaceEGlue
                                 , penalty minfPenalty]
     where spaceEGlue = B.EGlue $ B.Glue
-            { B.glueType=B.H
-            , B.size=zeroDimen
+            { B.size=zeroDimen
             , B.expandable=(dimenFromInches 1000)
             , B.shrinkage=zeroDimen
             , B.infLevel=1

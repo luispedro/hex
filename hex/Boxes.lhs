@@ -18,8 +18,6 @@ module Boxes
     , HBox
     , VBox
     , Glue(..)
-    , HGlue
-    , VGlue
     , Penalty(..)
     , HPenalty
     , VPenalty
@@ -111,22 +109,15 @@ instance (BoxType b) => Show (Box b) where
 \end{code}
 
 We also define ``glue'' here (as D.~E. Knuth himself points out, this should
-have been called ``springs'', but the word glue stuck). As above, we can have
-h- and v-glue.
+have been called ``springs'', but the word glue stuck).
 
 \begin{code}
-data Glue t = Glue
-            { glueType :: t
-            , size :: Dimen
+data Glue = Glue
+            { size :: Dimen
             , shrinkage :: Dimen
             , expandable :: Dimen
             , infLevel :: Integer
-            } deriving (Eq)
-instance (BoxType t) => Show (Glue t) where
-    show (Glue t w s e i) = printf "%sG[[w(%s)s(%s)e(%s)i(%s)]]" (codefor t) (show w) (show s) (show e) (show i)
-
-type HGlue = Glue H
-type VGlue = Glue V
+            } deriving (Eq, Show)
 \end{code}
 
 The final type of element we can have are \emph{penalties}, h- or v-penalties:
@@ -149,7 +140,7 @@ or a penalty:
 
 \begin{code}
 data Element t =  EBox (Box t)
-                | EGlue (Glue t)
+                | EGlue Glue
                 | EPenalty (Penalty t)
 
 instance (BoxType t) => Show (Element t) where
@@ -233,7 +224,7 @@ lower r = raise (dmul r (-1))
 
 We add a few helpers to build basic glues \&{} boxes:
 \begin{code}
-spaceInFont fnt = EGlue $ Glue H (f2d spS) (f2d spSt) (f2d spShr) 0
+spaceInFont fnt = EGlue $ Glue (f2d spS) (f2d spSt) (f2d spShr) 0
     where (F.SpaceInfo spS spSt spShr) = F.spaceInfo fnt
 
 charInFont c fidx fnt = EBox $ Box
