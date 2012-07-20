@@ -919,7 +919,7 @@ process1 (ControlSequence csname)
 process1 (ControlSequence "\\dimen") = do
     cid <- readNumberM
     maybeeqM
-    val <- readDimenM
+    val <- readEDimenM
     tell1 (SetDimenCommand cid val)
 \end{code}
 
@@ -1138,17 +1138,17 @@ expandedTokenM = do
             gettokenM
 \end{code}
 
-\code{readDimenM} reads a dimension in tokens
+\code{readEDimenM} reads a dimension in tokensM
 
 \begin{code}
-readDimenM = local (++" -> readDimen") $ do
-        n <- readNumberM
+readEDimenM = local (++" -> readEDimen") $ do
+        n <- readENumberM
         c0 <- readC
         c1 <- readC
         return $ dimenFromUnit (fromInteger n) (unit [c0,c1])
     where
         readC = do
-            t <- gettokenM
+            t <- expandedTokenM
             case t of
                 CharToken c -> return $ value c
                 _ -> syntaxErrorConcat ["Expected char token, got ", show t] >> return '\0'
@@ -1156,5 +1156,5 @@ readDimenM = local (++" -> readDimen") $ do
         unit "pt" = UnitPt
         unit "px" = UnitPx
         unit un = error ("hex.Macros.unit: not implemented: "++un)
-readGlueM = local (++" -> readGlue") readDimenM
+readGlueM = local (++" -> readGlue") readEDimenM
 \end{code}
