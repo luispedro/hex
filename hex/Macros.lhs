@@ -99,6 +99,7 @@ data HexCommand =
         | SelectfontHCommand String
         | SetMathFontHCommand String Integer E.MathFontStyle
         | LookupCountHCommand Integer (Lookup Integer)
+        | LookupDimenHCommand Integer (Lookup Dimen)
         | ByeCommand
         deriving (Eq)
 \end{code}
@@ -124,6 +125,7 @@ data Command =
         | SfCodeCommand Char Integer
         | SetIParameterCommand String Integer
         | SetCountCommand Integer Integer
+        | SetDParameterCommand String Dimen
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Dimen
         | AdvanceCountCommand Bool Integer (Either Integer Integer)
@@ -150,6 +152,7 @@ instance Show HexCommand where
     show (SelectfontHCommand fname) = "selectfont:"++fname
     show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
     show (LookupCountHCommand cid _) = "lookupcount:"++show cid
+    show (LookupDimenHCommand did _) = "lookupdimen:"++show did
     show ByeCommand = "bye"
 
 instance Show Command where
@@ -163,6 +166,7 @@ instance Show Command where
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
     show (SetIParameterCommand cid val) = concat ["<iparameter ", show cid, " = ", show val, ">"]
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
+    show (SetDParameterCommand cid val) = concat ["<dparameter ", show cid, " = ", show val, ">"]
     show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
     show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
     show (AdvanceCountCommand isg cid val) = concat ["<advance count ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
@@ -254,6 +258,30 @@ iparameters =
     ,"\\vbadness"
     ,"\\widowpenalty"
     ,"\\year"
+    ]
+
+dparameter =
+    ["\\boxmaxdepth"
+    ,"\\delimitershortfall"
+    ,"\\displayindent"
+    ,"\\displaywidth"
+    ,"\\emergencystretch"
+    ,"\\hangindent"
+    ,"\\hfuzz"
+    ,"\\hoffset"
+    ,"\\hsize"
+    ,"\\lineskiplimit"
+    ,"\\mathsurround"
+    ,"\\maxdepth"
+    ,"\\nulldelimiterspace"
+    ,"\\overfullrule"
+    ,"\\parindent"
+    ,"\\predisplaysize"
+    ,"\\scriptspace"
+    ,"\\splitmaxdepth"
+    ,"\\vfuzz"
+    ,"\\voffset"
+    ,"\\vsize"
     ]
 
 \end{code}
@@ -819,8 +847,8 @@ process1 (ControlSequence "\\ifnum") = do
             t -> error $ concat ["hex.process1(ifnum): expected relationship character, got ", show t]
     val1 <- readENumberOrCountM
     let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return ()
-        continuation0 v = maybeLookup val1 (continuation v)
-    maybeLookup val0 continuation0
+        continuation0 v = maybeLookup LookupCountHCommand val1 (continuation v)
+    maybeLookup LookupCountHCommand val0 continuation0
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -863,7 +891,7 @@ process1 (ControlSequence cdef)
         ControlSequence name <- gettokenM
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup noc $ \charcode -> do
+        maybeLookup LookupCountHCommand noc $ \charcode -> do
             updateEnvM (E.insert name (cdefcons charcode))
     where
         cdefcons = if cdef == "\\chardef"
@@ -877,7 +905,7 @@ process1 (ControlSequence cddef)
         ControlSequence name <- gettokenM
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup noc $ \cid -> do
+        maybeLookup LookupCountHCommand noc $ \cid -> do
             updateEnvM (E.insert name (c cid))
     where
         c = case cddef of
@@ -901,16 +929,17 @@ process1 (ControlSequence "\\count") = do
     cid <- readNumberM
     maybeeqM
     noc <- readENumberOrCountM
-    maybeLookup noc $ \val ->
+    maybeLookup LookupCountHCommand noc $ \val ->
         tell1 (SetCountCommand cid val)
 \end{code}
 
+Integer parameters are handled similar to count registers:
 \begin{code}
 process1 (ControlSequence csname)
     | csname `elem` iparameters = do
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup noc $ \val ->
+        maybeLookup LookupCountHCommand noc $ \val ->
             tell1 (SetIParameterCommand csname val)
 \end{code}
 
@@ -919,8 +948,18 @@ process1 (ControlSequence csname)
 process1 (ControlSequence "\\dimen") = do
     cid <- readNumberM
     maybeeqM
-    val <- readEDimenM
-    tell1 (SetDimenCommand cid val)
+    dim <- readEDimenM
+    maybeLookup LookupDimenHCommand dim $ \val ->
+        tell1 (SetDimenCommand cid val)
+\end{code}
+
+\begin{code}
+process1 (ControlSequence csname)
+    | csname `elem` dparameter = do
+        maybeeqM
+        dim <- readEDimenM
+        maybeLookup LookupDimenHCommand dim $ \val ->
+            tell1 (SetDParameterCommand csname val)
 \end{code}
 
 \tex{\\skip} is same thing:
@@ -990,7 +1029,7 @@ information and pass it down.
 process1 (ControlSequence cs)
     | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"] = do
         mfam <- readENumberOrCountM
-        maybeLookup mfam $ \fam -> do
+        maybeLookup LookupCountHCommand mfam $ \fam -> do
             maybeeqM
             ControlSequence fc <- gettokenM
             e <- envM
@@ -1065,14 +1104,14 @@ internalCommandM c = do
     (e,rest) <- get
     tell1 (InternalCommand e rest c)
 
-maybeLookup :: Either Integer Integer -> (Integer -> TkSS ()) -> TkSS ()
-maybeLookup (Left v) f = f v
-maybeLookup (Right cid) f = do
+maybeLookup :: (Integer -> Lookup a -> HexCommand) -> Either a Integer -> (a -> TkSS ()) -> TkSS ()
+maybeLookup _ (Left v) f = f v
+maybeLookup t (Right cid) f = do
     (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
                 DL.toList cs
-    internalCommandM $ LookupCountHCommand cid f'
+    internalCommandM $ t cid f'
 \end{code}
 
 A simple function to read an integer from tokens:
@@ -1141,11 +1180,21 @@ expandedTokenM = do
 \code{readEDimenM} reads a dimension in tokensM
 
 \begin{code}
+readEDimenM :: TkSS (Either Dimen Integer)
 readEDimenM = local (++" -> readEDimen") $ do
-        n <- readENumberM
-        c0 <- readC
-        c1 <- readC
-        return $ dimenFromUnit (fromInteger n) (unit [c0,c1])
+        tk <- expandedTokenM
+        e <- envM
+        case tk of
+            ControlSequence "\\dimen" -> (Right `fmap` readENumberM)
+            ControlSequence csname -> case E.lookup csname e of
+                Just (DimenDef val) -> return $! Right val
+                _ -> syntaxErrorConcat ["Expected \\dimen, got ", show tk] >> return (Left zeroDimen)
+            _ -> do
+                puttokenM tk
+                n <- readENumberM
+                c0 <- readC
+                c1 <- readC
+                return $! Left $  dimenFromUnit (fromInteger n) (unit [c0,c1])
     where
         readC = do
             t <- expandedTokenM
@@ -1156,5 +1205,7 @@ readEDimenM = local (++" -> readEDimen") $ do
         unit "pt" = UnitPt
         unit "px" = UnitPx
         unit un = error ("hex.Macros.unit: not implemented: "++un)
-readGlueM = local (++" -> readGlue") readEDimenM
+
+readGlueM :: TkSS Dimen
+readGlueM = local (++" -> readENumberM") $ readEDimenM >>= either return (\_ -> syntaxError "hex.readGlueM Cannot handle registers" >> return zeroDimen)
 \end{code}
