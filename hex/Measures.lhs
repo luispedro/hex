@@ -47,7 +47,7 @@ points}, i.e., points times $2^{16}$.
 
 \begin{code}
 data Dimen = Dimen
-            { nrScaledPoints :: Integer
+            { nrScaledPoints :: !Integer
             } deriving (Eq)
 
 instance Show Dimen where
@@ -107,10 +107,10 @@ have been called ``springs'', but the word glue stuck).
 
 \begin{code}
 data Glue = Glue
-            { size :: Dimen
-            , shrinkage :: Dimen
-            , expandable :: Dimen
-            , infLevel :: Integer
+            { size :: !Dimen
+            , shrinkage :: !Dimen
+            , expandable :: !Dimen
+            , infLevel :: !Int
             } deriving (Eq, Show)
 \end{code}
 Eventually, this module will grow. For now, we define only paper size and hard
