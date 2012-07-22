@@ -25,7 +25,6 @@ import Control.Monad
 import Control.Monad.Trans.RWS.Strict
 import qualified Data.AList as AL
 
-import Tracex
 import DVI
 import Fonts
 import Tokens
@@ -132,6 +131,7 @@ data Command =
         | SetDParameterCommand String Dimen
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Glue
+        | SetSParameterCommand String Glue
         | AdvanceCountCommand Bool Integer (Either Integer Integer)
         | AdvanceDimenCommand Bool Integer (Either Dimen Integer)
         | AdvanceSkipCommand Bool Integer (Either Glue Integer)
@@ -173,6 +173,7 @@ instance Show Command where
     show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
     show (SetDParameterCommand cid val) = concat ["<dparameter ", show cid, " = ", show val, ">"]
     show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
+    show (SetSParameterCommand cid val) = concat ["<sparameter ", show cid, " = ", show val, ">"]
     show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
     show (AdvanceCountCommand isg cid val) = concat ["<advance count ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceDimenCommand isg cid val) = concat ["<advance dimen ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
@@ -205,8 +206,6 @@ primitives =
     ,"\\hspace"
     ,"\\vspace"
     ]
-isprimitive = (`elem` primitives)
-
 iparameters =
     ["\\adjdemerits"
     ,"\\binoppenalty"
@@ -265,7 +264,7 @@ iparameters =
     ,"\\year"
     ]
 
-dparameter =
+dparameters =
     ["\\boxmaxdepth"
     ,"\\delimitershortfall"
     ,"\\displayindent"
@@ -288,6 +287,20 @@ dparameter =
     ,"\\voffset"
     ,"\\vsize"
     ]
+
+gparameters =
+    ["\\abovedisplayskip"
+    ,"\\parskip"
+    ]
+
+magic =
+    ["error"
+    ]
+isprimitive csname = (csname `elem` primitives)
+                || (csname `elem` iparameters)
+                || (csname `elem` dparameters)
+                || (csname `elem` gparameters)
+                || (csname `elem` magic)
 
 \end{code}
 
@@ -960,7 +973,7 @@ process1 (ControlSequence "\\dimen") = do
 
 \begin{code}
 process1 (ControlSequence csname)
-    | csname `elem` dparameter = do
+    | csname `elem` dparameters = do
         maybeeqM
         dim <- readEDimenM
         maybeLookup LookupDimenHCommand dim $ \val ->
@@ -975,6 +988,13 @@ process1 (ControlSequence "\\skip") = do
     skip <- _readGlueM
     maybeLookup LookupSkipHCommand skip $ \val ->
         tell1 (SetSkipCommand cid val)
+
+process1 (ControlSequence csname)
+    | csname `elem` gparameters = do
+        maybeeqM
+        skip <- _readGlueM
+        maybeLookup LookupSkipHCommand skip $ \val ->
+            tell1 (SetSParameterCommand csname val)
 \end{code}
 
 
@@ -1177,10 +1197,9 @@ Often we need to read an expanded token. This allows mixing between expansion le
 expandedTokenM = do
     tk <- gettokenM
     case tk of
-        (CharToken _) -> return tk
-        (ControlSequence _) -> do
-            expand1 tk
-            gettokenM
+        CharToken _ -> return tk
+        ControlSequence csname | isprimitive csname -> return tk
+        _ -> expand1 tk >> expandedTokenM
 \end{code}
 
 \code{readEDimenM} reads a dimension in tokensM

@@ -15,7 +15,7 @@ import qualified Data.Vector as V
 import qualified Data.Text.Lazy as LT
 import Text.Parsec hiding (many, optional, (<|>))
 import Control.Monad.RWS.Strict (runRWS)
-
+import Data.Char (ord)
 
 
 import Chars
@@ -98,6 +98,10 @@ case_readNumberM5 = n @=? 5
 case_readNumberMhex15 = 15 @=? n
     where
         (n,_) = runTkS readNumberM (asTokenStream "\"F\\relax")
+
+case_readNumberMchar = ord '-' @=? fromIntegral n
+    where
+        (n,_) = runTkS readNumberM (asTokenStream "`\\-")
 
 case_readNumberMhexf3a = 0xf3a @=? n
     where

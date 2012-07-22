@@ -109,6 +109,7 @@ processinputs [] _ = return []
 \begin{code}
 processinputs ((SetIParameterCommand _cid _val):r) e = processinputs r e
 processinputs ((SetDParameterCommand _cid _val):r) e = processinputs r e
+processinputs ((SetSParameterCommand _cid _val):r) e = processinputs r e
 processinputs ((SetCountCommand cid val):r) e = processinputs r (setCount False cid val e)
 processinputs ((SetDimenCommand cid val):r) e = processinputs r (setDimen False cid val e)
 processinputs ((SetSkipCommand cid val):r) e = processinputs r (setSkip False cid val e)
