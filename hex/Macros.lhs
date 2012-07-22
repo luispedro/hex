@@ -21,7 +21,7 @@ import Data.Char (chr, toUpper, ord)
 import Data.Bits
 import Control.Monad
 import Control.Monad.Trans.RWS.Strict
-import qualified Data.DList as DL
+import qualified Data.AList as AL
 
 import DVI
 import Fonts
@@ -549,7 +549,7 @@ The main function, \code{expand} is a wrapper around the monadic \code{expandM}:
 \begin{code}
 expand = expandE (ExpansionEnvironment E.empty False)
 expandE :: ExpansionEnvironment -> TokenStream -> [Command]
-expandE env st = DL.toList cs
+expandE env st = AL.toList cs
     where
         (_,_,cs) = runTkSS expandM env st
 \end{code}
@@ -570,10 +570,10 @@ expandM = do
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
 
 \begin{code}
-type CList = DL.DList Command
+type CList = AL.AList Command
 type TkS e a = RWS String CList (e,TokenStream) a
 
-tell1 = tell . DL.singleton
+tell1 = tell . AL.singleton
 bTkS :: (TokenStream -> (a,TokenStream)) -> TkS e a
 bTkS f = do
     (e,st) <- get
@@ -1110,7 +1110,7 @@ maybeLookup t (Right cid) f = do
     (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
-                DL.toList cs
+                AL.toList cs
     internalCommandM $ t cid f'
 \end{code}
 

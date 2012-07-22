@@ -11,7 +11,7 @@ import FixWords (FixWord, fixToFloat)
 import Boxes
 import Measures
 
-import qualified Data.DList as DL
+import qualified Data.AList as AL
 import Data.Maybe
 import Control.Monad (when)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
@@ -36,16 +36,16 @@ We use a \code{Writer} monad inside a \code{Reader} monad to encapsulate the
 environment and the current font style.
 \begin{code}
 type Environment = E.Environment String E.HexType
-type MathSet a = ReaderT (Environment, E.MathFontStyle) (Writer (DL.DList HElement)) a
+type MathSet a = ReaderT (Environment, E.MathFontStyle) (Writer (AL.AList HElement)) a
 
 runMathSet :: MathSet () -> (Environment, E.MathFontStyle) -> [HElement]
-runMathSet mset (e,st) = DL.toList $ snd $ runWriter $ runReaderT mset (e,st)
+runMathSet mset (e,st) = AL.toList $ snd $ runWriter $ runReaderT mset (e,st)
 \end{code}
 
 We will be outputting element-by-element, so we define \code{tell1} as a useful
 abbreviation:
 \begin{code}
-tell1 = tell . DL.singleton
+tell1 = tell . AL.singleton
 \end{code}
 
 The main function is \code{setM}, which sets an mlist.
