@@ -98,7 +98,7 @@ zeroDimen = Dimen 0
 data Unit = UnitEm | UnitEn | UnitPt | UnitPx | UnitIn deriving (Eq, Show)
 dimenFromUnit val UnitPt = dimenFromPoints val
 dimenFromUnit val UnitIn = dimenFromInches val
-dimenFromUnit _ _ = error "dimenFromUnit: not implemented"
+dimenFromUnit _ u = error ("dimenFromUnit: not implemented: "++show u)
 \end{code}
 
 
