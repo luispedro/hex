@@ -120,8 +120,9 @@ processinputs ((AdvanceDimenCommand isg did val):r) e = processinputs r (setDime
     where
         v = getDimen did e
         val' = either id (`getDimen` e) val
-processinputs ((AdvanceSkipCommand isg did val):r) e = processinputs r (setSkip isg did (v `dplus` val') e)
+processinputs ((AdvanceSkipCommand isg did val):r) e = processinputs r (setSkip isg did (v `gplus` val') e)
     where
+        gplus (Glue b0 st0 sh0 i0) (Glue b1 st1 sh1 i1) = Glue (b0 `dplus` b1) (st0`dplus` st1) (sh0 `dplus` sh1) (i0 + i1)
         v = getSkip did e
         val' = either id (`getSkip` e) val
 \end{code}

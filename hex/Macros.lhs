@@ -13,16 +13,19 @@ module Macros
     , gettokenM
     , gettokentilM
     , readNumberM
+    , _readGlueM
     , _breakAtGroupEnd
     ) where
 
 import Data.List (sortBy)
 import Data.Char (chr, toUpper, ord)
 import Data.Bits
+import Data.Maybe
 import Control.Monad
 import Control.Monad.Trans.RWS.Strict
 import qualified Data.AList as AL
 
+import Tracex
 import DVI
 import Fonts
 import Tokens
@@ -100,6 +103,7 @@ data HexCommand =
         | SetMathFontHCommand String Integer E.MathFontStyle
         | LookupCountHCommand Integer (Lookup Integer)
         | LookupDimenHCommand Integer (Lookup Dimen)
+        | LookupSkipHCommand Integer (Lookup Glue)
         | ByeCommand
         deriving (Eq)
 \end{code}
@@ -127,10 +131,10 @@ data Command =
         | SetCountCommand Integer Integer
         | SetDParameterCommand String Dimen
         | SetDimenCommand Integer Dimen
-        | SetSkipCommand Integer Dimen
+        | SetSkipCommand Integer Glue
         | AdvanceCountCommand Bool Integer (Either Integer Integer)
         | AdvanceDimenCommand Bool Integer (Either Dimen Integer)
-        | AdvanceSkipCommand Bool Integer (Either Dimen Integer)
+        | AdvanceSkipCommand Bool Integer (Either Glue Integer)
         | PrimitiveCommand String
         | InternalCommand ExpansionEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -153,6 +157,7 @@ instance Show HexCommand where
     show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
     show (LookupCountHCommand cid _) = "lookupcount:"++show cid
     show (LookupDimenHCommand did _) = "lookupdimen:"++show did
+    show (LookupSkipHCommand did _) = "lookupskip:"++show did
     show ByeCommand = "bye"
 
 instance Show Command where
@@ -967,8 +972,9 @@ process1 (ControlSequence csname)
 process1 (ControlSequence "\\skip") = do
     cid <- readNumberM
     maybeeqM
-    val <- readGlueM
-    tell1 (SetSkipCommand cid val)
+    skip <- _readGlueM
+    maybeLookup LookupSkipHCommand skip $ \val ->
+        tell1 (SetSkipCommand cid val)
 \end{code}
 
 
@@ -1194,7 +1200,8 @@ readEDimenM = local (++" -> readEDimen") $ do
                 n <- readENumberM
                 c0 <- readC
                 c1 <- readC
-                return $! Left $  dimenFromUnit (fromInteger n) (unit [c0,c1])
+                u <- unitM [c0,c1]
+                return . Left $! dimenFromUnit (fromInteger n) u
     where
         readC = do
             t <- expandedTokenM
@@ -1202,10 +1209,58 @@ readEDimenM = local (++" -> readEDimen") $ do
                 CharToken c -> return $ value c
                 _ -> syntaxErrorConcat ["Expected char token, got ", show t] >> return '\0'
 
-        unit "pt" = UnitPt
-        unit "px" = UnitPx
-        unit un = error ("hex.Macros.unit: not implemented: "++un)
+        unitM "pt" = return UnitPt
+        unitM "px" = return UnitPx
+        unitM "in" = return UnitIn
+        unitM un = syntaxError ("unit `"++un++"` not implemented.") >> return UnitPt
 
-readGlueM :: TkSS Dimen
-readGlueM = local (++" -> readENumberM") $ readEDimenM >>= either return (\_ -> syntaxError "hex.readGlueM Cannot handle registers" >> return zeroDimen)
+_readGlueM :: TkSS (Either Glue Integer)
+_readGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchOr` readGlueSpec)
+    where
+        readSkipReg = do
+            tk <- expandedTokenM
+            e <- envM
+            case tk of
+                ControlSequence "\\skip" -> (Just . Right) `fmap` readENumberM
+                ControlSequence csname -> case E.lookup csname e of
+                    Just (SkipDef n) -> return . Just . Right $ n
+                    _ -> return Nothing
+                _ -> return Nothing
+        readGlueSpec = do
+            Left base <- readEDimenM
+            maybespaceM
+            hplus <- matchETokens "plus"
+            maybespaceM
+            Left st <- if hplus
+                            then readEDimenM
+                            else (return $ Left zeroDimen)
+            maybespaceM
+            hminus <- matchETokens "minus"
+            maybespaceM
+            Left sh <- if hminus
+                            then readEDimenM
+                            else (return $ Left zeroDimen)
+            return . Just . Left $! Glue base st sh 0
+        matchETokens [] = return True
+        matchETokens (t:ts) = do
+            val <- matchETok t
+            if val
+                then matchETokens ts
+                else return False
+        matchETok t = do
+            tk <- expandedTokenM
+            case tk of
+                CharToken (TypedChar c _) | c == t -> return True
+                _ -> puttokenM tk >> return False
+\end{code}
+
+matchOr is similar to <|>.
+\begin{code}
+matchOr :: TkSS (Maybe a) -> TkSS (Maybe a) -> TkSS (Maybe a)
+matchOr a b = do
+    s <- get
+    v <- a
+    if isJust v
+        then return v
+        else (put s) >> b
 \end{code}
