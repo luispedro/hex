@@ -1103,6 +1103,11 @@ but again, it is just transformed into an \code{InternalCommand}
 process1 (ControlSequence "\\input") = readStrM >>= (internalCommandM . InputCommand)
 \end{code}
 
+\tex{relax} does not do anything, but it is only syntax.
+\begin{code}
+process1 (ControlSequence "\\relax") = return ()
+\end{code}
+
 Finally, we come to the default cases.
 
 \begin{code}
