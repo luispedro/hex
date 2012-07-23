@@ -297,9 +297,15 @@ magic =
     ["error"
     ]
 isprimitive csname = (csname `elem` primitives)
-                || (csname `elem` iparameters)
+
+isparameter csname = (csname `elem` iparameters)
                 || (csname `elem` dparameters)
                 || (csname `elem` gparameters)
+handled =
+    ["\\dimen"
+    ,"\\global"
+    ]
+ishandled csname = (csname `elem` handled)
                 || (csname `elem` magic)
 
 \end{code}
@@ -1203,7 +1209,7 @@ expandedTokenM = do
     tk <- gettokenM
     case tk of
         CharToken _ -> return tk
-        ControlSequence csname | isprimitive csname -> return tk
+        ControlSequence csname | isprimitive csname || isparameter csname || ishandled csname -> return tk
         _ -> expand1 tk >> expandedTokenM
 \end{code}
 
