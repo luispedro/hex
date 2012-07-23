@@ -920,7 +920,7 @@ process1 (ControlSequence cdef)
 \begin{code}
 process1 (ControlSequence cddef)
     | cddef `elem` ["\\countdef", "\\dimendef", "\\skipdef", "\\toksdef"] = do
-        ControlSequence name <- gettokenM
+        name <- getCSM ("Expected a control sequence after "++cddef)
         maybeeqM
         noc <- readENumberOrCountM
         maybeLookup LookupCountHCommand noc $ \cid -> do
