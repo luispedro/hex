@@ -929,7 +929,7 @@ process1 (ControlSequence "\\global") = do
 \begin{code}
 process1 (ControlSequence cdef)
     |cdef `elem` ["\\chardef", "\\mathchardef"] = do
-        ControlSequence name <- gettokenM
+        name <- getCSM ("Expected control sequence after "++cdef)
         maybeeqM
         noc <- readENumberOrCountM
         maybeLookup LookupCountHCommand noc $ \charcode -> do
