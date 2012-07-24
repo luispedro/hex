@@ -206,6 +206,7 @@ _paragraph =
     (sfcode >> _paragraph) <|>
     (setmathfont >> _paragraph) <|>
     (selectfont >> _paragraph) <|>
+    (match (PrimitiveCommand "\\relax") >> _paragraph) <|>
     return []
 \end{code}
 
