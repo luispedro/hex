@@ -7,6 +7,8 @@ module Macros
     ( expand
     , expandE
     , Lookup(..)
+    , Quantity(..)
+    , quantity
     , Command(..)
     , HexCommand(..)
     , ExpansionEnvironment(..)
@@ -114,6 +116,21 @@ data Lookup a = Lookup (a -> [Command])
 
 instance Eq (Lookup a) where
     _a == _b = False
+\end{code}
+
+Quantities come in three forms: inline (1pt), in registers (\\count1), or in
+internal quantities (\\day). We need a type to represent those.
+\begin{code}
+data Quantity a = QConstant !a
+                | QRegister !Integer
+                | QInternal !String
+                deriving (Eq, Show)
+
+quantity :: (Integer -> a) -> (String -> a) -> Quantity a -> a
+quantity _ _ (QConstant a) = a
+quantity f _ (QRegister ai) = f ai
+quantity _ f (QInternal an) = f an
+
 
 data Command =
         CharCommand TypedChar
@@ -132,9 +149,9 @@ data Command =
         | SetDimenCommand Integer Dimen
         | SetSkipCommand Integer Glue
         | SetSParameterCommand String Glue
-        | AdvanceCountCommand Bool Integer (Either Integer Integer)
-        | AdvanceDimenCommand Bool Integer (Either Dimen Integer)
-        | AdvanceSkipCommand Bool Integer (Either Glue Integer)
+        | AdvanceCountCommand Bool Integer (Quantity Integer)
+        | AdvanceDimenCommand Bool Integer (Quantity Dimen)
+        | AdvanceSkipCommand Bool Integer (Quantity Glue)
         | PrimitiveCommand String
         | InternalCommand ExpansionEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -1147,14 +1164,16 @@ internalCommandM c = do
     (e,rest) <- get
     tell1 (InternalCommand e rest c)
 
-maybeLookup :: (Integer -> Lookup a -> HexCommand) -> Either a Integer -> (a -> TkSS ()) -> TkSS ()
-maybeLookup _ (Left v) f = f v
-maybeLookup t (Right cid) f = do
+maybeLookup :: (Integer -> Lookup a -> HexCommand) -> Quantity a -> (a -> TkSS ()) -> TkSS ()
+maybeLookup _ (QConstant v) f = f v
+maybeLookup t (QRegister cid) f = do
     (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
                 AL.toList cs
     internalCommandM $ t cid f'
+maybeLookup _ (QInternal _) _f = syntaxError "Not implemented yet"
+
 \end{code}
 
 A simple function to read an integer from tokens:
@@ -1194,19 +1213,25 @@ a number, which is what TeX does):
 readENumberOrCountM = local (++" -> readENumberOrCountM") $ do
     t <- gettokenM
     case t of
-        CharToken _ -> puttokenM t >> Left `liftM` readNumberM
-        ControlSequence "\\count" -> Right `liftM` readENumberM
+        CharToken _ -> puttokenM t >> QConstant `liftM` readNumberM
+        ControlSequence "\\count" -> QRegister `liftM` readENumberM
         ControlSequence csname -> do
             e <- envM
             case E.lookup csname e of
-                Just (CharDef v) -> return (Left v)
-                Just (MathCharDef v) -> return (Left v)
+                Just (CharDef v) -> return (QConstant v)
+                Just (MathCharDef v) -> return (QConstant v)
                 Just (Macro _ _ _ _) -> expand1 t >> readENumberOrCountM
-                Just (CountDef cid) -> return (Right cid)
-                Nothing -> syntaxErrorConcat ["hex.readENumberOrCountM undefined ", csname] >> return (Left 0)
-                n -> syntaxErrorConcat ["hex.readENumberOrCountM: unexpected: ", show n] >> return (Left 0)
+                Just (CountDef cid) -> return (QRegister cid)
+                Nothing -> syntaxErrorConcat ["hex.readENumberOrCountM undefined ", csname] >> return (QConstant 0)
+                n -> syntaxErrorConcat ["hex.readENumberOrCountM: unexpected: ", show n] >> return (QConstant 0)
 
-readENumberM = local (++" -> readENumberM") $ readENumberOrCountM >>= either return (\_ -> syntaxError "hex.readENumberM expected number, got count register" >> return 0)
+readENumberM = local (++" -> readENumberM") $ do
+    n <- readENumberOrCountM
+    case n of
+        QConstant n' -> return n'
+        _ -> do
+            syntaxError "hex.readENumberM expected number, got count register"
+            return 0
 \end{code}
 
 Often we need to read an expanded token. This allows mixing between expansion levels:
@@ -1222,22 +1247,22 @@ expandedTokenM = do
 \code{readEDimenM} reads a dimension in tokensM
 
 \begin{code}
-readEDimenM :: TkSS (Either Dimen Integer)
+readEDimenM :: TkSS (Quantity Dimen)
 readEDimenM = local (++" -> readEDimen") $ do
         tk <- expandedTokenM
         e <- envM
         case tk of
-            ControlSequence "\\dimen" -> (Right `fmap` readENumberM)
+            ControlSequence "\\dimen" -> (QRegister `fmap` readENumberM)
             ControlSequence csname -> case E.lookup csname e of
-                Just (DimenDef val) -> return $! Right val
-                _ -> syntaxErrorConcat ["Expected \\dimen, got ", show tk] >> return (Left zeroDimen)
+                Just (DimenDef val) -> return $! QRegister val
+                _ -> syntaxErrorConcat ["Expected \\dimen, got ", show tk] >> return (QConstant zeroDimen)
             _ -> do
                 puttokenM tk
                 n <- readENumberM
                 c0 <- readC
                 c1 <- readC
                 u <- unitM [c0,c1]
-                return . Left $! dimenFromUnit (fromInteger n) u
+                return . QConstant $! dimenFromUnit (fromInteger n) u
     where
         readC = do
             t <- expandedTokenM
@@ -1250,33 +1275,33 @@ readEDimenM = local (++" -> readEDimen") $ do
         unitM "in" = return UnitIn
         unitM un = syntaxError ("unit `"++un++"` not implemented.") >> return UnitPt
 
-_readGlueM :: TkSS (Either Glue Integer)
+_readGlueM :: TkSS (Quantity Glue)
 _readGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchOr` readGlueSpec)
     where
         readSkipReg = do
             tk <- expandedTokenM
             e <- envM
             case tk of
-                ControlSequence "\\skip" -> (Just . Right) `fmap` readENumberM
+                ControlSequence "\\skip" -> (Just . QRegister) `fmap` readENumberM
                 ControlSequence csname -> case E.lookup csname e of
-                    Just (SkipDef n) -> return . Just . Right $ n
+                    Just (SkipDef n) -> return . Just . QRegister $ n
                     _ -> return Nothing
                 _ -> return Nothing
         readGlueSpec = do
-            Left base <- readEDimenM
+            QConstant base <- readEDimenM
             maybespaceM
             hplus <- matchETokens "plus"
             maybespaceM
-            Left st <- if hplus
+            QConstant st <- if hplus
                             then readEDimenM
-                            else (return $ Left zeroDimen)
+                            else (return $ QConstant zeroDimen)
             maybespaceM
             hminus <- matchETokens "minus"
             maybespaceM
-            Left sh <- if hminus
+            QConstant sh <- if hminus
                             then readEDimenM
-                            else (return $ Left zeroDimen)
-            return . Just . Left $! Glue base st sh 0
+                            else (return $ QConstant zeroDimen)
+            return . Just . QConstant $! Glue base st sh 0
         matchETokens [] = return True
         matchETokens (t:ts) = do
             val <- matchETok t

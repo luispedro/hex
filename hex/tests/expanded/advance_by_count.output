@@ -1,1 +1,1 @@
-<count 1 = 1><count 2 = 1><advance count local 1 by Right 2>
+<count 1 = 1><count 2 = 1><advance count local 1 by QRegister 2>
