@@ -102,9 +102,9 @@ data HexCommand =
         | LoadfontHCommand String
         | SelectfontHCommand String
         | SetMathFontHCommand String Integer E.MathFontStyle
-        | LookupCountHCommand Integer (Lookup Integer)
-        | LookupDimenHCommand Integer (Lookup Dimen)
-        | LookupSkipHCommand Integer (Lookup Glue)
+        | LookupCountHCommand (Quantity Integer) (Lookup Integer)
+        | LookupDimenHCommand (Quantity Dimen) (Lookup Dimen)
+        | LookupSkipHCommand (Quantity Glue) (Lookup Glue)
         | ByeCommand
         deriving (Eq)
 \end{code}
@@ -143,15 +143,12 @@ data Command =
         | MathCodeCommand Char Integer Integer Char
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
-        | SetIParameterCommand String Integer
-        | SetCountCommand Integer Integer
-        | SetDParameterCommand String Dimen
-        | SetDimenCommand Integer Dimen
-        | SetSkipCommand Integer Glue
-        | SetSParameterCommand String Glue
-        | AdvanceCountCommand Bool Integer (Quantity Integer)
-        | AdvanceDimenCommand Bool Integer (Quantity Dimen)
-        | AdvanceSkipCommand Bool Integer (Quantity Glue)
+        | SetCountCommand Bool (Quantity Integer) Integer
+        | SetDimenCommand Bool (Quantity Dimen) Dimen
+        | SetSkipCommand Bool (Quantity Integer) Glue
+        | AdvanceCountCommand Bool (Quantity Integer) (Quantity Integer)
+        | AdvanceDimenCommand Bool (Quantity Dimen) (Quantity Dimen)
+        | AdvanceSkipCommand Bool (Quantity Glue) (Quantity Glue)
         | PrimitiveCommand String
         | InternalCommand ExpansionEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -186,12 +183,9 @@ instance Show Command where
     show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
     show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
-    show (SetIParameterCommand cid val) = concat ["<iparameter ", show cid, " = ", show val, ">"]
-    show (SetCountCommand cid val) = concat ["<count ", show cid, " = ", show val, ">"]
-    show (SetDParameterCommand cid val) = concat ["<dparameter ", show cid, " = ", show val, ">"]
-    show (SetDimenCommand cid val) = concat ["<dimen ", show cid, " = ", show val, ">"]
-    show (SetSParameterCommand cid val) = concat ["<sparameter ", show cid, " = ", show val, ">"]
-    show (SetSkipCommand cid val) = concat ["<skip ", show cid, " = ", show val, ">"]
+    show (SetCountCommand isg cid val) = concat ["<", if isg then "global " else "", "count ", show cid, " = ", show val, ">"]
+    show (SetDimenCommand isg cid val) = concat ["<", if isg then "global " else "", "dimen ", show cid, " = ", show val, ">"]
+    show (SetSkipCommand isg cid val) = concat ["<", if isg then "global " else "", "skip ", show cid, " = ", show val, ">"]
     show (AdvanceCountCommand isg cid val) = concat ["<advance count ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceDimenCommand isg cid val) = concat ["<advance dimen ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceSkipCommand isg cid val) = concat ["<advance skip ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
@@ -976,8 +970,9 @@ process1 (ControlSequence "\\count") = do
     cid <- readNumberM
     maybeeqM
     noc <- readENumberOrCountM
+    isg <- flagsM
     maybeLookup LookupCountHCommand noc $ \val ->
-        tell1 (SetCountCommand cid val)
+        tell1 (SetCountCommand isg (QRegister cid) val)
 \end{code}
 
 Integer parameters are handled similar to count registers:
@@ -986,8 +981,9 @@ process1 (ControlSequence csname)
     | csname `elem` iparameters = do
         maybeeqM
         noc <- readENumberOrCountM
+        isg <- flagsM
         maybeLookup LookupCountHCommand noc $ \val ->
-            tell1 (SetIParameterCommand csname val)
+            tell1 (SetCountCommand isg (QInternal csname) val)
 \end{code}
 
 \tex{\\dimen} is same thing:
@@ -996,8 +992,9 @@ process1 (ControlSequence "\\dimen") = do
     cid <- readNumberM
     maybeeqM
     dim <- readEDimenM
+    isg <- flagsM
     maybeLookup LookupDimenHCommand dim $ \val ->
-        tell1 (SetDimenCommand cid val)
+        tell1 (SetDimenCommand isg (QRegister cid) val)
 \end{code}
 
 \begin{code}
@@ -1005,8 +1002,9 @@ process1 (ControlSequence csname)
     | csname `elem` dparameters = do
         maybeeqM
         dim <- readEDimenM
+        isg <- flagsM
         maybeLookup LookupDimenHCommand dim $ \val ->
-            tell1 (SetDParameterCommand csname val)
+            tell1 (SetDimenCommand isg (QInternal csname) val)
 \end{code}
 
 \tex{\\skip} is same thing:
@@ -1015,15 +1013,17 @@ process1 (ControlSequence "\\skip") = do
     cid <- readNumberM
     maybeeqM
     skip <- _readGlueM
+    isg <- flagsM
     maybeLookup LookupSkipHCommand skip $ \val ->
-        tell1 (SetSkipCommand cid val)
+        tell1 (SetSkipCommand isg (QRegister cid) val)
 
 process1 (ControlSequence csname)
     | csname `elem` gparameters = do
         maybeeqM
         skip <- _readGlueM
+        isg <- flagsM
         maybeLookup LookupSkipHCommand skip $ \val ->
-            tell1 (SetSParameterCommand csname val)
+            tell1 (SetSkipCommand isg (QInternal csname) val)
 \end{code}
 
 
@@ -1036,7 +1036,7 @@ process1 (ControlSequence "\\advance") = do
         val <- readENumberOrCountM
         isg <- flagsM
         updateFlagsM (const False)
-        tell1 (AdvanceCountCommand isg count val)
+        tell1 (AdvanceCountCommand isg (QRegister count) val)
     where
         maybeToksM = mapM_ maybeTokM
         maybeTokM c = do
@@ -1164,15 +1164,14 @@ internalCommandM c = do
     (e,rest) <- get
     tell1 (InternalCommand e rest c)
 
-maybeLookup :: (Integer -> Lookup a -> HexCommand) -> Quantity a -> (a -> TkSS ()) -> TkSS ()
+maybeLookup :: (Quantity a -> Lookup a -> HexCommand) -> Quantity a -> (a -> TkSS ()) -> TkSS ()
 maybeLookup _ (QConstant v) f = f v
-maybeLookup t (QRegister cid) f = do
+maybeLookup t q f = do
     (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
                 AL.toList cs
-    internalCommandM $ t cid f'
-maybeLookup _ (QInternal _) _f = syntaxError "Not implemented yet"
+    internalCommandM $ t q f'
 
 \end{code}
 
@@ -1215,6 +1214,7 @@ readENumberOrCountM = local (++" -> readENumberOrCountM") $ do
     case t of
         CharToken _ -> puttokenM t >> QConstant `liftM` readNumberM
         ControlSequence "\\count" -> QRegister `liftM` readENumberM
+        ControlSequence csname | csname `elem` iparameters -> return $! QInternal csname
         ControlSequence csname -> do
             e <- envM
             case E.lookup csname e of

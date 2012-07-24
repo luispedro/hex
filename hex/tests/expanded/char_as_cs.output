@@ -1,1 +1,1 @@
-<iparameter "\\defaulthyphenchar" = 45>
+<count QInternal "\\defaulthyphenchar" = 45>

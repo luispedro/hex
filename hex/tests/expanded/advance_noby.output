@@ -1,1 +1,1 @@
-<advance count local 1 by QConstant 2>(bye)
+<advance count local QRegister 1 by QConstant 2>(bye)

@@ -1,1 +1,1 @@
-<dparameter "\\boxmaxdepth" = 65536pt>
+<dimen QInternal "\\boxmaxdepth" = 65536pt>

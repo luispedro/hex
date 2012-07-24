@@ -75,23 +75,30 @@ stream.
 
 The implementation of \tex{\\count} is hidden behind a few helper functions:
 \begin{code}
-getRegister :: String -> Integer -> HexEnvironment -> E.HexType
-getRegister class_ rid = E.lookupWithDefault errormsg (class_++"-register:"++show rid)
-    where errormsg = error $ concat ["hex.getRegister: lookup of ",class_, " ", show rid," failed."]
+getRegister :: (Show a) => String -> Quantity a -> HexEnvironment -> E.HexType
+getRegister class_ rid = E.lookupWithDefault errormsg (class_++ename rid)
+    where
+        errormsg = error $ concat ["hex.getRegister: lookup of ",class_, " ", show rid," failed."]
 
 setRegister class_ wrapper isglobal rid val =
-        ins isglobal (class_++"-register:"++show rid) (wrapper val)
+        ins isglobal (class_++ename rid) (wrapper val)
     where
         ins True = E.globalinsert
         ins False = E.insert
+ename (QConstant _) = error "ename of QConstant"
+ename (QRegister r) = "register:"++show r
+ename (QInternal i) = "internal:"++i
 
-getCount :: Integer -> HexEnvironment -> Integer
+getCount :: Quantity Integer -> HexEnvironment -> Integer
+getCount (QConstant v) = const v
 getCount cid = (\(E.HexInteger i) -> i) . getRegister "count" cid
 setCount = setRegister "count" E.HexInteger
 
+getDimen (QConstant v) = const v
 getDimen did = (\(E.HexDimen d) -> d) . getRegister "dimen" did
 setDimen = setRegister "dimen" E.HexDimen
 
+getSkip (QConstant v) = const v
 getSkip sid = (\(E.HexGlue g) -> g) . getRegister "skip" sid
 setSkip = setRegister "skip" E.HexGlue
 \end{code}
@@ -107,25 +114,22 @@ processinputs [] _ = return []
 
 \code{setcount} and \code{setdimen} are both very simple:
 \begin{code}
-processinputs ((SetIParameterCommand _cid _val):r) e = processinputs r e
-processinputs ((SetDParameterCommand _cid _val):r) e = processinputs r e
-processinputs ((SetSParameterCommand _cid _val):r) e = processinputs r e
-processinputs ((SetCountCommand cid val):r) e = processinputs r (setCount False cid val e)
-processinputs ((SetDimenCommand cid val):r) e = processinputs r (setDimen False cid val e)
-processinputs ((SetSkipCommand cid val):r) e = processinputs r (setSkip False cid val e)
+processinputs ((SetCountCommand isg cid val):r) e = processinputs r (setCount isg cid val e)
+processinputs ((SetDimenCommand isg cid val):r) e = processinputs r (setDimen isg cid val e)
+processinputs ((SetSkipCommand isg cid val):r) e = processinputs r (setSkip isg cid val e)
 processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCount isg cid (v + val') e)
     where
         v = getCount cid e
-        val' = quantity (`getCount` e) error val
+        val' = getCount val e
 processinputs ((AdvanceDimenCommand isg did val):r) e = processinputs r (setDimen isg did (v `dplus` val') e)
     where
         v = getDimen did e
-        val' = quantity (`getDimen` e) error val
+        val' = getDimen val e
 processinputs ((AdvanceSkipCommand isg did val):r) e = processinputs r (setSkip isg did (v `gplus` val') e)
     where
         gplus (Glue b0 st0 sh0 i0) (Glue b1 st1 sh1 i1) = Glue (b0 `dplus` b1) (st0`dplus` st1) (sh0 `dplus` sh1) (i0 + i1)
         v = getSkip did e
-        val' = quantity (`getSkip` e) error val
+        val' = getSkip val e
 \end{code}
 
 The simplest command is the \tex{\\bye} command. Just stop everything, we are
