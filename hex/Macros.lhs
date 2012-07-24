@@ -800,6 +800,17 @@ process1 (ControlSequence "\\expandafter") = do
     puttokenM unexp
 \end{code}
 
+\begin{code}
+process1 (ControlSequence "\\string") = do
+        unexp <- gettokenM
+        case unexp of
+            CharToken _ -> puttokenM unexp
+            ControlSequence csname -> mapM_ putC (reverse csname)
+    where
+        putC ' ' = puttokenM (CharToken (TypedChar ' ' Space))
+        putC c = puttokenM (CharToken (TypedChar c Other))
+\end{code}
+
 Manipulation of catcodes is performed here. It needs to change the token
 stream. In hex, the ``environment'' is actually a few separate namespaces,
 \tex{\\catcode} only manipulates the category table embedded in the tokens
