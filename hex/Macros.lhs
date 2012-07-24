@@ -290,7 +290,13 @@ dparameters =
 
 gparameters =
     ["\\abovedisplayskip"
+    ,"\\abovedisplayshortskip"
+    ,"\\belowdisplayskip"
+    ,"\\belowdisplayshortskip"
     ,"\\parskip"
+    ,"\\splittopskip"
+    ,"\\parfillskip"
+    ,"\\topskip"
     ]
 
 magic =
