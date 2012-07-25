@@ -1,3 +1,6 @@
+Version 0.0.6+
+	* Implement \string & \csname
+
 Version 0.0.6 2012-06-30 by luispedro
 	* Refactor Macros/Tokens to emphasise Monadic interface
 	* Update to newer Haskell

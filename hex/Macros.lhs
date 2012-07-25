@@ -318,12 +318,18 @@ isprimitive csname = (csname `elem` primitives)
 isparameter csname = (csname `elem` iparameters)
                 || (csname `elem` dparameters)
                 || (csname `elem` gparameters)
-handled =
+unexpandable =
     ["\\dimen"
     ,"\\global"
+    ,"\\endcsname"
     ]
-ishandled csname = (csname `elem` handled)
+processed =
+    ["\\string"
+    ,"\\csname"
+    ]
+isunexpandable csname = (csname `elem` unexpandable)
                 || (csname `elem` magic)
+isprocessable csname = (csname `elem` processed)
 
 \end{code}
 
@@ -796,10 +802,19 @@ Therefore, the environment cannot change in the inner expansion.
 process1 (ControlSequence "\\expandafter") = do
     unexp <- gettokenM
     next <- gettokenM
-    expand1 next
+    nexte <- case next of
+        CharToken _ -> return next
+        ControlSequence csname
+                | isprimitive csname || isparameter csname || isunexpandable csname -> return next
+                | isprocessable csname -> process1 next >> gettokenM
+        _ -> expand1 next >> gettokenM
+    puttokenM nexte
     puttokenM unexp
 \end{code}
 
+
+The implementation of \tex{\\string} is incomplete as it does not handle the
+escapechar setting.
 \begin{code}
 process1 (ControlSequence "\\string") = do
         unexp <- gettokenM
@@ -809,6 +824,24 @@ process1 (ControlSequence "\\string") = do
     where
         putC ' ' = puttokenM (CharToken (TypedChar ' ' Space))
         putC c = puttokenM (CharToken (TypedChar c Other))
+\end{code}
+
+\begin{code}
+process1 (ControlSequence "\\csname") = do
+        tokens <- expandUntil (ControlSequence "\\endcsname")
+        case asString tokens of
+            Just s -> puttokenM (ControlSequence s)
+            Nothing -> syntaxError ("Cannot read a csname correctly")
+    where
+        asString [] = Just []
+        asString (t:ts) = case t of
+            CharToken (TypedChar c _) -> asString ts >>= return . (c:)
+            _ -> Nothing
+        expandUntil lim = do
+            t <- expandedTokenM
+            if t == lim
+                then return []
+                else expandUntil lim >>= return . (t:)
 \end{code}
 
 Manipulation of catcodes is performed here. It needs to change the token
@@ -1251,7 +1284,9 @@ expandedTokenM = do
     tk <- gettokenM
     case tk of
         CharToken _ -> return tk
-        ControlSequence csname | isprimitive csname || isparameter csname || ishandled csname -> return tk
+        ControlSequence csname
+                | isprimitive csname || isparameter csname || isunexpandable csname -> return tk
+                | isprocessable csname -> process1 tk >> expandedTokenM
         _ -> expand1 tk >> expandedTokenM
 \end{code}
 

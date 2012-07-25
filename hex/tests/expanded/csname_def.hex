@@ -1,0 +1,2 @@
+\expandafter\def\csname this\endcsname{hello}%
+\csname this\endcsname%

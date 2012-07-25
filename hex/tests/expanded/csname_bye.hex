@@ -1,0 +1,9 @@
+\def\b{b}%
+\def\e{e}%
+\def\y{y}%
+{%
+\catcode`\j=0%
+\catcode`\\=11%
+jglobaljdefjcat{\}%
+}%
+\csname\cat\b\y\e\endcsname
