@@ -14,7 +14,7 @@ import Boxes
 import Linebreak
 import Maths
 
-import Text.Parsec hiding (many, optional, (<|>))
+import Text.Parsec hiding (many, anyToken, optional, (<|>))
 import qualified Text.Parsec.Prim as Prim
 import Control.Monad
 import Control.Applicative
@@ -42,11 +42,16 @@ popE = modifyState E.pop
 Small helpers, to match commands that fulfil a certain condition (like
 equality) and to match character categories:
 \begin{code}
-incCol pos _ _  = incSourceColumn pos $ sourceColumn pos
 matchf :: (Command -> Bool) -> Modes Command
 matchf f = Prim.tokenPrim show incCol testChar
-    where testChar t = if f t then Just t else Nothing
+    where
+        testChar t = if f t then Just t else Nothing
+        incCol pos _ _  = incSourceColumn pos 1
 
+anyCommand :: Modes Command
+anyCommand = matchf (const True)
+
+match :: Command -> Modes Command
 match c = matchf (==c)
 
 matchcat :: CharCategory -> Modes Command
@@ -103,16 +108,21 @@ the monad).
 \begin{code}
 _vModeM :: Modes [VBox]
 _vModeM = (eof >> return []) <|> do
+    p0 <- getPosition
     v <- try vMode1 <|> hMode
-    r <- _vModeM
-    return (v++r)
+    p1 <- getPosition
+    if p0 == p1
+        then unexpected (concat ["Infinite loop detected ", show p0, " == ", show p1])
+        else do
+            r <- _vModeM
+            return (v++r)
 \end{code}
 
 \code{vMode1} handles one vertical mode command and drops to hMode if that
 fails. Only a few vertical commands are handled currently.
 \begin{code}
 vMode1 :: Modes [VBox]
-vMode1 = anyToken >>= vMode1'
+vMode1 = anyCommand >>= vMode1'
 \end{code}
 
 \begin{code}
