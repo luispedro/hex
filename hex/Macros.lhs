@@ -755,7 +755,7 @@ updateFlagsM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment
 \end{code}
 
 \begin{code}
-deprecated (ControlSequence "\\newlinechar") = deprecatedWarning "\\newlinechar is always \\"
+deprecated (ControlSequence "\\newlinechar") = deprecatedWarning "\\newlinechar is always \\n"
 deprecated (ControlSequence "\\pausing") = deprecatedWarning "\\pausing does nothing"
 deprecated _ = return ()
 deprecatedWarning msg = do
