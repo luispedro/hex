@@ -1225,8 +1225,8 @@ readNumberM :: TkSS Integer
 readNumberM = local (++" -> readNumberM") $ do
         tk <- peektokenM
         case tk of
-            CharToken (TypedChar '"' _) -> gettokenM >> readNumber ("0x"++) hexdigits
-            CharToken (TypedChar '\'' _) -> gettokenM >> readNumber ("0o"++) octdigits
+            CharToken (TypedChar '"' _) -> skiptokenM >> readNumber ("0x"++) hexdigits
+            CharToken (TypedChar '\'' _) -> skiptokenM >> readNumber ("0o"++) octdigits
             CharToken (TypedChar '`' _) -> skiptokenM >> gettokenM >>= (\t -> case t of
                             CharToken (TypedChar c _) -> return $! toInteger . ord $ c
                             ControlSequence ['\\',c] -> return $! toInteger . ord $ c
