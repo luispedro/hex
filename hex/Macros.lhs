@@ -1219,22 +1219,40 @@ maybeLookup t q f = do
 
 \end{code}
 
-A simple function to read an integer from tokens:
+A simple function to read an integer from tokens, which just calls on
+\code{readFNumberM} to do all the hard work:
 \begin{code}
-readNumberM :: TkSS Integer
-readNumberM = local (++" -> readNumberM") $ do
+readNumberM = do
+    (x,Nothing) <- readFNumberM False
+    return x
+\end{code}
+
+This function optionally tries to parse a fraction:
+\begin{code}
+readFNumberM :: Bool -> TkSS (Integer,Maybe Integer)
+readFNumberM checkfraction = local (++" -> readNumberM") $ do
         tk <- peektokenM
         case tk of
-            CharToken (TypedChar '"' _) -> skiptokenM >> readNumber ("0x"++) hexdigits
-            CharToken (TypedChar '\'' _) -> skiptokenM >> readNumber ("0o"++) octdigits
+            CharToken (TypedChar '"' _) -> skiptokenM >> readNumber ("0x"++) hexdigits >>= noFraction
+            CharToken (TypedChar '\'' _) -> skiptokenM >> readNumber ("0o"++) octdigits >>= noFraction
             CharToken (TypedChar '`' _) -> skiptokenM >> gettokenM >>= (\t -> case t of
-                            CharToken (TypedChar c _) -> return $! toInteger . ord $ c
-                            ControlSequence ['\\',c] -> return $! toInteger . ord $ c
-                            _ -> syntaxErrorConcat ["Expected character, got ", show t]  >> return 0
+                            CharToken (TypedChar c _) -> return $! (toInteger . ord $ c, Nothing)
+                            ControlSequence ['\\',c] -> return $! (toInteger . ord $ c, Nothing)
+                            _ -> syntaxErrorConcat ["Expected character, got ", show t]  >> return (0, Nothing)
                             )
-            CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits
-            t -> syntaxErrorConcat ["hex.Macros.readNumberM: expected number (got ", show t, ")"] >> return 0
+            CharToken (TypedChar c _) | c `elem` decdigits -> readNumber id decdigits >>= maybeFraction checkfraction
+            t -> syntaxErrorConcat ["hex.Macros.readNumberM: expected number (got ", show t, ")"] >> return (0,Nothing)
     where
+        noFraction x = return (x, Nothing)
+        maybeFraction False x = noFraction x
+        maybeFraction True x = do
+            tk <- maybepeektokenM
+            case tk of
+                Just (CharToken tc) | value tc == '.' -> do
+                    skiptokenM
+                    f <- readNumberM
+                    return (x, Just f)
+                _ -> noFraction x
         readNumber prefix cond = (read . prefix) `liftM` (digits cond)
         digits :: [Char] -> TkS e [Char]
         digits accepted = do
