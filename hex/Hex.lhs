@@ -88,6 +88,7 @@ setRegister class_ wrapper isglobal rid val =
 ename (QConstant _) = error "ename of QConstant"
 ename (QRegister r) = "register:"++show r
 ename (QInternal i) = "internal:"++i
+ename (QScaled _ q) = "scaled:"++ename q
 
 getCount :: Quantity Integer -> HexEnvironment -> Integer
 getCount (QConstant v) = const v

@@ -3,6 +3,7 @@
 module FixWords
     ( FixWord(..)
     , fixToFloat
+    , fromFloat
     ) where
 
 import Data.Bits

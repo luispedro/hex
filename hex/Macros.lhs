@@ -30,6 +30,7 @@ import qualified Data.AList as AL
 import DVI
 import Fonts
 import Tokens
+import FixWords
 import Chars
 import CharStream
 import Measures
@@ -124,12 +125,14 @@ internal quantities (\\day). We need a type to represent those.
 data Quantity a = QConstant !a
                 | QRegister !Integer
                 | QInternal !String
+                | QScaled !FixWord !(Quantity a)
                 deriving (Eq, Show)
 
 quantity :: (Integer -> a) -> (String -> a) -> Quantity a -> a
 quantity _ _ (QConstant a) = a
 quantity f _ (QRegister ai) = f ai
 quantity _ f (QInternal an) = f an
+quantity _fi _fs (QScaled _f _q) = error "oops"
 
 
 data Command =
@@ -1322,22 +1325,55 @@ readEDimenM = local (++" -> readEDimen") $ do
                 _ -> syntaxErrorConcat ["Expected \\dimen, got ", show tk] >> return (QConstant zeroDimen)
             _ -> do
                 puttokenM tk
-                n <- readENumberM
-                c0 <- readC
-                c1 <- readC
-                u <- unitM [c0,c1]
-                return . QConstant $! dimenFromUnit (fromInteger n) u
+                n <- readFNumberM True
+                ntk <- expandedTokenM
+                puttokenM ntk
+                case ntk of
+                    ControlSequence _ -> do
+                        d <- readEDimenM
+                        return . QScaled (fromPair n) $! d
+                    _ -> do
+                        u <- readUnitM
+                        return . QConstant $! dimenFromUnit (fromInteger . fst $ n) u
     where
-        readC = do
-            t <- expandedTokenM
-            case t of
-                CharToken c -> return $ value c
-                _ -> syntaxErrorConcat ["Expected char token, got ", show t] >> return '\0'
+        fromPair (int,Nothing) = fromInteger int
+        fromPair (int, Just frac) = fromFloat . read $ (show int ++ "." ++ show frac)
+        readUnitM = do
+            u <- (readSimpleUnit `matchOr` readFill)
+            case u of
+                Just v -> return v
+                Nothing -> (syntaxError "Expected Unit") >> return UnitIn
+        readSimpleUnit = do
+            tok0 <- expandedTokenM
+            tok1 <- expandedTokenM
+            case (tok0,tok1) of
+                (CharToken c0, CharToken c1)
+                    | [value c0, value c1] == "pt" -> return . Just $ UnitPt
+                    | [value c0, value c1] == "px" -> return . Just $ UnitPx
+                    | [value c0, value c1] == "in" -> return . Just $ UnitIn
+                _ -> return Nothing
+        readFill = do
+            isfil <- matchETokens "fil"
+            if isfil
+                then do
+                    isfill <- matchETok 'l'
+                    if isfill
+                        then skiptokenM >> (return . Just $ UnitFill)
+                        else return . Just $ UnitFil
+                else return Nothing
 
-        unitM "pt" = return UnitPt
-        unitM "px" = return UnitPx
-        unitM "in" = return UnitIn
-        unitM un = syntaxError ("unit `"++un++"` not implemented.") >> return UnitPt
+
+matchETokens [] = return True
+matchETokens (t:ts) = do
+    val <- matchETok t
+    if val
+        then matchETokens ts
+        else return False
+matchETok t = do
+    tk <- expandedTokenM
+    case tk of
+        CharToken (TypedChar c _) | c == t -> return True
+        _ -> puttokenM tk >> return False
 
 _readGlueM :: TkSS (Quantity Glue)
 _readGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchOr` readGlueSpec)
@@ -1366,17 +1402,6 @@ _readGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchO
                             then readEDimenM
                             else (return $ QConstant zeroDimen)
             return . Just . QConstant $! Glue base st sh 0
-        matchETokens [] = return True
-        matchETokens (t:ts) = do
-            val <- matchETok t
-            if val
-                then matchETokens ts
-                else return False
-        matchETok t = do
-            tk <- expandedTokenM
-            case tk of
-                CharToken (TypedChar c _) | c == t -> return True
-                _ -> puttokenM tk >> return False
 \end{code}
 
 matchOr is similar to <|>.

@@ -95,9 +95,12 @@ zeroDimen = Dimen 0
 \tex{\Tex} recognises several units:
 
 \begin{code}
-data Unit = UnitEm | UnitEn | UnitPt | UnitPx | UnitIn deriving (Eq, Show)
+data Unit = UnitEm | UnitEn | UnitPt | UnitPx | UnitIn | UnitFil | UnitFill deriving (Eq, Show)
+dimenFromUnit :: Double -> Unit -> Dimen
 dimenFromUnit val UnitPt = dimenFromPoints val
 dimenFromUnit val UnitIn = dimenFromInches val
+dimenFromUnit val UnitFil = Dimen . round $ ((-1.0) * val)
+dimenFromUnit val UnitFill = Dimen . round $ ((-1.0) * val)
 dimenFromUnit _ u = error ("dimenFromUnit: not implemented: "++show u)
 \end{code}
 
