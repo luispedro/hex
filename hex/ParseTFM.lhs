@@ -127,13 +127,13 @@ gliphMetrics dsize cis widths heights depths italics = gliph1 `map` (zip cis [0.
 parseHeader n = do
     checksum <- getWord32be
     dsize <- getFixWord
-    coding <- getBytes 40
-    fam <- getBytes 20
+    coding <- getByteString 40
+    fam <- getByteString 20
     _seven_bit_safe_flag <- getByte
     _ <- getByte
     _ <- getByte
     _wse <- getByte
-    _ <- getBytes $ (*4) $ convert (n - 18)
+    _ <- getByteString $ (*4) $ convert (n - 18)
     return (checksum, dsize, coding, fam)
 
 parseCharInfo bc ec = (const parseCharInfo1) `mapM` [bc..ec]
