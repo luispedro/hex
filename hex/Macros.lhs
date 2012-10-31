@@ -15,7 +15,7 @@ module Macros
     , gettokenM
     , gettokentilM
     , readNumberM
-    , _readGlueM
+    , _readUGlueM
     , _breakAtGroupEnd
     ) where
 
@@ -104,8 +104,8 @@ data HexCommand =
         | SelectfontHCommand String
         | SetMathFontHCommand String Integer E.MathFontStyle
         | LookupCountHCommand (Quantity Integer) (Lookup Integer)
-        | LookupDimenHCommand (Quantity Dimen) (Lookup Dimen)
-        | LookupSkipHCommand (Quantity Glue) (Lookup Glue)
+        | LookupDimenHCommand (Quantity UDimen) (Lookup Dimen)
+        | LookupSkipHCommand (Quantity UGlue) (Lookup Glue)
         | ByeCommand
         deriving (Eq)
 \end{code}
@@ -147,11 +147,12 @@ data Command =
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
         | SetCountCommand Bool (Quantity Integer) Integer
-        | SetDimenCommand Bool (Quantity Dimen) Dimen
+        | SetMuGlueCommand Bool (Quantity UGlue) UGlue
+        | SetDimenCommand Bool (Quantity UDimen) UDimen
         | SetSkipCommand Bool (Quantity Integer) Glue
         | AdvanceCountCommand Bool (Quantity Integer) (Quantity Integer)
-        | AdvanceDimenCommand Bool (Quantity Dimen) (Quantity Dimen)
-        | AdvanceSkipCommand Bool (Quantity Glue) (Quantity Glue)
+        | AdvanceDimenCommand Bool (Quantity UDimen) (Quantity UDimen)
+        | AdvanceSkipCommand Bool (Quantity UGlue) (Quantity UGlue)
         | PrimitiveCommand String
         | InternalCommand ExpansionEnvironment TokenStream HexCommand
         deriving (Eq)
@@ -189,6 +190,7 @@ instance Show Command where
     show (SetCountCommand isg cid val) = concat ["<", if isg then "global " else "", "count ", show cid, " = ", show val, ">"]
     show (SetDimenCommand isg cid val) = concat ["<", if isg then "global " else "", "dimen ", show cid, " = ", show val, ">"]
     show (SetSkipCommand isg cid val) = concat ["<", if isg then "global " else "", "skip ", show cid, " = ", show val, ">"]
+    show (SetMuGlueCommand isg mid val) = concat ["<", if isg then "global " else "", "muglue ", show mid, " = ", show val, ">"]
     show (AdvanceCountCommand isg cid val) = concat ["<advance count ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceDimenCommand isg cid val) = concat ["<advance dimen ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceSkipCommand isg cid val) = concat ["<advance skip ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
@@ -313,6 +315,12 @@ gparameters =
     ,"\\topskip"
     ]
 
+mparameters =
+    ["\\thickmuskip"
+    ,"\\thinmuskip"
+    ,"\\medmuskip"
+    ]
+
 magic =
     ["error"
     ]
@@ -321,6 +329,7 @@ isprimitive csname = (csname `elem` primitives)
 isparameter csname = (csname `elem` iparameters)
                 || (csname `elem` dparameters)
                 || (csname `elem` gparameters)
+                || (csname `elem` mparameters)
 unexpandable =
     ["\\dimen"
     ,"\\global"
@@ -935,8 +944,8 @@ process1 (ControlSequence "\\ifnum") = do
             t -> error $ concat ["hex.process1(ifnum): expected relationship character, got ", show t]
     val1 <- readENumberOrCountM
     let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return ()
-        continuation0 v = maybeLookup LookupCountHCommand val1 (continuation v)
-    maybeLookup LookupCountHCommand val0 continuation0
+        continuation0 v = maybeLookup id LookupCountHCommand val1 (continuation v)
+    maybeLookup id LookupCountHCommand val0 continuation0
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -979,7 +988,7 @@ process1 (ControlSequence cdef)
         name <- getCSM ("Expected control sequence after "++cdef)
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup LookupCountHCommand noc $ \charcode -> do
+        maybeLookup id LookupCountHCommand noc $ \charcode -> do
             updateEnvM (E.insert name (cdefcons charcode))
     where
         cdefcons = if cdef == "\\chardef"
@@ -993,7 +1002,7 @@ process1 (ControlSequence cddef)
         name <- getCSM ("Expected a control sequence after "++cddef)
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup LookupCountHCommand noc $ \cid -> do
+        maybeLookup id LookupCountHCommand noc $ \cid -> do
             updateEnvM (E.insert name (c cid))
     where
         c = case cddef of
@@ -1018,7 +1027,7 @@ process1 (ControlSequence "\\count") = do
     maybeeqM
     noc <- readENumberOrCountM
     isg <- flagsM
-    maybeLookup LookupCountHCommand noc $ \val ->
+    maybeLookup id LookupCountHCommand noc $ \val ->
         tell1 (SetCountCommand isg (QRegister cid) val)
 \end{code}
 
@@ -1029,7 +1038,7 @@ process1 (ControlSequence csname)
         maybeeqM
         noc <- readENumberOrCountM
         isg <- flagsM
-        maybeLookup LookupCountHCommand noc $ \val ->
+        maybeLookup id LookupCountHCommand noc $ \val ->
             tell1 (SetCountCommand isg (QInternal csname) val)
 \end{code}
 
@@ -1040,8 +1049,8 @@ process1 (ControlSequence "\\dimen") = do
     maybeeqM
     dim <- readEDimenM
     isg <- flagsM
-    maybeLookup LookupDimenHCommand dim $ \val ->
-        tell1 (SetDimenCommand isg (QRegister cid) val)
+    lookupDimen dim $ \val ->
+        tell1 (SetDimenCommand isg (QRegister cid) (asUDimen val))
 \end{code}
 
 \begin{code}
@@ -1050,8 +1059,8 @@ process1 (ControlSequence csname)
         maybeeqM
         dim <- readEDimenM
         isg <- flagsM
-        maybeLookup LookupDimenHCommand dim $ \val ->
-            tell1 (SetDimenCommand isg (QInternal csname) val)
+        lookupDimen dim $ \val ->
+            tell1 (SetDimenCommand isg (QInternal csname) (asUDimen val))
 \end{code}
 
 \tex{\\skip} is same thing:
@@ -1059,20 +1068,29 @@ process1 (ControlSequence csname)
 process1 (ControlSequence "\\skip") = do
     cid <- readNumberM
     maybeeqM
-    skip <- _readGlueM
+    skip <- _readUGlueM
     isg <- flagsM
-    maybeLookup LookupSkipHCommand skip $ \val ->
-        tell1 (SetSkipCommand isg (QRegister cid) val)
+    lookupGlue skip $ \g ->
+        tell1 (SetSkipCommand isg (QRegister cid) g)
 
 process1 (ControlSequence csname)
     | csname `elem` gparameters = do
         maybeeqM
-        skip <- _readGlueM
+        skip <- _readUGlueM
         isg <- flagsM
-        maybeLookup LookupSkipHCommand skip $ \val ->
-            tell1 (SetSkipCommand isg (QInternal csname) val)
+        lookupGlue skip $ \g ->
+            tell1 (SetSkipCommand isg (QInternal csname) g)
 \end{code}
 
+
+\begin{code}
+process1 (ControlSequence csname)
+    | csname `elem` mparameters = do
+        maybeeqM
+        QConstant val <- _readUGlueM
+        isg <- flagsM
+        tell1 (SetMuGlueCommand isg (QInternal csname) val)
+\end{code}
 
 \begin{code}
 process1 (ControlSequence "\\advance") = do
@@ -1131,7 +1149,7 @@ information and pass it down.
 process1 (ControlSequence cs)
     | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"] = do
         mfam <- readENumberOrCountM
-        maybeLookup LookupCountHCommand mfam $ \fam -> do
+        maybeLookup id LookupCountHCommand mfam $ \fam -> do
             maybeeqM
             ControlSequence fc <- gettokenM
             e <- envM
@@ -1210,16 +1228,36 @@ We make it easy to output internal commands:
 internalCommandM c = do
     (e,rest) <- get
     tell1 (InternalCommand e rest c)
+\end{code}
 
-maybeLookup :: (Quantity a -> Lookup a -> HexCommand) -> Quantity a -> (a -> TkSS ()) -> TkSS ()
-maybeLookup _ (QConstant v) f = f v
-maybeLookup t q f = do
+We often need to switch levels and ask questions from the next layer.
+\begin{code}
+lookupDimen :: (Quantity UDimen) -> (Dimen -> TkSS ()) -> TkSS ()
+lookupDimen q f = do
+    (e,rest) <- get
+    let f' = Lookup $ \d ->
+                let (_,_,cs) = runTkSS (f d >> expandM) e rest in
+                AL.toList cs
+    internalCommandM $ LookupDimenHCommand q f'
+
+
+lookupGlue :: (Quantity UGlue) -> (Glue -> TkSS ()) -> TkSS ()
+lookupGlue q f = do
+    (e,rest) <- get
+    let f' = Lookup $ \g ->
+                let (_,_,cs) = runTkSS (f g >> expandM) e rest in
+                AL.toList cs
+    internalCommandM $ LookupSkipHCommand q f'
+
+
+maybeLookup :: (a -> b) -> (Quantity a -> Lookup b -> HexCommand) -> Quantity a -> (b -> TkSS ()) -> TkSS ()
+maybeLookup t _ (QConstant v) f = f (t v)
+maybeLookup _ t q f = do
     (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
                 AL.toList cs
     internalCommandM $ t q f'
-
 \end{code}
 
 A simple function to read an integer from tokens, which just calls on
@@ -1314,7 +1352,7 @@ expandedTokenM = do
 \code{readEDimenM} reads a dimension in tokensM
 
 \begin{code}
-readEDimenM :: TkSS (Quantity Dimen)
+readEDimenM :: TkSS (Quantity UDimen)
 readEDimenM = local (++" -> readEDimen") $ do
         tk <- expandedTokenM
         e <- envM
@@ -1322,7 +1360,7 @@ readEDimenM = local (++" -> readEDimen") $ do
             ControlSequence "\\dimen" -> (QRegister `fmap` readENumberM)
             ControlSequence csname -> case E.lookup csname e of
                 Just (DimenDef val) -> return $! QRegister val
-                _ -> syntaxErrorConcat ["Expected \\dimen, got ", show tk] >> return (QConstant zeroDimen)
+                _ -> syntaxErrorConcat ["Expected \\dimen, got ", show tk] >> return (QConstant zeroUDimen)
             _ -> do
                 puttokenM tk
                 n <- readFNumberM True
@@ -1331,10 +1369,10 @@ readEDimenM = local (++" -> readEDimen") $ do
                 case ntk of
                     ControlSequence _ -> do
                         d <- readEDimenM
-                        return . QScaled (fromPair n) $! d
+                        return $ QScaled (fromPair n) d
                     _ -> do
                         u <- readUnitM
-                        return . QConstant $! dimenFromUnit (fromInteger . fst $ n) u
+                        return . QConstant $! UDimen (fromInteger . fst $ n) u
     where
         fromPair (int,Nothing) = fromInteger int
         fromPair (int, Just frac) = fromFloat . read $ (show int ++ "." ++ show frac)
@@ -1351,6 +1389,7 @@ readEDimenM = local (++" -> readEDimen") $ do
                     | [value c0, value c1] == "pt" -> return . Just $ UnitPt
                     | [value c0, value c1] == "px" -> return . Just $ UnitPx
                     | [value c0, value c1] == "in" -> return . Just $ UnitIn
+                    | [value c0, value c1] == "mu" -> return . Just $ UnitMu
                 _ -> return Nothing
         readFill = do
             isfil <- matchETokens "fil"
@@ -1375,8 +1414,8 @@ matchETok t = do
         CharToken (TypedChar c _) | c == t -> return True
         _ -> puttokenM tk >> return False
 
-_readGlueM :: TkSS (Quantity Glue)
-_readGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchOr` readGlueSpec)
+_readUGlueM :: TkSS (Quantity UGlue)
+_readUGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchOr` readUGlueSpec)
     where
         readSkipReg = do
             tk <- expandedTokenM
@@ -1387,21 +1426,21 @@ _readGlueM = local (++" -> readENumberM") $ fromJust `fmap` (readSkipReg `matchO
                     Just (SkipDef n) -> return . Just . QRegister $ n
                     _ -> return Nothing
                 _ -> return Nothing
-        readGlueSpec = do
+        readUGlueSpec = do
             QConstant base <- readEDimenM
             maybespaceM
             hplus <- matchETokens "plus"
             maybespaceM
             QConstant st <- if hplus
                             then readEDimenM
-                            else (return $ QConstant zeroDimen)
+                            else (return $ QConstant zeroUDimen)
             maybespaceM
             hminus <- matchETokens "minus"
             maybespaceM
             QConstant sh <- if hminus
                             then readEDimenM
-                            else (return $ QConstant zeroDimen)
-            return . Just . QConstant $! Glue base st sh 0
+                            else (return $ QConstant zeroUDimen)
+            return . Just . QConstant $! UGlue base st sh 0
 \end{code}
 
 matchOr is similar to <|>.

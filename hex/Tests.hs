@@ -115,10 +115,10 @@ case_readNumberM15 = n @=? 15
     where
         (n,_) = runTkS readNumberM (asTokenStream "15\\relax")
 
-case_readGlueM = g @?= Glue (pt 1) (pt 2) (pt 4) 0
+case_readGlueM = g @?= UGlue (pt 1) (pt 2) (pt 4) 0
     where
-        (QConstant g,_) = runTkS _readGlueM (asTokenStream "1pt plus 2pt minus 4pt")
-        pt = dimenFromPoints
+        (QConstant g,_) = runTkS _readUGlueM (asTokenStream "1pt plus 2pt minus 4pt")
+        pt p = UDimen p UnitPt
 
 case_readNumberMfollow = cs @=? "\\relax"
     where

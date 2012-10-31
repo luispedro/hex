@@ -94,13 +94,35 @@ getCount :: Quantity Integer -> HexEnvironment -> Integer
 getCount (QConstant v) = const v
 getCount cid = (\(E.HexInteger i) -> i) . getRegister "count" cid
 setCount = setRegister "count" E.HexInteger
+\end{code}
 
-getDimen (QConstant v) = const v
-getDimen did = (\(E.HexDimen d) -> d) . getRegister "dimen" did
+To handle \code{Dimen}s, we need to handle the case where the dimension depends
+on the font (if the unit is em, ex, or mu):
+\begin{code}
+getDimen (QConstant v) e = dimenFromFont v (currentFont e)
+getDimen did e = (\(E.HexDimen d) -> d) . getRegister "dimen" did $ e
+
+currentFont :: HexEnvironment -> FontInfo
+currentFont = snd . (\(E.HexFontInfo f) -> f) . fromJust . E.lookup "current-font"
+
+dimenFromFont :: UDimen -> FontInfo -> Dimen
+dimenFromFont (UDimen v UnitEm) f = v `dscalef` (dimenFromFloatingPoints . quad $ f)
+dimenFromFont (UDimen v UnitMu) f = (v / 8) `dscalef` (dimenFromFloatingPoints . quad $ f)
+dimenFromFont ud _f = asDimen ud
+
 setDimen = setRegister "dimen" E.HexDimen
+\end{code}
 
-getSkip (QConstant v) = const v
-getSkip sid = (\(E.HexGlue g) -> g) . getRegister "skip" sid
+Glues are just builtup of multiple dimen lookups:
+\begin{code}
+getSkip :: Quantity UGlue -> HexEnvironment -> Glue
+getSkip (QConstant v) e =
+            Glue
+                (getDimen (QConstant . usize $ v) e)
+                (getDimen (QConstant . ushrinkage $ v) e)
+                (getDimen (QConstant . uexpandable $ v) e)
+                (uinfLevel v)
+getSkip sid e = (\(E.HexGlue g) -> g) . getRegister "skip" sid $ e
 setSkip = setRegister "skip" E.HexGlue
 \end{code}
 In particular, it process \tex{\\bye}, \tex{\\input}, and
@@ -116,7 +138,7 @@ processinputs [] _ = return []
 \code{setcount} and \code{setdimen} are both very simple:
 \begin{code}
 processinputs ((SetCountCommand isg cid val):r) e = processinputs r (setCount isg cid val e)
-processinputs ((SetDimenCommand isg cid val):r) e = processinputs r (setDimen isg cid val e)
+processinputs ((SetDimenCommand isg cid val):r) e = processinputs r (setDimen isg cid (asDimen val) e)
 processinputs ((SetSkipCommand isg cid val):r) e = processinputs r (setSkip isg cid val e)
 processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCount isg cid (v + val') e)
     where
@@ -124,6 +146,7 @@ processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCoun
         val' = getCount val e
 processinputs ((AdvanceDimenCommand isg did val):r) e = processinputs r (setDimen isg did (v `dplus` val') e)
     where
+        v :: Dimen
         v = getDimen did e
         val' = getDimen val e
 processinputs ((AdvanceSkipCommand isg did val):r) e = processinputs r (setSkip isg did (v `gplus` val') e)
@@ -174,15 +197,17 @@ Selecting a font is a couple of environment lookups:
 processinputs ((InternalCommand _ _ (SelectfontHCommand fname)):cs) e = do
     let E.HexInteger fontindex = fromJust $ E.lookup ("font-index:"++fname) e
     let E.HexFontInfo fontinfo = fromJust $ E.lookup ("font:"++fname) e
-    r <- processinputs cs e
+    let e' = E.globalinsert "current-font" (E.HexFontInfo fontinfo) e
+    r <- processinputs cs e'
     return ((SelectfontCommand fontindex fontinfo):r)
 \end{code}
 
 \begin{code}
 processinputs ((InternalCommand _ _ (SetMathFontHCommand fname fam fs)):cs) e = do
     let E.HexInteger fontindex = fromJust $ E.lookup ("font-index:"++fname) e
-    let E.HexFontInfo fontinfo = fromJust $ E.lookup ("font:"++fname) e
-    r <- processinputs cs e
+        E.HexFontInfo fontinfo = fromJust $ E.lookup ("font:"++fname) e
+        e' = E.globalinsert "current-mfont" (E.HexFontInfo fontinfo) e
+    r <- processinputs cs e'
     return ((SetMathFontCommand fontindex fontinfo fam fs):r)
 \end{code}
 

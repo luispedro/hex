@@ -5,15 +5,21 @@ module Measures
     , scale
     , scaledToRational
     , Dimen(..)
+    , UDimen(..)
     , Glue(..)
+    , UGlue(..)
     , Unit(..)
+    , asDimen
+    , asUDimen
     , zeroDimen
+    , zeroUDimen
     , dimenFromInches
     , dimenFromPoints
     , dimenFromFloatingPoints
     , dplus
     , dsub
     , dmul
+    , dscalef
     , dratio
     , dgt
     , dflip
@@ -24,6 +30,10 @@ module Measures
     ) where
 
 import Data.Ratio
+
+import FixWords
+
+import GHC.Float (float2Double)
 \end{code}
 
 Many operations in \TeX{} are performed with fixed point numbers, so we define
@@ -69,6 +79,10 @@ with names prefixed with \emph{d}:
 dmul :: Dimen -> Rational -> Dimen
 (Dimen np0) `dmul` f = Dimen $ round $ (toRational np0) * f
 dratio :: Dimen -> Dimen -> Rational
+
+dscalef :: FixWord -> Dimen -> Dimen
+f `dscalef` (Dimen p) = Dimen . round $ (fixToFloat f * fromInteger p)
+
 (Dimen np0) `dratio` (Dimen np1) = np0 % np1
 dflip :: Dimen -> Dimen
 dflip (Dimen np) = Dimen (-np)
@@ -88,6 +102,7 @@ We also add a couple of convenience converters:
 dimenFromPoints = Dimen . round . (*scalefactor)
 dimenFromFloatingPoints :: (RealFrac f) => f -> Dimen
 dimenFromFloatingPoints = Dimen . round . (*scalefactor)
+
 dimenFromInches = dimenFromPoints . inchesToPoints
 zeroDimen = Dimen 0
 \end{code}
@@ -95,13 +110,20 @@ zeroDimen = Dimen 0
 \tex{\Tex} recognises several units:
 
 \begin{code}
-data Unit = UnitEm | UnitEn | UnitPt | UnitPx | UnitIn | UnitFil | UnitFill deriving (Eq, Show)
+data Unit = UnitEm | UnitEn | UnitPt | UnitPx | UnitIn | UnitMu | UnitFil | UnitFill deriving (Eq, Show)
+data UDimen = UDimen !FixWord !Unit deriving (Eq, Show)
+
+zeroUDimen = UDimen 0 UnitPt
+
 dimenFromUnit :: Double -> Unit -> Dimen
 dimenFromUnit val UnitPt = dimenFromPoints val
 dimenFromUnit val UnitIn = dimenFromInches val
 dimenFromUnit val UnitFil = Dimen . round $ ((-1.0) * val)
 dimenFromUnit val UnitFill = Dimen . round $ ((-1.0) * val)
 dimenFromUnit _ u = error ("dimenFromUnit: not implemented: "++show u)
+
+asDimen (UDimen val u) = dimenFromUnit (float2Double . fixToFloat $ val) u
+asUDimen (Dimen val) = UDimen (fromInteger val) UnitPt
 \end{code}
 
 
@@ -114,6 +136,12 @@ data Glue = Glue
             , shrinkage :: !Dimen
             , expandable :: !Dimen
             , infLevel :: !Int
+            } deriving (Eq, Show)
+data UGlue = UGlue
+            { usize :: !UDimen
+            , ushrinkage :: !UDimen
+            , uexpandable :: !UDimen
+            , uinfLevel :: !Int
             } deriving (Eq, Show)
 \end{code}
 Eventually, this module will grow. For now, we define only paper size and hard
