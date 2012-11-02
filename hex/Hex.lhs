@@ -5,6 +5,7 @@ This is the main driver of the programme.
 \begin{code}
 module Hex
     ( processinputs
+    , processcommands
     , readFont
     ) where
 import System.IO.Error hiding (catch)
@@ -17,6 +18,8 @@ import System.Process (readProcess)
 import qualified Data.ByteString.Lazy as B
 import Data.IORef
 import Data.Maybe
+import Data.Time.Clock
+import Data.Time.Calendar
 
 import Macros
 import ParseTFM
@@ -28,6 +31,7 @@ import CharStream (prequeue)
 import qualified Environment as E
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.IO as LT
+
 type HexEnvironment = E.Environment String E.HexType
 \end{code}
 
@@ -93,6 +97,8 @@ ename (QScaled _ q) = "scaled:"++ename q
 getCount :: Quantity Integer -> HexEnvironment -> Integer
 getCount (QConstant v) = const v
 getCount cid = (\(E.HexInteger i) -> i) . getRegister "count" cid
+
+setCount :: Bool -> Quantity Integer -> Integer -> HexEnvironment -> HexEnvironment
 setCount = setRegister "count" E.HexInteger
 \end{code}
 
@@ -127,6 +133,23 @@ setSkip = setRegister "skip" E.HexGlue
 \end{code}
 In particular, it process \tex{\\bye}, \tex{\\input}, and
 \tex{\\message}.
+
+
+\begin{code}
+date :: IO (Integer,Int,Int) -- :: (year,month,day)
+date = getCurrentTime >>= return . toGregorian . utctDay
+
+initialenv :: HexEnvironment -> IO HexEnvironment
+initialenv e = do
+    (year, month, day) <- date
+    let e' = (setCount False (QInternal "\\year") $ toInteger year) .
+            (setCount False (QInternal "\\month") $ toInteger month) .
+            (setCount False (QInternal "\\day") $ toInteger day) $ e
+    return e'
+
+processcommands :: [Command] -> HexEnvironment -> IO [Command]
+processcommands cs e = initialenv e >>= processinputs cs
+\end{code}
 
 We start with the basics:
 

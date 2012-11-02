@@ -17,7 +17,7 @@ import Modes (vMode)
 import Measures (dimenFromInches)
 import Output (outputBoxes)
 import PageBreak (breakpages)
-import Hex (processinputs, readFont)
+import Hex (processcommands, readFont)
 
 import Defaults (startenv, plaintexenv)
 import qualified Environment as E
@@ -66,7 +66,7 @@ hex output fname = do
             fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue fname inputstr
             q = updateCharStream fileq (prequeue ("prexif",prefix))
 
-        commands <- processinputs (expand q) startingenv
+        commands <- processcommands (expand q) startingenv
         let result = buildout startingenv commands
         when output (B.putStr result)
         return ()

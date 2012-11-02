@@ -490,10 +490,15 @@ If found, the macro is expanded by \code{expand1'}
                     Just Macro{isOuter=io} -> io
                     _ -> False
                 isOuterMacro _ _ = False
-        backtotoks cv = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
 
 
 expand1 t = syntaxErrorConcat ["hex.Macros.expand1: asked to expand non-macro: ", show t]
+\end{code}
+
+A little utility function prints out anything as tokens
+\begin{code}
+backtotoks :: (Show a) => a -> [Token]
+backtotoks cv = (\s -> (CharToken (TypedChar s Other))) `map` (show cv)
 \end{code}
 
 Matching macro parameters is done by attempting to match delimiters. A special
@@ -1205,6 +1210,18 @@ process1 (ControlSequence "\\hexinternal") = do
     internalCommandM (cmd arg)
 \end{code}
 
+\begin{code}
+process1 (ControlSequence "\\the") = do
+    tk <- expandedTokenM
+    case tk of
+        CharToken _ -> puttokenM tk
+        ControlSequence csname
+            | csname `elem` iparameters -> maybeLookup id LookupCountHCommand (QInternal csname) (streamenqueueM . backtotoks)
+            | csname `elem` dparameters -> lookupDimen (QInternal csname) (streamenqueueM . backtotoks)
+            | csname `elem` gparameters -> lookupGlue (QInternal csname) (streamenqueueM . backtotoks)
+            | otherwise -> syntaxErrorConcat ["Saw ", show tk, " after \\the, which hex cannot handle"]
+\end{code}
+
 The \code{\\input} command has slightly different syntax than most commands,
 but again, it is just transformed into an \code{InternalCommand}
 
@@ -1263,7 +1280,6 @@ lookupGlue q f = do
                 let (_,_,cs) = runTkSS (f g >> expandM) e rest in
                 AL.toList cs
     internalCommandM $ LookupSkipHCommand q f'
-
 
 maybeLookup :: (a -> b) -> (Quantity a -> Lookup b -> HexCommand) -> Quantity a -> (b -> TkSS ()) -> TkSS ()
 maybeLookup t _ (QConstant v) f = f (t v)
