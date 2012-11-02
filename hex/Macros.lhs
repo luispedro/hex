@@ -961,6 +961,21 @@ If we encounter a \tex{\\fi}, just ignore it.
 process1 (ControlSequence "\\fi") = return ()
 \end{code}
 
+The switch statement, \tex{\ifcase}
+
+\begin{code}
+process1 (ControlSequence "\\ifcase") = do
+        val <- readENumberM
+        skipCaseM (val - 1)
+    where
+        skipCaseM 0 = skipifM True
+        skipCaseM n = (void $ gettokentilM isOr) >> skiptokenM >> skipCaseM (n-1)
+        isOr (ControlSequence "\\or") = True
+        isOr (ControlSequence "\\fi") = True
+        isOr _ = False
+process1 (ControlSequence "\\or") = skipifM False
+\end{code}
+
 If we have a primitive command, then just wrap it up and ship it down.
 
 Defining macros comes in two forms: \tex{\\def} and \tex{\\edef}. The only
@@ -1328,6 +1343,7 @@ readENumberOrCountM = local (++" -> readENumberOrCountM") $ do
                 Nothing -> syntaxErrorConcat ["hex.readENumberOrCountM undefined ", csname] >> return (QConstant 0)
                 n -> syntaxErrorConcat ["hex.readENumberOrCountM: unexpected: ", show n] >> return (QConstant 0)
 
+readENumberM :: TkSS Integer
 readENumberM = local (++" -> readENumberM") $ do
     n <- readENumberOrCountM
     case n of
