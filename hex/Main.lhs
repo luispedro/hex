@@ -1,8 +1,9 @@
 \begin{code}
-{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Text as LS
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.IO as LT
 import System.Console.CmdArgs
@@ -59,19 +60,20 @@ function "breaklines" = \inputstr -> do
             breaklines (E.setfont 0 fontinfo startenv) (asqueue "<input>" inputstr)
 function hmode = \_ -> putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
+hex :: Bool -> String -> IO ()
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
-        inputstr <- LT.readFile fname
-        let fileq :: TokenStream
-            fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue fname inputstr
+        let inputstr :: LT.Text
+            inputstr = LT.fromChunks $ map LS.pack ["\\input ", fname, "%\n"]
+            fileq :: TokenStream
+            fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue (fname :: String) inputstr
             q = updateCharStream fileq (prequeue ("prexif",prefix))
 
-        commands <- processcommands (expand q) startingenv
-        let result = buildout startingenv commands
+        commands <- processcommands (expand q) startenv
+        let result = buildout startenv commands
         when output (B.putStr result)
         return ()
     where
-        startingenv = E.globalinsert "currentfile" (E.HexString fname) startenv
         buildout env = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (vMode env)
 \end{code}
 
