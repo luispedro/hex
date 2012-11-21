@@ -81,6 +81,7 @@ Pushing and popping environments are simple list manipulations:
 \begin{code}
 push = (:) (M.empty :: (BaseEnvironment a b))
 pop [] = error "popping empty environment"
+pop [_] = error "popping will render environment empty"
 pop (_:es) = es
 \end{code}
 
@@ -120,6 +121,10 @@ setfont i fi e = e''
         e'' = insert "currentfont-index" (HexInteger i) e'
 \end{code}
 
+
+Math fonts come in different styles. This might not be the best place for these
+definitions, but they are first used here:
+
 \begin{code}
 data MathFontStyle = Textfont | Scriptfont | Scriptscriptfont
                     deriving (Eq, Show)
@@ -139,5 +144,4 @@ setmathfont i fi e fam fs = e''
 code Textfont = "textfont"
 code Scriptfont = "scriptfont"
 code Scriptscriptfont = "scriptscriptfont"
-
 \end{code}
