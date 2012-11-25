@@ -61,7 +61,7 @@ data Dimen = Dimen
             } deriving (Eq)
 
 instance Show Dimen where
-    show (Dimen n) = show n ++ "pt"
+    show (Dimen n) = show n ++ "sp"
 
 instance Ord Dimen where
     compare (Dimen np0) (Dimen np1) = compare np0 np1

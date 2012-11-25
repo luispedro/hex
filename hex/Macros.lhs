@@ -1216,6 +1216,15 @@ process1 (ControlSequence "\\the") = do
     tk <- expandedTokenM
     case tk of
         CharToken _ -> puttokenM tk
+        ControlSequence "\\count" -> do
+            n <- readENumberM
+            lookupCount (QRegister n) (streamenqueueM . backtotoks)
+        ControlSequence "\\dimen" -> do
+            n <- readENumberM
+            lookupDimen (QRegister n) (streamenqueueM . backtotoks)
+        ControlSequence "\\skip" -> do
+            n <- readENumberM
+            lookupGlue (QRegister n) (streamenqueueM . backtotoks)
         ControlSequence csname
             | csname `elem` iparameters -> lookupCount (QInternal csname) (streamenqueueM . backtotoks)
             | csname `elem` dparameters -> lookupDimen (QInternal csname) (streamenqueueM . backtotoks)
