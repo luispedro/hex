@@ -50,7 +50,10 @@ function :: String -> LT.Text -> IO ()
 function "chars" = putStrLn . concatMap show . chars
 function "tokens" = putStrLn . concatMap show . tokens . asqueue "<input>"
 function "expanded" = putStrLn . concatMap show . expanded . asqueue "<input>"
-
+function "commands" = \inputstr -> let
+            fileq :: TokenStream
+            fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue ("<input>" :: String) inputstr
+        in (processcommands (expand fileq) startenv) >>= (putStrLn . concatMap show)
 function "breaklines" = \inputstr -> do
     fontinfo <- readFont "cmr10"
     putStrLn $
