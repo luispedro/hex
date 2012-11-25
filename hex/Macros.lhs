@@ -611,6 +611,7 @@ macronotfounderror csname = do
 The main function, \code{expand} is a wrapper around the monadic \code{expandM}:
 
 \begin{code}
+expand :: TokenStream -> [Command]
 expand = expandE (ExpansionEnvironment E.empty False)
 expandE :: ExpansionEnvironment -> TokenStream -> [Command]
 expandE env st = AL.toList cs
@@ -772,8 +773,8 @@ updateFlagsM f = modify (\(ExpansionEnvironment e g,st) -> (ExpansionEnvironment
 \end{code}
 
 \begin{code}
-deprecated (ControlSequence "\\newlinechar") = deprecatedWarning "\\newlinechar is always \\n"
-deprecated (ControlSequence "\\pausing") = deprecatedWarning "\\pausing does nothing"
+deprecated (ControlSequence "\\newlinechar") = deprecatedWarning "Setting \\newlinechar has no effect (it is always set to \\n)"
+deprecated (ControlSequence "\\pausing") = deprecatedWarning "\\pausing is not implemented (the command has no effect)"
 deprecated _ = return ()
 deprecatedWarning msg = do
     (fname,line) <- fNamePosM
@@ -782,9 +783,9 @@ deprecatedWarning msg = do
 \end{code}
 
 \code{process1} is structured as a huge case statement (implemented with Haskell
-pattern matching). It consumes as many tokens as necessary to proces it
-sarguments. Some are handled at this level (e.g., \tex{\\let}), while others
-geenreate Commands.
+pattern matching). It consumes as many tokens as necessary to proces its
+arguments. Some are handled at this level (e.g., \tex{\\let}), while others
+generate Commands.
 
 \begin{code}
 process1 :: Token -> TkSS ()
