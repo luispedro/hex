@@ -950,8 +950,8 @@ process1 (ControlSequence "\\ifnum") = do
             t -> error $ concat ["hex.process1(ifnum): expected relationship character, got ", show t]
     val1 <- readENumberOrCountM
     let continuation v0 v1 = (skipifM $ evaluatenum v0 (value rel) v1) >> return ()
-        continuation0 v = maybeLookup id LookupCountHCommand val1 (continuation v)
-    maybeLookup id LookupCountHCommand val0 continuation0
+        continuation0 v = lookupCount val1 (continuation v)
+    lookupCount val0 continuation0
 \end{code}
 
 If we run into an \tex{\\else}, then, we were on the true clause of an if and
@@ -1009,7 +1009,7 @@ process1 (ControlSequence cdef)
         name <- getCSM ("Expected control sequence after "++cdef)
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup id LookupCountHCommand noc $ \charcode -> do
+        lookupCount noc $ \charcode -> do
             updateEnvM (E.insert name (cdefcons charcode))
     where
         cdefcons = if cdef == "\\chardef"
@@ -1023,7 +1023,7 @@ process1 (ControlSequence cddef)
         name <- getCSM ("Expected a control sequence after "++cddef)
         maybeeqM
         noc <- readENumberOrCountM
-        maybeLookup id LookupCountHCommand noc $ \cid -> do
+        lookupCount noc $ \cid -> do
             updateEnvM (E.insert name (c cid))
     where
         c = case cddef of
@@ -1048,7 +1048,7 @@ process1 (ControlSequence "\\count") = do
     maybeeqM
     noc <- readENumberOrCountM
     isg <- flagsM
-    maybeLookup id LookupCountHCommand noc $ \val ->
+    lookupCount noc $ \val ->
         tell1 (SetCountCommand isg (QRegister cid) val)
 \end{code}
 
@@ -1059,7 +1059,7 @@ process1 (ControlSequence csname)
         maybeeqM
         noc <- readENumberOrCountM
         isg <- flagsM
-        maybeLookup id LookupCountHCommand noc $ \val ->
+        lookupCount noc $ \val ->
             tell1 (SetCountCommand isg (QInternal csname) val)
 \end{code}
 
@@ -1170,7 +1170,7 @@ information and pass it down.
 process1 (ControlSequence cs)
     | cs `elem` ["\\textfont", "\\scriptfont", "\\scriptscriptfont"] = do
         mfam <- readENumberOrCountM
-        maybeLookup id LookupCountHCommand mfam $ \fam -> do
+        lookupCount mfam $ \fam -> do
             maybeeqM
             ControlSequence fc <- gettokenM
             e <- envM
@@ -1217,7 +1217,7 @@ process1 (ControlSequence "\\the") = do
     case tk of
         CharToken _ -> puttokenM tk
         ControlSequence csname
-            | csname `elem` iparameters -> maybeLookup id LookupCountHCommand (QInternal csname) (streamenqueueM . backtotoks)
+            | csname `elem` iparameters -> lookupCount (QInternal csname) (streamenqueueM . backtotoks)
             | csname `elem` dparameters -> lookupDimen (QInternal csname) (streamenqueueM . backtotoks)
             | csname `elem` gparameters -> lookupGlue (QInternal csname) (streamenqueueM . backtotoks)
             | otherwise -> syntaxErrorConcat ["Saw ", show tk, " after \\the, which hex cannot handle"]
@@ -1282,14 +1282,14 @@ lookupGlue q f = do
                 AL.toList cs
     internalCommandM $ LookupSkipHCommand q f'
 
-maybeLookup :: (a -> b) -> (Quantity a -> Lookup b -> HexCommand) -> Quantity a -> (b -> TkSS ()) -> TkSS ()
-maybeLookup t _ (QConstant v) f = f (t v)
-maybeLookup _ t q f = do
+lookupCount :: (Quantity Integer) -> (Integer -> TkSS ()) -> TkSS ()
+lookupCount (QConstant v) f = f v
+lookupCount q f = do
     (e,rest) <- get
     let f' = Lookup $ \v ->
                 let (_,_,cs) = runTkSS (f v >> expandM) e rest in
                 AL.toList cs
-    internalCommandM $ t q f'
+    internalCommandM (LookupCountHCommand q f')
 \end{code}
 
 A simple function to read an integer from tokens, which just calls on
