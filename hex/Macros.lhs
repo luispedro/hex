@@ -1,6 +1,7 @@
 \section{Macros}
 
-Macros are the mechanism for TeX scripting.
+Macros are the mechanism for TeX scripting. They are token based, but can
+influence the tokenization process itself.
 
 \begin{code}
 module Macros

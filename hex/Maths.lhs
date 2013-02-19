@@ -151,5 +151,6 @@ spacingM a b = do
 
 As usual, we hide it all inside a pure interface, which is exported:
 \begin{code}
+typesetMList  :: Environment -> MList -> [HElement]
 typesetMList e ml = runMathSet (setM ml) (e, E.Textfont)
 \end{code}

@@ -46,29 +46,43 @@ annotate ::  CategoryTable -> Char -> TypedChar
 annotate tab c = TypedChar{value=c, category=E.lookupWithDefault Other c tab}
 \end{code}
 
-This encodes a typed character stream
+This encodes a typed character stream. We remember the line number and file
+name in order to be able to print them out in error messages. Because we can
+include files from other files, we have a list of streams: each stream points
+to the one to use once the current one becomes empty.
 
 \begin{code}
-
 data NamedCharStream = EofNCS
     | NamedCharStream
-                { ncsData :: LT.Text
-                , ncsLine :: !Int
-                , ncsFname :: String
-                , ncsNext :: NamedCharStream
+                { ncsData :: LT.Text -- ^ input data
+                , ncsLine :: !Int -- ^ current line number
+                , ncsFname :: String -- ^ current file name
+                , ncsNext :: NamedCharStream -- ^ next stream
                 }
     deriving (Eq, Show)
+\end{code}
 
+A constructor:
+\begin{code}
 asqueue :: String -> LT.Text -> NamedCharStream
 asqueue fname cs = NamedCharStream cs 1 fname EofNCS
+\end{code}
 
+\haskell{_safeget} is the raw input function
+\begin{code}
 _safeget :: NamedCharStream -> Maybe (Char,NamedCharStream)
 _safeget EofNCS = Nothing
 _safeget s@NamedCharStream{ncsData=r, ncsLine=line, ncsNext=next} = case LT.uncons r of
     Nothing -> _safeget next
     Just ('\n',cs) -> Just ('\n',s{ncsData=cs,ncsLine=(1+line)})
     Just (c,cs) -> Just (c,s{ncsData=cs})
+\end{code}
 
+The character stream handles converting \tex{^^ab} encoded characters into real
+characters. Note that this is simply a way to input 8-bit characters when the
+underlying system does not handle it.
+
+\begin{code}
 gethathat :: NamedCharStream -> Maybe (Char, NamedCharStream)
 gethathat s0 = do
     (c1,s1) <- _safeget s0
@@ -79,7 +93,9 @@ gethathat s0 = do
     let ov = ord v
         c = chr $ ov + (if ov >= 64 then (-64) else 64)
     return (c,s3)
+\end{code}
 
+\begin{code}
 data TypedCharStream = TypedCharStream
                 { table :: CategoryTable
                 , remaining :: NamedCharStream
@@ -93,11 +109,14 @@ returns \code{Nothing}. Up to this level, \code{error} is never called.
 
 \begin{code}
 getchar :: TypedCharStream -> Maybe (TypedChar, TypedCharStream)
-getchar st@TypedCharStream{table=tab,remaining=q } = (gethathat q <|> _safeget q) >>= (\(c,q') -> Just (annotate tab c, st{remaining=q'}))
+getchar st@TypedCharStream{table=tab,remaining=q } =
+                gethathat q <|> _safeget q >>= \(c,q') ->
+                    Just (annotate tab c, st{remaining=q'})
 \end{code}
 
 This is retrieves the inner positional information:
 \begin{code}
+fnameLine :: TypedCharStream -> (String, Int)
 fnameLine TypedCharStream{remaining=q} = (ncsFname q, ncsLine q)
 \end{code}
 

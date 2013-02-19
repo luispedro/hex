@@ -1,6 +1,6 @@
 \section{Tokens}
 
-This handles Token parsing into a token stream
+This module handles Token parsing. It transforms a char stream into a token stream
 
 \begin{code}
 module Tokens
@@ -67,7 +67,8 @@ as a datatype. Unfortunately, we also need to define the ugly
 newtype StateFunction = StateFunction { applyStateFunction :: TypedCharStream -> Maybe (Token, TypedCharStream, StateFunction) }
 \end{code}
 
-Now, the implementation of the two easy states: S \& N.
+Now, the implementation of the two easy states: S \& N. N is the Newline state.
+We transform another newline into \tex{\\par} and otherwise ignore spaces.
 
 \begin{code}
 sN = StateFunction sN' where
@@ -77,6 +78,12 @@ sN = StateFunction sN' where
             | category c == EOL -> Just (ControlSequence "\\par", rest, sN)
             | category c == Space -> sN' rest
             | otherwise -> applyStateFunction sM st
+\end{code}
+
+S is the space state. Multiple spaces get collapsed here as we ignore them
+until we get a character.
+
+\begin{code}
 sS = StateFunction sS' where
     sS' st = case getchar st of
         Nothing -> Nothing
@@ -87,7 +94,7 @@ sS = StateFunction sS' where
 \end{code}
 
 \code{sM} does most of the real work of transforming \code{TypedChar}s into
-\code{Token}s.
+\code{Token}s. This is the M state: middle of a line.
 
 Almost everything is a \code{CharToken}, except single non-letters or a word
 following an \code{Escape}. A word is a sequence of \code{Letter}s followed by
@@ -137,9 +144,16 @@ data TokenStream = TokenStream
                 , state :: StateFunction
                 , queue :: [Token]
                 }
+\end{code}
 
+We need an \haskell{Eq} instance for \haskell{TokenStream} because we are using
+these inside \haskell{Command}.
+\begin{code}
 instance Eq TokenStream where
     _ == _ = False
+\end{code}
+
+\begin{code}
 instance Show TokenStream where
     show (TokenStream _cs _state q) = show _cs ++ show q
 
@@ -148,9 +162,10 @@ newTokenStream cs = TokenStream cs sN []
 \end{code}
 
 The main function of this module is \code{gettoken}, which returns a pair
-\code{(Token, TokenStream)}. This could easily be modified into a Monadic
-interface.
+\code{(Token, TokenStream)} unless the stream is empty.
 
+If the queue has tokens, return them; otherwise, read from the character
+stream:
 \begin{code}
 gettoken :: TokenStream -> Maybe (Token, TokenStream)
 gettoken tSt@TokenStream{queue=(t:ts)} = Just (t,tSt{queue=ts})
@@ -189,8 +204,7 @@ toksToStr = map charof
 \end{code}
 
 
-We also add a function to manipulate the underlying character stream.
-
+Finally, we need to provide access to the underlying character stream.
 \begin{code}
 updateCharStream t@TokenStream{charsource=s} f = t{charsource=f s}
 \end{code}

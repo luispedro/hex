@@ -78,10 +78,12 @@ data DVIStream = DVIStream { rstream :: B.ByteString
                            , fontDefs :: [FontDef]
                            , currentFont :: Integer
                            } deriving (Eq)
+type DVIWriter a = State DVIStream a
 \end{code}
 
 We store the stream in reverse form for performance. This way, we are always
-appending to the front (which is fast).
+appending to the front (which is fast). When retrieve the stream, we reverse
+it:
 
 \begin{code}
 stream = B.reverse. rstream
@@ -168,7 +170,7 @@ function names correspond to DVI commands, with the exception of the
 setchar c
     | c < 128 = put1 c
     | otherwise = error "hex.DVI.setchar: c >= 128!"
-nop = (138 :: Integer)
+nop = put1 138
 bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 _p = do
         thisBop <- getCurPos
         put1 139
@@ -285,6 +287,7 @@ startwcomment comment = pre 2 tex_num tex_den tex_mag k x
         x = map (toInteger . ord) comment
 startfile = startwcomment "Written by hex"
 
+newpage :: DVIWriter Integer
 newpage = do
     page <- getTotalPages
     bop (page + 1) 0 0 0 0 0 0 0 0 0 (page + 1)

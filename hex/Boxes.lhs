@@ -64,12 +64,12 @@ string), a kern (which represents a vspace for vboxes), or a list of other
 boxes.
 
 \begin{code}
-data BoxContents = CharContent Char Integer -- Char Font
-                    | Kern Dimen
+data BoxContents = CharContent Char Integer -- ^ Char FontIndex
+                    | Kern Dimen -- ^ A Kerning
                     | VBoxList [VBox]
                     | HBoxList [HBox]
                     | TransformedContent BoxTransform BoxContents
-                    | DefineFontContent (FontDef, F.FontInfo)
+                    | DefineFontContent (FontDef, F.FontInfo) -- ^ This is a special thing, not a box
                     deriving (Eq)
 instance Show BoxContents where
     show (CharContent c _) = [c]

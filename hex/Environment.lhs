@@ -28,9 +28,8 @@ import DVI (FontDef)
 import Measures
 \end{code}
 
-This module implements the hex environment, the object which saves what TeX
-calls ``parameters'' and macros.
-
+This module implements the hex environment, which is a nested series of
+namespaces.
 The environment holds a sort of variant type, \code{HexType}:
 \begin{code}
 data HexType =
@@ -43,9 +42,12 @@ data HexType =
         | HexScaledNumber Scaled
 \end{code}
 
-An environment is a nested sequence of mappings, which we implement as a list.
-The head mapping is the deeper element. As we search for an element, we look
-for environments through the list and return the first match found.
+In the TeXbook, the implementation and the specification is mixed
+together and there is a lot of talk of restoring the variable values at the end
+of a block. Naturally, this can be achieved in other ways. We use a list as the
+implementation. The head mapping is the deeper element. As we search for an
+element, we look for environments through the list and return the first match
+found.
 
 \begin{code}
 type BaseEnvironment a b = M.Map a b
@@ -60,6 +62,7 @@ empty :: Environment a b
 empty = [M.empty :: (BaseEnvironment a b)]
 \end{code}
 
+Making the nesting level visible level is useful for diagnostic of user errors:
 \begin{code}
 level :: Environment a b -> Int
 level = length

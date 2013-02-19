@@ -131,9 +131,10 @@ breakParagraphIntoLines w elems = breakat w elems' $ algo w elems'
         elems' = _preprocessParagraph elems
 \end{code}
 
-\code{_texBreak} implements the \TeX{} line breaking algorithm.
+\code{_texBreak} implements the \TeX{} line breaking algorithm. It returns the
+positions at which to insert the breaks.
 
-\code{breakat} takes the elements and a list of breaks and returns a list of
+\code{breakat} takes the elements and the list of breaks and returns a list of
 Vboxes.
 
 \begin{code}
@@ -185,8 +186,9 @@ demerit textwidth velems nat_exp_shr s ell = if canbreak then badness + curpenal
         (nt_e,ex_e,sh_e) = nat_exp_shr ! ee
 \end{code}
 
-This is equivalent to cumsum on the 3 dimensions. It makes it fast to compute
-partial sums (i.e., sum (slice velems i j))
+We will use many partial sums of widths, shrinkages, and stretchs. To makes
+these fasts, we compute all the cummulative sums. Then, we get the nice
+property that \haskell{sum (slice velems i j) == (summed ! j) - (summed ! i)}.
 \begin{code}
 _acc_sizes = V.scanl props (zeroDimen,zeroDimen,zeroDimen)
     where
@@ -196,11 +198,14 @@ _acc_sizes = V.scanl props (zeroDimen,zeroDimen,zeroDimen)
 This implements a slightly different algorithm than \TeX\ does. It is a simpler
 and less efficient implementation as it does the full dynamic programming
 without early exits that are easier to achieve in a more imperative style.
+
+We use Haskell lazyness for the dynamic programming.
 \begin{code}
 _texBreak :: Dimen -> [B.HElement] -> [Int]
 _texBreak _ [] = []
 _texBreak textwidth elems = snd $ bfcache ! 0
     where
+        -- We convert elems to a vector for speed
         velems = V.fromList elems
         n = V.length velems
         nat_exp_shr = _acc_sizes velems
@@ -226,7 +231,9 @@ _texBreak textwidth elems = snd $ bfcache ! 0
                         vm = min v (first + valm)
                         first = (demerits_s ! m)
 
+        bfcache :: V.Vector (Ratio Integer, [Int])
         bfcache = V.generate (n+1) bestfit
+        dtable :: V.Vector (V.Vector (Ratio Integer))
         dtable = V.generate (n+1) (\i -> V.generate (n-i) (demerit textwidth velems nat_exp_shr i))
 \end{code}
 
