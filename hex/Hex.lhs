@@ -10,11 +10,11 @@ module Hex
     ) where
 import System.IO.Error hiding (catch)
 import Prelude hiding (catch)
+import System.Exit
 import System.IO.Unsafe
 import System.FilePath.Posix
-import Control.Monad
 import Control.Exception
-import System.Process (readProcess)
+import System.Process (readProcessWithExitCode)
 import qualified Data.ByteString.Lazy as B
 import Data.IORef
 import Data.Maybe
@@ -56,7 +56,14 @@ To read and write fonts:
 
 \begin{code}
 fontpath :: String -> IO String
-fontpath fname = liftM init $ readProcess "kpsewhich" [fname ++ ".tfm"] []
+fontpath fname = do
+    (exit,pstdout,_pstderr) <- readProcessWithExitCode "kpsewhich" [fname ++ ".tfm"] []
+    case exit of
+        ExitSuccess -> return (init pstdout)
+        ExitFailure e -> error $ concat [
+                    "Command 'kpsewhich' failed (Error :", show e, ").\n",
+                    "At this stage, HeX needs traditional TeX to be installed for font information.\n"
+                    ]
 
 readFont :: String -> IO (FontDef,FontInfo)
 readFont fname = do
