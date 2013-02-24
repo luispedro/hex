@@ -3,14 +3,14 @@
 module Main where
 
 import qualified Data.ByteString.Lazy as B
-import qualified Data.Text as LS
+import qualified Data.Text as TS
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.IO as LT
 import System.Console.CmdArgs
 import Control.Monad
 import Control.Monad.RWS.Strict
 
-import CharStream -- (annotate,TypedCharStream)
+import CharStream (asqueue,prequeue,annotate,TypedCharStream(..))
 import qualified Boxes
 import Tokens
 import Macros (expand, gettokentilM)
@@ -31,8 +31,8 @@ version = "0.0.6+git"
 \end{code}
 
 The implementation is simple: each subcommand is a function which takes the
-input file (as a string) and produces an output string. The \var{function}
-table maps strings to these functions.
+input file (as a string) and produces an output string. The \haskell{function}
+maps strings to these functions.
 
 \begin{code}
 prefix = LT.pack "\\hexinternal{loadfont}{cmr10}\\hexinternal{selectfont}{cmr10}"
@@ -63,11 +63,17 @@ function "breaklines" = \inputstr -> do
             breaklines (E.setfont 0 fontinfo startenv) (asqueue "<input>" inputstr)
 function hmode = \_ -> putStrLn ("Error: unknown mode `" ++ hmode ++ "`")
 
+\end{code}
+
+
+\haskell{hex} is the main function, taking an input filename and optionally
+outputing the resulting DVI.
+\begin{code}
 hex :: Bool -> String -> IO ()
 hex output "-" = hex output "/dev/stdin"
 hex output fname = do
         let inputstr :: LT.Text
-            inputstr = LT.fromChunks $ map LS.pack ["\\input ", fname, "%\n"]
+            inputstr = LT.fromChunks $ map TS.pack ["\\input ", fname, "%\n"]
             fileq :: TokenStream
             fileq = newTokenStream $ TypedCharStream plaintexenv $ asqueue (fname :: String) inputstr
             q = updateCharStream fileq (prequeue ("prexif",prefix))
@@ -80,8 +86,8 @@ hex output fname = do
         buildout env = (outputBoxes env) . (breakpages (dimenFromInches 7)) . (vMode env)
 \end{code}
 
-There are currently two options, a mode and a file name:
-
+There are currently two options, the mode and a file name. Both are optional,
+mode defaults to "hex", and filename to "-" (i.e., standard input).
 \begin{code}
 data HexCmd = HexCmd
                 { mode :: String
@@ -94,8 +100,7 @@ hexcmds = HexCmd
             verbosity &=
             summary sumtext &=
             details ["Hex implements the TeX language"]
-    where sumtext = concat ["Hex v", version, " (C) Luis Pedro Coelho 2011-2012"]
-
+    where sumtext = concat ["Hex v", version, " (C) Luis Pedro Coelho 2011-2013"]
 \end{code}
 
 Main function does not do a lot of error checking, but just gets the arguments
