@@ -109,6 +109,7 @@ data HexCommand =
         | DeprecatedCommand String
         | InputCommand String
         | MessageCommand Bool String
+        | WriteCommand Bool Integer String
         | LoadfontHCommand String
         | SelectfontHCommand String
         | SetMathFontHCommand String Integer E.MathFontStyle
@@ -179,6 +180,7 @@ instance Show HexCommand where
     show (DeprecatedCommand errmsg) = "deprecated:"++errmsg
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand _ism msg) = "message:"++msg
+    show (WriteCommand onr _ism msg) = "write("++show onr++"):"++msg
     show (LoadfontHCommand fname) = "loadfont:"++fname
     show (SelectfontHCommand fname) = "selectfont:"++fname
     show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
@@ -1212,6 +1214,16 @@ process1 (ControlSequence cs) | cs `elem` ["error","\\message"] = do
         cmd = if cs == "error" then ErrorCommand else (MessageCommand ism)
     internalCommandM (cmd arg)
 \end{code}
+\begin{code}
+process1 (ControlSequence "\\write") = do
+    ism <- immediateFlag `fmap` flagsM
+    onrq <- readENumberOrCountM
+    lookupCount onrq $ \onr -> do
+        arguments <- (getargs [DelimParameter 0, DelimEmpty])
+        let [(0,argtoks)] = arguments
+            arg = toksToStr argtoks
+        internalCommandM (WriteCommand ism onr arg)
+\end{code}
 
 The \tex{\\hexinternal} is a generic command for accessing hex internals:
 
@@ -1370,6 +1382,7 @@ This reads expanded tokens to form a number (including interpreting CharDef as
 a number, which is what TeX does):
 
 \begin{code}
+readENumberOrCountM :: TkSS (Quantity Integer)
 readENumberOrCountM = local (++" -> readENumberOrCountM") $ do
     t <- gettokenM
     case t of
