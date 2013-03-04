@@ -193,9 +193,11 @@ done.
 processinputs ((InternalCommand _ _ ByeCommand):_) _ = return []
 \end{code}
 
-Another simple commmand is the \code{MessageCommand}, which outputs its message.
+Another simple commmand is the \code{MessageCommand}, which outputs its
+message. At the moment, the immediate flag is ignored.
+
 \begin{code}
-processinputs ((InternalCommand _ _ (MessageCommand msg)):cs) e = (putStrLn msg) >> (processinputs cs e)
+processinputs ((InternalCommand _ _ (MessageCommand _ msg)):cs) e = (putStrLn msg) >> (processinputs cs e)
 \end{code}
 
 At the moment, deprecated commands are handled like messages:

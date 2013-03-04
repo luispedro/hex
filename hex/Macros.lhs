@@ -16,6 +16,7 @@ module Macros
     , gettokenM
     , gettokentilM
     , readNumberM
+    , _newFlags
     , _readUGlueM
     , _breakAtGroupEnd
     ) where
@@ -85,10 +86,17 @@ Now, an environment simply maps macro names (\code{String}s) to \code{Macro}s.
 
 \begin{code}
 type MacroEnvironment = E.Environment String Macro
-type Flags = Bool
+data Flags = Flags
+            { globalFlag :: Bool
+            , immediateFlag :: Bool
+            } deriving (Eq,Show)
+_newFlags = Flags False False
+setGlobalFlag g (Flags _ i) = Flags g i
+setImmediateFlag i (Flags g _) = Flags g i
+
 data ExpansionEnvironment = ExpansionEnvironment
                         { definitions :: MacroEnvironment
-                        , flags :: Bool
+                        , flags :: Flags
                         } deriving (Eq, Show)
 \end{code}
 
@@ -100,7 +108,7 @@ data HexCommand =
         ErrorCommand String
         | DeprecatedCommand String
         | InputCommand String
-        | MessageCommand String
+        | MessageCommand Bool String
         | LoadfontHCommand String
         | SelectfontHCommand String
         | SetMathFontHCommand String Integer E.MathFontStyle
@@ -170,7 +178,7 @@ instance Show HexCommand where
     show (ErrorCommand errmsg) = "error:"++errmsg
     show (DeprecatedCommand errmsg) = "deprecated:"++errmsg
     show (InputCommand fname) = "input:"++fname
-    show (MessageCommand msg) = "message:"++msg
+    show (MessageCommand _ism msg) = "message:"++msg
     show (LoadfontHCommand fname) = "loadfont:"++fname
     show (SelectfontHCommand fname) = "selectfont:"++fname
     show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
@@ -569,9 +577,9 @@ definemacro long _outer "\\outer" = (getCSM "Expected control sequence after \\o
 definemacro long outer csname
     | csname `elem` ["\\gdef","\\xdef","\\edef","\\def"] = do
         next <- getCSM "Expected control sequence after \\def"
-        globalFlag <- flagsM
+        global <- globalFlag `fmap` flagsM
         let insertfunction = if
-                    globalFlag || (csname `elem` ["\\gdef", "\\xdef"])
+                    global || (csname `elem` ["\\gdef", "\\xdef"])
                 then E.globalinsert
                 else E.insert
         env <- envM
@@ -579,7 +587,7 @@ definemacro long outer csname
         skiptokenM
         substitutiontext <- breakAtGroupEndM 0
         let macro = Macro args substitution outer long
-            expandedsubtext = map toToken $ expandE (ExpansionEnvironment env False) $ tokenliststream substitutiontext
+            expandedsubtext = map toToken $ expandE (ExpansionEnvironment env _newFlags) $ tokenliststream substitutiontext
             substitution = if edef then expandedsubtext else substitutiontext
         updateEnvM (insertfunction next macro)
     | otherwise = fail "Unexpected control sequence"
@@ -613,7 +621,7 @@ The main function, \code{expand} is a wrapper around the monadic \code{expandM}:
 
 \begin{code}
 expand :: TokenStream -> [Command]
-expand = expandE (ExpansionEnvironment E.empty False)
+expand = expandE (ExpansionEnvironment E.empty _newFlags)
 expandE :: ExpansionEnvironment -> TokenStream -> [Command]
 expandE env st = AL.toList cs
     where
@@ -999,7 +1007,14 @@ We handle \code{\\global} by simply transforming it into \code{\\gdef} or
 \code{\\xdef}. This will immediately ``goto'' the code above:
 \begin{code}
 process1 (ControlSequence "\\global") = do
-    updateFlagsM (const True)
+    updateFlagsM (setGlobalFlag True)
+    gettokenM >>= process1
+\end{code}
+
+Similarly, \tex{\immediate} is handled by setting a flag:
+\begin{code}
+process1 (ControlSequence "\\immediate") = do
+    updateFlagsM (setImmediateFlag True)
     gettokenM >>= process1
 \end{code}
 
@@ -1048,7 +1063,7 @@ process1 (ControlSequence "\\count") = do
     cid <- readNumberM
     maybeeqM
     noc <- readENumberOrCountM
-    isg <- flagsM
+    isg <- globalFlag `fmap` flagsM
     lookupCount noc $ \val ->
         tell1 (SetCountCommand isg (QRegister cid) val)
 \end{code}
@@ -1059,7 +1074,7 @@ process1 (ControlSequence csname)
     | csname `elem` iparameters = do
         maybeeqM
         noc <- readENumberOrCountM
-        isg <- flagsM
+        isg <- globalFlag `fmap` flagsM
         lookupCount noc $ \val ->
             tell1 (SetCountCommand isg (QInternal csname) val)
 \end{code}
@@ -1070,7 +1085,7 @@ process1 (ControlSequence "\\dimen") = do
     cid <- readNumberM
     maybeeqM
     dim <- readEDimenM
-    isg <- flagsM
+    isg <- globalFlag `fmap` flagsM
     lookupDimen dim $ \val ->
         tell1 (SetDimenCommand isg (QRegister cid) (asUDimen val))
 \end{code}
@@ -1080,7 +1095,7 @@ process1 (ControlSequence csname)
     | csname `elem` dparameters = do
         maybeeqM
         dim <- readEDimenM
-        isg <- flagsM
+        isg <- globalFlag `fmap` flagsM
         lookupDimen dim $ \val ->
             tell1 (SetDimenCommand isg (QInternal csname) (asUDimen val))
 \end{code}
@@ -1091,7 +1106,7 @@ process1 (ControlSequence "\\skip") = do
     cid <- readNumberM
     maybeeqM
     skip <- _readUGlueM
-    isg <- flagsM
+    isg <- globalFlag `fmap` flagsM
     lookupGlue skip $ \g ->
         tell1 (SetSkipCommand isg (QRegister cid) g)
 
@@ -1099,7 +1114,7 @@ process1 (ControlSequence csname)
     | csname `elem` gparameters = do
         maybeeqM
         skip <- _readUGlueM
-        isg <- flagsM
+        isg <- globalFlag `fmap` flagsM
         lookupGlue skip $ \g ->
             tell1 (SetSkipCommand isg (QInternal csname) g)
 \end{code}
@@ -1110,7 +1125,7 @@ process1 (ControlSequence csname)
     | csname `elem` mparameters = do
         maybeeqM
         QConstant val <- _readUGlueM
-        isg <- flagsM
+        isg <- globalFlag `fmap` flagsM
         tell1 (SetMuGlueCommand isg (QInternal csname) val)
 \end{code}
 
@@ -1121,8 +1136,8 @@ process1 (ControlSequence "\\advance") = do
         maybeToksM "by"
         maybespaceM
         val <- readENumberOrCountM
-        isg <- flagsM
-        updateFlagsM (const False)
+        isg <- globalFlag `fmap` flagsM
+        updateFlagsM (setGlobalFlag False)
         tell1 (AdvanceCountCommand isg (QRegister count) val)
     where
         maybeToksM = mapM_ maybeTokM
@@ -1191,9 +1206,10 @@ Errors and messages are similar and handled by the same case (they are similar):
 \begin{code}
 process1 (ControlSequence cs) | cs `elem` ["error","\\message"] = do
     arguments <- (getargs [DelimParameter 0, DelimEmpty])
+    ism <- immediateFlag `fmap` flagsM
     let [(0,argtoks)] = arguments
         arg = toksToStr argtoks
-        cmd = if cs == "error" then ErrorCommand else MessageCommand
+        cmd = if cs == "error" then ErrorCommand else (MessageCommand ism)
     internalCommandM (cmd arg)
 \end{code}
 
