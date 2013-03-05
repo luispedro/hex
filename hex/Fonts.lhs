@@ -7,6 +7,8 @@ module Fonts
     , FontInfo(..)
     , widthHeightDepth
     ) where
+import Data.Convertible
+import Data.Convertible.Base ()
 import Data.Word
 import Data.Char
 import FixWords
@@ -19,7 +21,7 @@ strings:
 
 \begin{code}
 fontName :: String -> [Word8]
-fontName = map (fromInteger . toInteger . ord)
+fontName = map convert
 \end{code}
 
 A font is information about gliphs, ligatures, kerning, and some extra bits.
@@ -43,14 +45,17 @@ instance Show GliphMetric where
 \end{code}
 
 In addition to the gliphs, a font has information on the space:
-
 \begin{code}
 data SpaceInfo = SpaceInfo
                     { size :: FixWord
                     , stretch :: FixWord
                     , shrink :: FixWord
                     } deriving (Eq, Show)
+\end{code}
 
+A linear list is a very poor implementation the gliph information and should
+eventually be replaced by a real structure:
+\begin{code}
 data FontInfo = FontInfo
             { gliphInfo :: [GliphMetric]
             , spaceInfo :: SpaceInfo
