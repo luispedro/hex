@@ -26,7 +26,7 @@ SOURCES :=  \
 hex: Main.lhs $(SOURCES)
 	ghc $(GHCOPTS) --make -O2 $^ -o $@
 
-hextest: Tests.hs $(SOURCES)
+hextest: TestExpanded.hs Tests.hs $(SOURCES)
 	ghc $(GHCOPTS) --make -O $^ -o $@
 
 tests: hextest

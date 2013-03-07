@@ -5,11 +5,13 @@ module Main where
 
 -- Import basic functionality and our own modules
 
+import Test.Framework
 import Test.Framework.TH
 import Test.HUnit
 import Test.QuickCheck
 import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2
+
 import System.IO.Unsafe
 import qualified Data.Vector as V
 import qualified Data.Text.Lazy as LT
@@ -34,9 +36,11 @@ import qualified Environment as E
 import qualified Fonts as F
 import qualified Boxes as B
 
+import TestExpanded (expandedTestGroup)
 -- The main driver
 
-main = $(defaultMainGenerator)
+main = defaultMain [mainTestGroup, expandedTestGroup]
+mainTestGroup = $(testGroupGenerator)
 
 prop_dmul_dflipped p = mulled == flipped
     where
