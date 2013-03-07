@@ -11,7 +11,7 @@ import Test.Framework.Providers.QuickCheck2
 
 import qualified Data.Text.Lazy as LT
 import Tokens
-import CharStream (asqueue,prequeue,annotate,TypedCharStream(..))
+import CharStream (asqueue,TypedCharStream(..))
 import Macros (expand)
 import Defaults (plaintexenv)
 
