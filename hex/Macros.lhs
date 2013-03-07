@@ -349,6 +349,7 @@ unexpandable =
 processed =
     ["\\string"
     ,"\\csname"
+    ,"\\expandafter"
     ]
 isunexpandable csname = (csname `elem` unexpandable)
                 || (csname `elem` magic)

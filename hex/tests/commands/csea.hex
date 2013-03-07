@@ -1,0 +1,4 @@
+\def\bc{bc}%
+\def\a{\b}%
+\csname\expandafter\string\a c\endcsname%
+\bye
