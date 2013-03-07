@@ -1,5 +1,5 @@
 all: hex hextest dvidecode
-.PHONY: all clean
+.PHONY: all clean tests
 GHCOPTS := -odir .objs -hidir .objs -Wall -fwarn-tabs -fno-warn-missing-signatures
 
 SOURCES :=  \
@@ -28,6 +28,9 @@ hex: Main.lhs $(SOURCES)
 
 hextest: Tests.hs $(SOURCES)
 	ghc $(GHCOPTS) --make -O $^ -o $@
+
+tests: hextest
+	./tests.zsh
 
 dvidecode: DVIDecode.lhs DVI.lhs
 	ghc $(GHCOPTS) --make -O2 $^ -o $@
