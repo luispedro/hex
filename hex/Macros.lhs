@@ -27,7 +27,7 @@ import Data.Bits
 import Data.Maybe
 import Control.Monad
 import Control.Monad.Trans.RWS.Strict
-import qualified Data.AList as AL
+import qualified Data.DList as AL
 
 import DVI
 import Fonts
@@ -647,7 +647,7 @@ expandM = do
 To make code simpler, we define a \code{TokenStream} monad, abbreviated TkS:
 
 \begin{code}
-type CList = AL.AList Command
+type CList = AL.DList Command
 type TkS e a = RWS String CList (e,TokenStream) a
 
 tell1 = tell . AL.singleton

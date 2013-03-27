@@ -11,7 +11,7 @@ import FixWords (FixWord, fixToFloat)
 import Boxes
 import Measures
 
-import qualified Data.AList as AL
+import qualified Data.DList as AL
 import Data.Maybe
 import Control.Monad (when)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
@@ -36,7 +36,7 @@ We use a \code{Writer} monad inside a \code{Reader} monad to encapsulate the
 environment and the current font style.
 \begin{code}
 type Environment = E.Environment String E.HexType
-type MathSet a = ReaderT (Environment, E.MathFontStyle) (Writer (AL.AList HElement)) a
+type MathSet a = ReaderT (Environment, E.MathFontStyle) (Writer (AL.DList HElement)) a
 
 runMathSet :: MathSet () -> (Environment, E.MathFontStyle) -> [HElement]
 runMathSet mset (e,st) = AL.toList $ snd $ runWriter $ runReaderT mset (e,st)
