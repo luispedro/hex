@@ -153,6 +153,7 @@ data Command =
         | OutputfontCommand (FontDef,FontInfo)
         | SelectfontCommand Integer (FontDef,FontInfo)
         | SetMathFontCommand Integer (FontDef,FontInfo) Integer E.MathFontStyle
+        | SetSkewChar Integer Integer
         | MathCodeCommand Char Integer Integer Char
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
@@ -195,6 +196,7 @@ instance Show Command where
     show MathShiftCommand = "<$>"
     show (SelectfontCommand _ _) = "<selectfont>"
     show (SetMathFontCommand _ _ _ _) = "<setmathfontcommand>"
+    show (SetSkewChar f v)  = concat ["<setskewchar(",show f,")=",show v]
     show (MathCodeCommand c mathtype fam val) = concat ["<mathcode(", [c], "): (", show mathtype, ",", show fam, ", ", [val], ")>"]
     show (DelCodeCommand c (sval,sfam) (bval,bfam)) = concat ["<delcode(", [c], "): (", show sval, ",", show sfam, ", ", show bval, ":", show bfam, ")>"]
     show (SfCodeCommand c sfval) = concat ["<sfcode(", [c], "): (", show sfval, ")>"]
@@ -1180,6 +1182,18 @@ process1 (ControlSequence "\\font") = do
     fname <- readStrM
     updateEnvM $ E.insert csname (FontMacro fname)
     internalCommandM (LoadfontHCommand fname)
+\end{code}
+
+Setting the skewchar is made with a special command. Note that skewchar is
+always global:
+\begin{code}
+process1 (ControlSequence "\\skewchar") = do
+    f <- readENumberOrCountM
+    lookupCount f $ \font -> do
+        maybeeqM
+        val <- readENumberOrCountM
+        lookupCount val $ \v ->
+            tell1 (SetSkewChar font v)
 \end{code}
 
 Setting the math fonts is done at another level, so we just collect the

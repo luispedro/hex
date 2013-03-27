@@ -3,6 +3,7 @@ Version 0.0.6+
 	* Almost complete register implementation (for \count, \dimen, & \skip)
 	* Implement \ifcase
 	* Support many cases of \the
+	* Partial support for \skewchar
 
 Version 0.0.6 2012-06-30 by luispedro
 	* Refactor Macros/Tokens to emphasise Monadic interface
