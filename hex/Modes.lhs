@@ -139,7 +139,7 @@ vMode1' (OutputfontCommand fontinfo) =
 
 If nothing matches, make the parser fail:
 \begin{code}
-vMode1' _ = unexpected "not a vmode command"
+vMode1' c = unexpected (concat ["Expected a vmode command, got ", show c])
 \end{code}
 
 Now that we have dealt with vertical mode, we must deal with the horizontal.

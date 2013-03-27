@@ -197,10 +197,10 @@ emptyTokenStream TokenStream{charsource=st, state=s, queue=q} = null q && (isNot
 Convert a sequence of \code{CharToken} into a \code{String}
 \begin{code}
 toksToStr :: [Token] -> [Char]
-toksToStr = map charof
+toksToStr = concatMap tos
     where
-        charof (CharToken (TypedChar c _)) = c
-        charof _ = error "hex.Tokens.toksToStr.charof: Unexpected token"
+        tos (CharToken (TypedChar c _)) = [c]
+        tos (ControlSequence s) = "\\" ++ s
 \end{code}
 
 
