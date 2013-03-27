@@ -153,7 +153,7 @@ data Command =
         | OutputfontCommand (FontDef,FontInfo)
         | SelectfontCommand Integer (FontDef,FontInfo)
         | SetMathFontCommand Integer (FontDef,FontInfo) Integer E.MathFontStyle
-        | SetSkewChar Integer Integer
+        | SetSkewChar String Integer
         | MathCodeCommand Char Integer Integer Char
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
@@ -773,9 +773,15 @@ runTkSS :: (TkSS a) -> ExpansionEnvironment -> TokenStream -> (a, (ExpansionEnvi
 runTkSS compute e st = (v,(e', st'),cs)
         where
             (v, (e',st'),cs) = runRWS compute "top" (e, st)
+\end{code}
 
+We add a few helpers to get information out of the state:
+\begin{code}
 envM :: TkSS MacroEnvironment
 envM = gets (definitions . fst)
+
+macroLookUpM :: String -> TkSS (Maybe Macro)
+macroLookUpM n = E.lookup n `fmap` envM
 
 flagsM :: TkSS Flags
 flagsM = gets (flags . fst)
@@ -1188,12 +1194,15 @@ Setting the skewchar is made with a special command. Note that skewchar is
 always global:
 \begin{code}
 process1 (ControlSequence "\\skewchar") = do
-    f <- readENumberOrCountM
-    lookupCount f $ \font -> do
-        maybeeqM
-        val <- readENumberOrCountM
-        lookupCount val $ \v ->
-            tell1 (SetSkewChar font v)
+    ControlSequence fontcontrol <- gettokenM
+    mfname <- macroLookUpM fontcontrol
+    case mfname of
+        Just (FontMacro font) -> do
+            maybeeqM
+            val <- readENumberOrCountM
+            lookupCount val $ \v ->
+                tell1 (SetSkewChar font v)
+        _ -> syntaxError "Expected a font name"
 \end{code}
 
 Setting the math fonts is done at another level, so we just collect the
