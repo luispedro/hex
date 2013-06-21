@@ -8,9 +8,9 @@ module Hex
     , processcommands
     , readFont
     ) where
-import System.IO.Error hiding (catch)
-import Prelude hiding (catch)
 import System.Exit
+import System.IO
+import System.IO.Error
 import System.IO.Unsafe
 import System.FilePath.Posix
 import Control.Exception
@@ -280,6 +280,17 @@ processinputs ((InternalCommand env rest (InputCommand nfname)):_) e = do {
             Nothing -> ""
             _ -> error "hex.hex.currentdir: environment is messed up"
         addfileenv = (E.globalinsert "currentfile") . E.HexString
+\end{code}
+
+The write command is only partially implemented:
+
+\begin{code}
+processinputs ((InternalCommand _ _ w@(WriteCommand _ _ _)):cs) e = write w >> processinputs cs e
+    where
+        write (WriteCommand _ onr msg)
+            | onr < 0 = hPutStrLn stderr msg
+            | otherwise = hPutStrLn stderr "LOG: " >> hPutStrLn stderr msg
+        write _ = error "impossible"
 \end{code}
 
 Finally, the default case is to just pass it on.

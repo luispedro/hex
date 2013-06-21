@@ -181,7 +181,7 @@ instance Show HexCommand where
     show (DeprecatedCommand errmsg) = "deprecated:"++errmsg
     show (InputCommand fname) = "input:"++fname
     show (MessageCommand _ism msg) = "message:"++msg
-    show (WriteCommand onr _ism msg) = "write("++show onr++"):"++msg
+    show (WriteCommand ism onr msg) = "write("++(if ism then "immediate" else "delayed")++"->"++show onr++"):"++msg
     show (LoadfontHCommand fname) = "loadfont:"++fname
     show (SelectfontHCommand fname) = "selectfont:"++fname
     show (SetMathFontHCommand fname _fam _type) = "mathfont:"++fname
