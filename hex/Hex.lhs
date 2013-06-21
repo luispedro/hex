@@ -126,7 +126,7 @@ dimenFromFont ud _f = asDimen ud
 setDimen = setRegister "dimen" E.HexDimen
 \end{code}
 
-Glues are just builtup of multiple dimen lookups:
+Glues are just built up of multiple dimen lookups:
 \begin{code}
 getSkip :: Quantity UGlue -> HexEnvironment -> Glue
 getSkip (QConstant v) e =
@@ -140,6 +140,15 @@ getSkip (QConstant v) e =
 
 getSkip sid e = (\(E.HexGlue g) -> g) . getRegister "skip" sid $ e
 setSkip = setRegister "skip" E.HexGlue
+\end{code}
+
+Finally, muglues are just another variation:
+
+\begin{code}
+getMuGlue :: Quantity UGlue -> HexEnvironment -> Glue
+getMuGlue = getSkip
+
+setMuGlue = setRegister "muglue" E.HexUGlue
 \end{code}
 In particular, it process \tex{\\bye}, \tex{\\input}, and
 \tex{\\message}.
@@ -173,6 +182,7 @@ processinputs [] _ = return []
 processinputs ((SetCountCommand isg cid val):r) e = processinputs r (setCount isg cid val e)
 processinputs ((SetDimenCommand isg cid val):r) e = processinputs r (setDimen isg cid (asDimen val) e)
 processinputs ((SetSkipCommand isg cid val):r) e  = processinputs r (setSkip  isg cid val e)
+processinputs ((SetMuGlueCommand isg cid val):r) e  = processinputs r (setMuGlue isg cid val e)
 processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCount isg cid (v + val') e)
     where
         v = getCount cid e
