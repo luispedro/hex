@@ -131,10 +131,13 @@ Glues are just builtup of multiple dimen lookups:
 getSkip :: Quantity UGlue -> HexEnvironment -> Glue
 getSkip (QConstant v) e =
             Glue
-                (getDimen (QConstant . usize $ v) e)
-                (getDimen (QConstant . ushrinkage $ v) e)
-                (getDimen (QConstant . uexpandable $ v) e)
+                (d . usize $ v)
+                (d . ushrinkage $ v)
+                (d . uexpandable $ v)
                 (uinfLevel v)
+    where
+        d dim = getDimen (QConstant dim) e
+
 getSkip sid e = (\(E.HexGlue g) -> g) . getRegister "skip" sid $ e
 setSkip = setRegister "skip" E.HexGlue
 \end{code}
@@ -169,7 +172,7 @@ processinputs [] _ = return []
 \begin{code}
 processinputs ((SetCountCommand isg cid val):r) e = processinputs r (setCount isg cid val e)
 processinputs ((SetDimenCommand isg cid val):r) e = processinputs r (setDimen isg cid (asDimen val) e)
-processinputs ((SetSkipCommand isg cid val):r) e = processinputs r (setSkip isg cid val e)
+processinputs ((SetSkipCommand isg cid val):r) e  = processinputs r (setSkip  isg cid val e)
 processinputs ((AdvanceCountCommand isg cid val):r) e = processinputs r (setCount isg cid (v + val') e)
     where
         v = getCount cid e
@@ -248,6 +251,7 @@ Looking up a value in a register just involves switching the command stream:
 \begin{code}
 processinputs ((InternalCommand _ _ (LookupCountHCommand cid (Lookup f))):_) e = processinputs (f $ getCount cid e) e
 processinputs ((InternalCommand _ _ (LookupDimenHCommand did (Lookup f))):_) e = processinputs (f $ getDimen did e) e
+processinputs ((InternalCommand _ _ (LookupSkipHCommand  sid (Lookup f))):_) e = processinputs (f $ getSkip  sid e) e
 \end{code}
 
 Finally, the \code{InputCommand} finds the input file and queues it in
