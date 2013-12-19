@@ -1,4 +1,6 @@
 \section{Modes}
+This is the high level typesetting interface where \code{Command}s get turned
+into boxes.
 \begin{code}
 module Modes
     ( vMode
@@ -32,7 +34,11 @@ Now a few functions to retrieve and manipulate the environment:
 \begin{code}
 environmentM :: Modes (E.Environment String E.HexType)
 environmentM = getState
+\end{code}
 
+Environments are stacks:
+
+\begin{code}
 pushE :: Modes ()
 pushE = modifyState E.push
 popE :: Modes ()
@@ -118,8 +124,8 @@ _vModeM = (eof >> return []) <|> do
             return (v++r)
 \end{code}
 
-\code{vMode1} handles one vertical mode command and drops to hMode if that
-fails. Only a few vertical commands are handled currently.
+\code{vMode1} handles one vertical mode command.
+
 \begin{code}
 vMode1 :: Modes [VBox]
 vMode1 = anyCommand >>= vMode1'
@@ -137,7 +143,7 @@ vMode1' (OutputfontCommand fontinfo) =
     return [Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)]
 \end{code}
 
-If nothing matches, make the parser fail:
+If nothing matches, the parser fails:
 \begin{code}
 vMode1' c = unexpected (concat ["Expected a vmode command, got ", show c])
 \end{code}
@@ -200,8 +206,11 @@ sfcode = do
 \end{code}
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
-\code{HElement}s (but they are still just a list). This is a long
-case-statement; most of the cases got back to \code{_paragraph} to build a list:
+\code{HElement}s (but they are still just a list, typesetting is done later).
+
+This is a long case-statement; most of the cases got back to \code{_paragraph}
+to build a list:
+
 \begin{code}
 _paragraph :: Modes [HElement]
 _paragraph =

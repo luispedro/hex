@@ -115,7 +115,7 @@ putSpace _ = do
     tell1 $ spaceInFont fnt
 \end{code}
 
-Spacing is done by a simple look up system
+Spacing is defined by a simple look up system as in the original TeX
 \begin{code}
 spacingM a b = do
         (_,sc) <- ask
