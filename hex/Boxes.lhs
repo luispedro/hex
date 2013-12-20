@@ -24,6 +24,7 @@ module Boxes
     , HElement
     , VElement
     , esize
+    , freezehelems
     , mergeBoxes
     , hboxto
     , raise
@@ -32,6 +33,7 @@ module Boxes
     , charInFont
     ) where
 import Text.Printf
+import Data.Maybe
 
 import Measures
 import qualified Fonts as F
@@ -188,6 +190,16 @@ hboxto target es = converted
         converted = map transform es
         transform (EGlue g) = EGlue $ update g factor
         transform e = e
+\end{code}
+
+\code{freezehelems} sets elements to their current size and throws out penalties:
+\begin{code}
+freezehelems :: [HElement] -> [HBox]
+freezehelems = mapMaybe freeze
+    where
+        freeze (EPenalty _) = Nothing
+        freeze (EBox b) = Just b
+        freeze (EGlue g) = Just (Box H zeroDimen zeroDimen (size g) (Kern (size g)))
 \end{code}
 
 Now, we get to \code{raise} and \code{lower} which implement the corresponding
