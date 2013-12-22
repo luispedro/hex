@@ -158,6 +158,8 @@ data Command =
         | DelCodeCommand Char (Char,Integer) (Char,Integer)
         | SfCodeCommand Char Integer
         | SetCountCommand Bool (Quantity Integer) Integer
+        | SetBoxCommand Integer [Command]
+        | BoxCommand Integer
         | SetMuGlueCommand Bool (Quantity UGlue) UGlue
         | SetDimenCommand Bool (Quantity UDimen) UDimen
         | SetSkipCommand Bool (Quantity Integer) Glue
@@ -207,6 +209,8 @@ instance Show Command where
     show (AdvanceCountCommand isg cid val) = concat ["<advance count ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceDimenCommand isg cid val) = concat ["<advance dimen ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
     show (AdvanceSkipCommand isg cid val) = concat ["<advance skip ", if isg then "global" else "local", " ", show cid, " by ", show val, ">"]
+    show (SetBoxCommand boxn box) = concat ["<setbox ", show boxn, " = ", show box, ">"]
+    show (BoxCommand boxn) = concat ["<box[", show boxn, "]>"]
     show (OutputfontCommand _) = "<outputfont>"
     show (PrimitiveCommand cmd) = "<" ++ cmd ++ ">"
     show (CharCommand (TypedChar c Letter)) = ['<',c,'>']
@@ -1090,7 +1094,7 @@ process1 (ControlSequence csname)
             tell1 (SetCountCommand isg (QInternal csname) val)
 \end{code}
 
-\tex{\\dimen} is same thing:
+\tex{\\dimen} is same thing as a \tex{\\count}:
 \begin{code}
 process1 (ControlSequence "\\dimen") = do
     cid <- readNumberM
@@ -1168,6 +1172,24 @@ process1 (ControlSequence "\\advance") = do
                         _ -> countExpected >> return 0
                 _ -> countExpected >> return 0
         countExpected = syntaxError "Was expecting a count register"
+\end{code}
+
+\tex{\box} is trivial:
+\begin{code}
+process1 (ControlSequence "\\box") = do
+    boxn <- readENumberM
+    tell1 (BoxCommand boxn)
+\end{code}
+
+\tex{\setbox} is not so easy, but we outsource the complexity to
+\code{readBox}:
+
+\begin{code}
+process1 (ControlSequence "\\setbox") = do
+    boxn <- readENumberM
+    maybeeqM
+    box <- readBox
+    tell1 (SetBoxCommand boxn box)
 \end{code}
 
 We need to special case the internal commands. The simplest is the \tex{\bye}
@@ -1362,6 +1384,22 @@ readNumberM = do
     return x
 \end{code}
 
+\code{readBox} gets a single box, either a \tex{\hbox} or a \tex{\vbox}:
+\begin{code}
+readBox :: TkSS [Command]
+readBox = do
+    tk <- expandedTokenM
+    let c = if tk == (ControlSequence "\\hbox")
+                then (PrimitiveCommand "\\hbox")
+                else (PrimitiveCommand "\\vbox")
+    tks <- gettokenorgroup
+    (e,_) <- get
+    let cs = expandE e (tokenliststream tks)
+    return (c:cs)
+\end{code}
+
+
+
 This function optionally tries to parse a fraction:
 \begin{code}
 readFNumberM :: Bool -> TkSS (Integer,Maybe Integer)
@@ -1435,6 +1473,7 @@ readENumberM = local (++" -> readENumberM") $ do
 
 Often we need to read an expanded token. This allows mixing between expansion levels:
 \begin{code}
+expandedTokenM :: TkSS Token
 expandedTokenM = do
     tk <- gettokenM
     case tk of

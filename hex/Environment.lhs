@@ -25,6 +25,7 @@ import Data.Maybe
 
 import Fonts
 import DVI (FontDef)
+import Boxes
 import Measures
 \end{code}
 
@@ -41,6 +42,8 @@ data HexType =
         | HexFontInfo (FontDef, FontInfo)
         | HexMathCodePoint (Char,Integer)
         | HexScaledNumber Scaled
+        | HexHBox HBox
+        | HexVBox VBox
 \end{code}
 
 In the TeXbook, the implementation and the specification is mixed

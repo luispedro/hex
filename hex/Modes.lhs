@@ -26,23 +26,35 @@ The implementation of the modes is as a Parsec based on \code{[Command]}. The
 state is the environment:
 
 \begin{code}
-type ModeState = E.Environment String E.HexType
+type ModeEnvironment= E.Environment String E.HexType
+type ModeState = ModeEnvironment
 type Modes a = Parsec [Command] ModeState a
 \end{code}
 
 Now a few functions to retrieve and manipulate the environment:
 \begin{code}
-environmentM :: Modes (E.Environment String E.HexType)
+environmentM :: Modes ModeEnvironment
 environmentM = getState
 \end{code}
 
 Environments are stacks:
 
 \begin{code}
+modifyEnvironment :: (ModeEnvironment -> ModeEnvironment) -> Modes ()
+modifyEnvironment f = modifyState f
 pushE :: Modes ()
-pushE = modifyState E.push
+pushE = modifyEnvironment E.push
 popE :: Modes ()
-popE = modifyState E.pop
+popE = modifyEnvironment E.pop
+\end{code}
+
+Some simple wrappers for boxes:
+\begin{code}
+insertBox boxn box =
+    modifyEnvironment (E.insert ("box:" ++ show boxn) box)
+lookupBox boxn = do
+    env <- environmentM
+    return (E.lookup ("box:" ++ show boxn) env)
 \end{code}
 
 Small helpers, to match commands that fulfil a certain condition (like
@@ -143,6 +155,24 @@ vMode1' (OutputfontCommand fontinfo) =
     return [Box V zeroDimen zeroDimen zeroDimen (DefineFontContent fontinfo)]
 \end{code}
 
+\tex{\setbox} is implemented by type setting the box and then putting it into the environment.
+\begin{code}
+vMode1' (SetBoxCommand boxn cs) = do
+    box <- typesetBox cs
+    insertBox boxn box
+    return []
+\end{code}
+
+Looking up a box is trivial, only complication is the error checking:
+\begin{code}
+vMode1' (BoxCommand boxn) = do
+    maybox <- lookupBox boxn
+    case maybox of
+        Just (E.HexVBox vb) -> return [vb]
+        Nothing -> error ("Box[" ++ show boxn ++ "] is empty")
+        _ -> fail ("vMode1: content of \\box[" ++ show boxn ++ "] is not a vbox")
+\end{code}
+
 If nothing matches, the parser fails:
 \begin{code}
 vMode1' c = unexpected (concat ["Expected a vmode command, got ", show c])
@@ -162,7 +192,7 @@ setCharacter = do
                     else charInFont c fidx fnt
         sf = if cat == Space then 0
             else let E.HexInteger i = E.lookupWithDefault (E.HexInteger 0) ("spacefactor:"++[c]) e in i
-    modifyState (E.globalinsert "spacefactor" (E.HexInteger sf))
+    modifyEnvironment (E.globalinsert "spacefactor" (E.HexInteger sf))
     return element
 \end{code}
 
@@ -170,21 +200,21 @@ Selecting a font is easy, just set the font in the environment:
 \begin{code}
 selectfont = do
     SelectfontCommand i fontinfo <- matchf (\t -> case t of { SelectfontCommand _ _ -> True ; _ -> False })
-    modifyState (E.setfont i fontinfo)
+    modifyEnvironment (E.setfont i fontinfo)
 \end{code}
 
 Setting math fonts is similar
 \begin{code}
 setmathfont = do
     SetMathFontCommand i fontinfo fam fs <- matchf (\t -> case t of { SetMathFontCommand{} -> True; _ -> False})
-    modifyState (\e -> E.setmathfont i fontinfo e fam fs)
+    modifyEnvironment (\e -> E.setmathfont i fontinfo e fam fs)
 \end{code}
 
 A \code{MathCodeCommand} similarly, just modifies the math environment:
 \begin{code}
 mathcode = do
     MathCodeCommand c mtype fam val <- matchf (\t -> case t of { MathCodeCommand{} -> True; _ -> False})
-    modifyState $ (E.insert ("mc-type"++[c]) (E.HexInteger mtype)) .
+    modifyEnvironment $ (E.insert ("mc-type"++[c]) (E.HexInteger mtype)) .
                 (E.insert ("mc-codepoint"++[c]) (E.HexMathCodePoint (val,fam)))
 \end{code}
 
@@ -194,7 +224,7 @@ well:
 \begin{code}
 delcode = do
     DelCodeCommand c (sval,sfam) (bval,bfam) <- matchf (\t -> case t of { DelCodeCommand{} -> True; _ -> False})
-    modifyState $ (E.insert ("delim-small:" ++ [c]) (E.HexMathCodePoint (sval,sfam))) .
+    modifyEnvironment $ (E.insert ("delim-small:" ++ [c]) (E.HexMathCodePoint (sval,sfam))) .
                 (E.insert ("delim-big:" ++ [c]) (E.HexMathCodePoint (bval,bfam)))
 \end{code}
 
@@ -202,7 +232,7 @@ sfcode is as easy:
 \begin{code}
 sfcode = do
     SfCodeCommand c sfc <- matchf (\t -> case t of { SfCodeCommand _ _ -> True; _ -> False })
-    modifyState (E.insert ("sfcode:" ++ [c]) (E.HexInteger sfc))
+    modifyEnvironment (E.insert ("sfcode:" ++ [c]) (E.HexInteger sfc))
 \end{code}
 
 Building up, \code{_paragraph} gets a single paragraph as a list of
@@ -215,6 +245,7 @@ to build a list:
 _paragraph :: Modes [HElement]
 _paragraph =
     (eof >> return []) <|>
+    hBox <|>
     (match (PrimitiveCommand "\\par") >> return []) <|>
     (match  PushCommand >> pushE >> _paragraph) <|>
     (match  PopCommand >> popE >> _paragraph) <|>
@@ -227,6 +258,23 @@ _paragraph =
     (selectfont >> _paragraph) <|>
     (match (PrimitiveCommand "\\relax") >> _paragraph) <|>
     return []
+\end{code}
+
+An \code{hBox} in this context is either directly a \tex{\hbox} or a \tex{\box} which contains an hbox.
+\begin{code}
+hBox :: Modes [HElement]
+hBox = directHBox <|> try hBoxLookup
+    where
+        directHBox = match (PrimitiveCommand "\\hbox") *> wrapHBox `fmap` _paragraph
+        hBoxLookup = anyCommand >>= \c -> case c of
+                        BoxCommand boxn -> do
+                            maybox <- lookupBox boxn
+                            case maybox of
+                                Just (E.HexHBox hb) -> return [EBox hb]
+                                _ -> fail ("hBoxLookup: content of \\box[" ++ show boxn ++ "] is not an hbox")
+                        _ -> fail "not a hbox"
+        wrapHBox :: [HElement] -> [HElement]
+        wrapHBox boxes = [EBox $ mergeBoxes H (freezehelems boxes)]
 \end{code}
 
 Given the list of \code{HElement}s, we need to set them in lines, represented
@@ -323,8 +371,29 @@ and we are done with the math mode functionality.
 
 Finally, we hide it all behind a pure interface:
 \begin{code}
-vMode :: E.Environment String E.HexType -> [Command] -> [VBox]
+vMode :: ModeEnvironment -> [Command] -> [VBox]
 vMode e cs = case runP _vModeM e "input" cs of
     Right res -> res
     Left err -> error $ show err
+\end{code}
+
+A function to typeset a box so that it can be saved into the environment:
+
+\begin{code}
+typesetBox :: [Command] -> Modes E.HexType
+typesetBox [] = error "typesetBox should not be called with empty command list"
+typesetBox (c:cs) = do
+    e <- environmentM
+    case c of
+        (PrimitiveCommand "\\hbox") -> do
+            let r = runP hBox e "typesetBox input" (c:cs)
+            case r of
+                Right [EBox b] -> return (E.HexHBox b)
+                _' -> error ("typesetBox["++show (c:cs)++"]: Should have been two boxes, got {"++show r++"}")
+        (PrimitiveCommand "\\vbox") -> do
+            let boxed = vMode e cs
+            case boxed of
+                [b] -> return (E.HexVBox b)
+                _ -> error ("typesetBox["++show (c:cs)++"]: Should have been a single box, got {"++show boxed++"}")
+        _ -> error "First element of typesetBox should be \\hbox or \\vbox"
 \end{code}

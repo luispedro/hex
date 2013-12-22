@@ -31,3 +31,7 @@ case_csea = simple_expand csea @?= "<b><c>(bye)"
                 \|csname|expandafter|string|a c|endcsname%\n\
                 \|bye\n"
 
+case_setbox = simple_expand setbox @?= "<setbox 0 = [<\\hbox>,<h>,<e>,<l>,<l>,<o>]><box[0]><\\par>"
+    where
+        setbox = "|setbox0=|hbox{hello}|box0|par"
+
