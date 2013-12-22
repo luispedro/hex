@@ -55,6 +55,7 @@ insertBox boxn box =
 lookupBox boxn = do
     env <- environmentM
     return (E.lookup ("box:" ++ show boxn) env)
+clearBox boxn = modifyEnvironment (E.delete ("box:" ++ show boxn))
 \end{code}
 
 Small helpers, to match commands that fulfil a certain condition (like
@@ -168,8 +169,8 @@ Looking up a box is trivial, only complication is the error checking:
 vMode1' (BoxCommand boxn) = do
     maybox <- lookupBox boxn
     case maybox of
-        Just (E.HexVBox vb) -> return [vb]
-        Nothing -> error ("Box[" ++ show boxn ++ "] is empty")
+        Just (E.HexVBox vb) -> clearBox boxn >> return [vb]
+        Nothing -> return []
         _ -> fail ("vMode1: content of \\box[" ++ show boxn ++ "] is not a vbox")
 \end{code}
 
@@ -270,7 +271,7 @@ hBox = directHBox <|> try hBoxLookup
                         BoxCommand boxn -> do
                             maybox <- lookupBox boxn
                             case maybox of
-                                Just (E.HexHBox hb) -> return [EBox hb]
+                                Just (E.HexHBox hb) -> clearBox boxn >> return [EBox hb]
                                 _ -> fail ("hBoxLookup: content of \\box[" ++ show boxn ++ "] is not an hbox")
                         _ -> fail "not a hbox"
         wrapHBox :: [HElement] -> [HElement]

@@ -12,6 +12,7 @@ module Environment
     , pop
     , insert
     , globalinsert
+    , delete
     , currentfont
     , setfont
     , MathFontStyle(..)
@@ -110,6 +111,14 @@ intermediate local environments and inserting it in the last one. See the tests
 globalinsert name val (e:[]) = [M.insert name val e]
 globalinsert name val (e:es) = ((M.delete name e):(globalinsert name val es))
 globalinsert _ _ [] = error "Inserting on an invalid environment"
+\end{code}
+
+Deletion is from the environment which would have returned the result of interest:
+\begin{code}
+delete name (e:es)
+    | M.member name e = (M.delete name e:es)
+    | otherwise       = (e:delete name es)
+delete _ [] = []
 \end{code}
 
 We define a few special names by coding them in functions:

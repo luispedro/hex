@@ -1,0 +1,2 @@
+\setbox0=\hbox{hello}%
+\box0\box0%
