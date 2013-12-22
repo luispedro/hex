@@ -1,4 +1,6 @@
 language: haskell
+before_install:
+    - sudo apt-get install zsh
 install:
     - cabal install cmdargs list-extras vector vector-algorithms binary convertible parsec dlist test-framework-th test-framework-quickcheck2 test-framework-hunit
 script: make --directory=hex tests
