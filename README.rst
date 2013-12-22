@@ -66,6 +66,12 @@ cabal install \
             test-framework-quickcheck2 \
             test-framework-hunit
 
+You also need to have some TeX binaries available (at the moment). On Ubuntu,
+you can install them by running::
+
+    sudo apt-get install texlive-binaries texlive-base
+
+
 Meta-Information
 ----------------
 
