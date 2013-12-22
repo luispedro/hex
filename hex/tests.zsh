@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
-make --quiet
-./hextest
+make --quiet || exit 1
+./hextest || exit 1
 for sub in `ls tests`; do
     function perform_diff() {
         diff -u tests/$sub/`basename $1 hex`output -
@@ -23,7 +23,7 @@ for sub in `ls tests`; do
         if test "$1" = "-v"; then
             echo testing $sub $t ...
         fi
-        run $t &
+        run $t || exit 1
     done
     wait
 done
