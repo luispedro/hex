@@ -20,9 +20,11 @@ To actually perform any operations, we start with code to put one element down.
 Then code that puts a whole line down, an element at a time:
 
 \begin{code}
-
 putvbox b = do
         move_down (height b)
+\end{code}
+All the boxes are put inside a push/pop pair. This may be overly conservative.
+\begin{code}
         push
         putvboxcontent (boxContents b)
         pop
@@ -30,12 +32,10 @@ putvbox b = do
     where
         putvboxcontent (CharContent c f) = putc c f
         putvboxcontent (Kern d) = move_right d
-        putvboxcontent (HBoxList bs) = putvboxcontentmany $ map boxContents bs
+        putvboxcontent (HBoxList bs) = mapM_ (putvboxcontent . boxContents) bs
         putvboxcontent (TransformedContent tr bc) = transform tr >> (putvboxcontent bc) >> untransform tr
         putvboxcontent (DefineFontContent (fontinfo,_)) = void $ defineFont fontinfo
         putvboxcontent _ = error "hex.Output.putvboxcontent: Cannot handle this type"
-        putvboxcontentmany [] = return ()
-        putvboxcontentmany (x:xs) = (putvboxcontent x) >> (putvboxcontentmany xs)
         transform (RaiseBox d) = move_up d
         untransform (RaiseBox d) = move_up (dflip d)
 \end{code}
@@ -44,15 +44,14 @@ Now we can put down a sequence of lines easily. This function could have been
 called \code{putvboxes}:
 
 \begin{code}
-putlines [] = return ()
-putlines (ln:lns) = (putvbox ln) >> (putlines lns)
+putlines = mapM_ putvbox
 \end{code}
 
-Finally, we put down whole pages. A page is simply a particular kind of v-box.
+Finally, we put down whole pages. A page is simply a particular kind of v-box,
+so the code can rely on that.
 
 \begin{code}
-putpages _ [] = return ()
-putpages env (p:ps) = (putpage p) >> (putpages env ps)
+putpages env ps = putpage `mapM_` ps
     where
         Just (E.HexDimen margintop) = E.lookup "margintop" env
         Just (E.HexDimen marginright) = E.lookup "marginright" env
