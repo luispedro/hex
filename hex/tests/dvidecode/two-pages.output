@@ -1,0 +1,77 @@
+pre 2 25400000 473628672 1000 14 Written by hex
+bop 1 0 0 0 0 0 0 0 0 0 -1
+push
+down4 0
+right4 0
+down4 0
+push
+fnt_def 0 1274110073 655360 655360 0 cmr10
+pop
+down4 0
+down4 455110
+push
+fnt_num 0
+char 102(f)
+char 105(i)
+char 114(r)
+char 115(s)
+char 116(t)
+right4 218866
+right4 26940356
+pop
+down4 0
+down4 568888
+push
+right4 568888
+pop
+down4 0
+pop
+eop
+bop 2 0 0 0 0 0 0 0 0 0 29
+push
+down4 0
+right4 0
+down4 33554432
+push
+right4 33554432
+pop
+down4 0
+pop
+eop
+bop 3 0 0 0 0 0 0 0 0 0 165
+push
+down4 0
+right4 0
+down4 0
+push
+right4 28311552
+pop
+down4 0
+down4 0
+push
+right4 0
+pop
+down4 0
+down4 455110
+push
+fnt_num 0
+char 115(s)
+char 101(e)
+char 99(c)
+char 111(o)
+char 110(n)
+char 100(d)
+right4 218854
+right4 26195798
+pop
+down4 0
+down4 568888
+push
+right4 568888
+pop
+down4 0
+pop
+eop
+post 240 25400000 473628672 1000 43725786 30785863 2 3
+fnt_def 0 1274110073 655360 655360 0 cmr10
+post_post 378 48226271

@@ -171,6 +171,10 @@ setchar c
     | c < 128 = put1 c
     | otherwise = error "hex.DVI.setchar: c >= 128!"
 nop = put1 138
+\end{code}
+
+bop is beginning of page, it starts a new page. The font is reset.
+\begin{code}
 bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 _p = do
         thisBop <- getCurPos
         put1 139
@@ -187,6 +191,7 @@ bop c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 _p = do
         prevBop <- getLastBop
         put4 prevBop
         putLastBop thisBop
+        modify (\st@DVIStream {} -> st { currentFont = (-1)})
 
 eop = put1 140
 push = (put1 141) >> pushOne
@@ -294,6 +299,12 @@ newpage = do
     putTotalPages (page + 1)
     return (page + 1)
 
+\end{code}
+
+putc puts down a character in a given font. It checks the current font to avoid
+having the file consist of repeated calls to selectFont.
+
+\begin{code}
 putc :: Char -> Integer -> State DVIStream ()
 putc c f = do
     cf <- fmap currentFont get
