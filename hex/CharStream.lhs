@@ -117,7 +117,9 @@ getchar st@TypedCharStream{table=tab,remaining=q } =
 This is retrieves the inner positional information:
 \begin{code}
 fnameLine :: TypedCharStream -> (String, Int)
-fnameLine TypedCharStream{remaining=q} = (ncsFname q, ncsLine q)
+fnameLine TypedCharStream{remaining=q} = case q of
+    EofNCS -> ("EOF [if you see this, this may be a bug in HeX]", -1)
+    NamedCharStream{ncsFname=fname, ncsLine=lno} -> (fname, lno)
 \end{code}
 
 An empty \code{TypedCharStream}:

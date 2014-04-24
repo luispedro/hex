@@ -1241,7 +1241,7 @@ process1 (ControlSequence cs)
             internalCommandM (case E.lookup fc e of
                 Just (FontMacro fname) ->
                     SetMathFontHCommand fname fam (fontstyle cs)
-                _ -> ErrorCommand $ "Hex: Was expecting a font for \\textfont primitive"
+                _ -> ErrorCommand $ concat ["Hex: Was expecting a font for \\textfont primitive (got ", show fc, ")"]
                 )
     where
         fontstyle "\\textfont" = E.Textfont
